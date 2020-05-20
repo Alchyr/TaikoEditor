@@ -1,0 +1,50 @@
+{
+  "ui": [
+    {
+      "name": "pixel",
+      "file": "taikoedit/images/ui/pixel.png",
+      "class": "Texture"
+    }
+  ],
+  "menu": [
+    {
+      "name": "test",
+      "file": "taikoedit/images/background/pink.png",
+      "class": "Texture"
+    }
+  ],
+  "editor": [
+    {
+      "name": "hit",
+      "file": "taikoedit/images/editor/objects/hit.png",
+      "class": "Texture"
+    }
+  ],
+  "background": [
+    {
+      "name": "osu background images",
+      "file": "",
+      "class": "Special",
+      "params": "osu_background"
+    }
+  ],
+  "font": [
+    {
+      "name": "default",
+      "file": "taikoedit/fonts/default.fnt",
+      "class": "BitmapFont"
+    },
+    {
+      "name": "yugothl",
+      "file": "YuGothM.ttc",
+      "class": "SystemTrueTypeFont",
+      "params": "s_32 x_0 k_0"
+    },
+    {
+      "name": "small",
+      "file": "YuGothM.ttc",
+      "class": "SystemTrueTypeFont",
+      "params": "s_16 x_0 k_0"
+    }
+  ]
+}

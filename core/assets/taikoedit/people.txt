@@ -1,0 +1,5 @@
+People should be able to interact.
+
+Important properties:
+personality - determines generally how people act. Combine "traits" to get a final result. Stuff like how they treat those they like, those they don't like, what kind of people they like, etc.
+Importance - just how important someone is. This will be factored into appearance generation. More important people should look more interesting. :)
