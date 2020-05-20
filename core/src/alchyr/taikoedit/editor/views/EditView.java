@@ -39,7 +39,7 @@ public class EditView extends MapView {
 
     @Override
     public void renderObject(HitObject o, SpriteBatch sb, ShapeRenderer sr) {
-        o.render(sb, sr, currentPos, parent.viewScale, SettingsMaster.getWidth() / 2.0f, y);
+        o.render(sb, sr, currentPos, parent.viewScale, SettingsMaster.getWidth() / 2.0f, objectY);
     }
 
     @Override

@@ -2,125 +2,734 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="initial">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/Alchemist.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/lib.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/log4j2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/data/AssetLists.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/data/formatting notes.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/fonts/default.fnt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/fonts/default1.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/fonts/default2.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/background/pink.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/objects/hit.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/ui/cursor.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/ui/pixel.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/localization/ENG/General.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/people.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/build.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/GameLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/InputLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/UIElement.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/AdjustedInputProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/EntityInputProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/entityinput/EntityInput.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/entityinput/PlayerInput.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/sub/TextInput.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/GameplayLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/LoadedLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/LoadingLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/scenes/Hitbox.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/scenes/topdown/Room.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/scenes/topdown/TopDownLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/scenes/topdown/tiles/EmptyTile.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/scenes/topdown/tiles/Tile.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/Button.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EditView.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/MapView.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/ControllableEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/Player.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/RenderableEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/UpdatingEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/ComponentMaps.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/ControllerComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/EntityRenderComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/InputComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/PositionComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/RenderComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/UpdateComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/components/VelocityComponent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/controllers/Controller.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/controllers/PlayerController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/controllers/TopDownController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/entitysystems/ControllerUpdateSystem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/entities/entitysystems/UpdateSystem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/AssetMaster.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/LocalizationMaster.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/MapMaster.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SettingsMaster.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SoundMaster.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/localization/LocalizedText.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/BeatmapDatabase.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/EditorBeatmap.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/FullMapInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/MapInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/Mapset.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/HitObject.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/TimingPoint.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Hit.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Slider.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Spinner.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/GameData.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/GeneralUtils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/Line.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/Noise.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/Range.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/RenderableEntityList.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/SeededRandom.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/SystemUtils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TextRenderer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/Time.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TrueTypeFontGenerator.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/AssetInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/AssetLists.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/FileHelper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/FilePathInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/RegionInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/SpecialLoader.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/loaders/OsuBackgroundLoader.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/assets/loaders/SkinLoader.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/CharacterTreeMap.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/Pair.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObject.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObjectTreeMap.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/ViewSet.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/vfx/Effect.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/vfx/FallingSoul.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/desktop/build.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/DesktopLauncher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/config/ConfigMenu.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/config/ProgramConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/folder.gif" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradlew" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradlew.bat" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/settings.gradle" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/settings/config.cfg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/ASSEMBLY_EXCEPTION" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/LICENSE" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/THIRD_PARTY_README" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/appletviewer.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/clhsdb.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/extcheck.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/hsdb.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/idlj.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jabswitch.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jar.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jarsigner.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/java-rmi.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/java.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/javac.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/javadoc.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/javah.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/javap.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/javaw.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jcmd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jconsole.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jdb.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jdeps.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jhat.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jinfo.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jjs.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jli.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jmap.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jps.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jrunscript.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jsadebugd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jstack.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jstat.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/jstatd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/keytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/kinit.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/klist.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/ktab.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/msvcr120.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/native2ascii.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/orbd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/pack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/policytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/rmic.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/rmid.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/rmiregistry.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/schemagen.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/serialver.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/servertool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/tnameserv.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/unpack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/wsgen.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/wsimport.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/bin/xjc.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/README" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/CodePointIM/CodePointIM.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/CodePointIM/README.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/CodePointIM/README_ja.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/CodePointIM/README_zh_CN.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/CodePointIM/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/FileChooserDemo/FileChooserDemo.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/FileChooserDemo/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/FileChooserDemo/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Metalworks/Metalworks.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Metalworks/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Metalworks/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Notepad/Notepad.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Notepad/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/Notepad/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/SampleTree/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/SampleTree/SampleTree.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/SampleTree/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TableExample/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TableExample/TableExample.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TableExample/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TransparentRuler/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TransparentRuler/TransparentRuler.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jfc/TransparentRuler/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jpda/com/sun/tools/example/README" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jpda/examples.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jpda/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/compiledMethodLoad/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/compiledMethodLoad/lib/compiledMethodLoad.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/compiledMethodLoad/lib/compiledMethodLoad.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/compiledMethodLoad/lib/compiledMethodLoad.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/compiledMethodLoad/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/gctest/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/gctest/lib/gctest.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/gctest/lib/gctest.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/gctest/lib/gctest.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/gctest/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/heapTracker.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/lib/heapTracker.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/lib/heapTracker.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/lib/heapTracker.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapTracker/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapViewer/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapViewer/lib/heapViewer.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapViewer/lib/heapViewer.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapViewer/lib/heapViewer.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/heapViewer/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/hprof/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/hprof/lib/hprof.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/hprof/lib/hprof.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/hprof/lib/hprof.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/hprof/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/lib/minst.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/lib/minst.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/lib/minst.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/minst.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/minst/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/lib/mtrace.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/lib/mtrace.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/lib/mtrace.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/mtrace.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/mtrace/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/versionCheck/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/versionCheck/lib/versionCheck.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/versionCheck/lib/versionCheck.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/versionCheck/lib/versionCheck.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/versionCheck/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/waiters/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/waiters/lib/waiters.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/waiters/lib/waiters.exp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/waiters/lib/waiters.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/jvmti/waiters/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/FullThreadDump/FullThreadDump.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/FullThreadDump/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/FullThreadDump/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/JTop/JTop.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/JTop/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/JTop/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/MemoryMonitor/MemoryMonitor.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/MemoryMonitor/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/MemoryMonitor/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/VerboseGC/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/VerboseGC/VerboseGC.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/VerboseGC/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/management/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/FileChooserDemo/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Font2DTest/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Metalworks/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/Notepad/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SampleTree/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/SwingApplet/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TableExample/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/jfc/TransparentRuler/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/FullThreadDump/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/JTop/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/MemoryMonitor/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/management/VerboseGC/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nbproject/scripting/jconsole-plugin/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nio/zipfs/Demo.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nio/zipfs/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nio/zipfs/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/nio/zipfs/zipfs.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/scripting/jconsole-plugin/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/scripting/jconsole-plugin/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/scripting/jconsole-plugin/jconsole-plugin.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/demo/scripting/jconsole-plugin/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/classfile_constants.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/jawt.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/jdwpTransport.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/jni.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/jvmti.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/jvmticmlr.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/bridge/AccessBridgeCallbacks.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/bridge/AccessBridgeCalls.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/bridge/AccessBridgeCalls.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/bridge/AccessBridgePackages.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/jawt_md.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/include/win32/jni_md.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/ASSEMBLY_EXCEPTION" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/LICENSE" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/THIRD_PARTY_README" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/JAWTAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/JavaAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/WindowsAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/attach.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/awt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/dt_shmem.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/dt_socket.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/fontmanager.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/freetype.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/hprof.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/instrument.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/j2pcsc.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/j2pkcs11.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jaas_nt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jabswitch.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/java-rmi.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/java.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/java.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/java_crw_demo.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/javaw.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jawt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jdwp.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jjs.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jli.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jpeg.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jsdt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jsound.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/jsoundds.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/keytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/kinit.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/klist.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/ktab.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/lcms.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/management.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/mlib_image.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/msvcp120.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/msvcr120.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/net.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/nio.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/npt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/orbd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/pack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/policytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/rmid.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/rmiregistry.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/sawindbg.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/server/Xusage.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/server/jvm.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/servertool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/splashscreen.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/sunec.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/sunmscapi.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/tnameserv.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/unpack.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/unpack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/verify.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/w2k_lsa_auth.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/bin/zip.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/accessibility.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/amd64/jvm.cfg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/calendars.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/charsets.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/classlist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/cmm/CIEXYZ.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/cmm/GRAY.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/cmm/LINEAR_RGB.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/cmm/PYCC.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/cmm/sRGB.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/content-types.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/currency.data" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/access-bridge-64.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/cldrdata.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/dnsns.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/jaccess.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/localedata.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/meta-index" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/nashorn.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/sunec.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/sunjce_provider.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/sunmscapi.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/sunpkcs11.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/ext/zipfs.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/flavormap.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/fontconfig.bfc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/fontconfig.properties.src" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/hijrah-config-umalqura.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/cursors.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/invalid32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_CopyDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_CopyNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_LinkDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_LinkNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_MoveDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/images/cursors/win32_MoveNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/jce.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/jsse.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/jvm.hprof.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/logging.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/management-agent.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/management/jmxremote.access" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/management/jmxremote.password.template" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/management/management.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/management/snmp.acl.template" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/meta-index" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/net.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/psfont.properties.ja" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/psfontj2d.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/resources.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/rt.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/blacklisted.certs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/cacerts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/java.policy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/java.security" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/policy/limited/US_export_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/policy/limited/local_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/policy/unlimited/US_export_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/security/policy/unlimited/local_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/sound.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/tzdb.dat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/jre/lib/tzmappings" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/ct.sym" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/dt.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/ir.idl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/jawt.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/jconsole.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/jvm.lib" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/orb.idl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/sa-jdi.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/lib/tools.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/release" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/README" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/Device.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/Kettle.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/Module.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/PluginChecker.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/Require.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/PluginChecker/src/checker/RequireContainer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/Plugins/src/plugins/BoilerPlugin.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/Plugins/src/plugins/ExtendedBoilerPlugin.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/DependencyChecker/Plugins/src/plugins/TimerPlugin.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/Validator/src/PositiveIntegerSupplier.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/Validator/src/SupplierValidator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/Validator/src/Validate.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/Validator/src/Validator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/annotations/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/forkjoin/mergesort/MergeDemo.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/forkjoin/mergesort/MergeSort.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/connect-local-ant-run.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/connect-local-java-jar.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/connect-local.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/remote-connection-failed.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/remote-connection.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/scandir-config.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/scandir-result.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/docfiles/scandir-start.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/keystore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/logging.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/manifest.mf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/DirectoryScanner.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/DirectoryScannerMXBean.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ResultLogManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ResultLogManagerMXBean.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanDirAgent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanDirClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanDirConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanDirConfigMXBean.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/ScanManagerMXBean.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/DirectoryScannerConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/FileMatch.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/ResultLogConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/ResultRecord.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/ScanManagerConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/XmlConfigUtils.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/config/package.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/com/sun/jmx/examples/scandir/package.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/etc/access.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/etc/management.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/etc/password.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/src/etc/testconfig.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/test/com/sun/jmx/examples/scandir/DirectoryScannerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/test/com/sun/jmx/examples/scandir/ScanDirConfigTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/test/com/sun/jmx/examples/scandir/ScanManagerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/test/com/sun/jmx/examples/scandir/TestUtils.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/test/com/sun/jmx/examples/scandir/config/XmlConfigUtilsTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/jmx/jmx-scandir/truststore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/BulkDataOperations/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/BulkDataOperations/src/CSVProcessor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/BulkDataOperations/src/Grep.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/BulkDataOperations/src/PasswordGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/BulkDataOperations/src/WC.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/ArrayIterator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/DiamondInheritance.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/Inheritance.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/MixIn.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/Reflection.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/lambda/DefaultMethods/SimplestUsage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/ChatServer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/Client.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/ClientReader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/DataReader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/MessageReader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/NameReader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/chatserver/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/AclEdit.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/Chmod.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/Copy.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/DiskUsage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/FileType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/WatchDir.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/file/Xdd.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/multicast/MulticastAddress.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/multicast/Reader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/multicast/Sender.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/AcceptHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Acceptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/B1.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/BN.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/BP.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/ChannelIO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/ChannelIOSecure.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Content.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Dispatcher.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Dispatcher1.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/DispatcherN.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/FileContent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Handler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/MalformedRequestException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/N1.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/N2.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Reply.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Request.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/RequestHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/RequestServicer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Sendable.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/Server.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/StringContent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/nio/server/URLDumper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/build.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/build.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/nbproject/file-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/nbproject/jdk.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/nbproject/netbeans-targets.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/nbproject/project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/META-INF/manifest.mf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/com/sun/sample/scriptpad/Main.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/resources/Main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/resources/conc.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/resources/gui.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/resources/mm.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/resources/scriptpad.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/browse.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/insertfile.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/linewrap.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/mail.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/memmonitor.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/memory.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/memory.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/memory.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/scripting/scriptpad/src/scripts/textcolor.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/try-with-resources/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/try-with-resources/src/CustomAutoCloseableSample.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/try-with-resources/src/Unzip.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/sample/try-with-resources/src/ZipCat.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/JDK/src.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/TaikoEditor.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/COPYRIGHT" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/LICENSE" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/README.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/THIRDPARTYLICENSEREADME-JAVAFX.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/THIRDPARTYLICENSEREADME.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/Welcome.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/JAWTAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/JavaAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/WindowsAccessBridge-64.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/awt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/bci.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/dcpr.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/decora_sse.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/deploy.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/dt_shmem.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/dt_socket.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/dtplugin/deployJava1.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/dtplugin/npdeployJava1.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/eula.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/fontmanager.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/fxplugins.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/glass.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/glib-lite.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/gstreamer-lite.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/hprof.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/instrument.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/j2pcsc.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/j2pkcs11.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jaas_nt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jabswitch.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/java-rmi.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/java.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/java.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/java_crw_demo.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javacpl.cpl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javacpl.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javafx_font.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javafx_font_t2k.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javafx_iio.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javaw.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/javaws.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jawt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jdwp.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jfr.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jfxmedia.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jfxwebkit.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jjs.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jli.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jp2iexp.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jp2launcher.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jp2native.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jp2ssv.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jpeg.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jsdt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jsound.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/jsoundds.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/kcms.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/keytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/kinit.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/klist.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/ktab.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/lcms.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/management.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/mlib_image.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/msvcp120.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/msvcr100.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/msvcr120.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/net.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/nio.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/npt.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/orbd.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/pack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/plugin2/msvcr100.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/plugin2/npjp2.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/policytool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/prism_common.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/prism_d3d.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/prism_sw.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/resource.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/rmid.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/rmiregistry.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/server/Xusage.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/server/jvm.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/servertool.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/splashscreen.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/ssv.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/ssvagent.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/sunec.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/sunmscapi.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/t2k.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/tnameserv.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/unpack.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/unpack200.exe" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/verify.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/w2k_lsa_auth.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/wsdetect.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/bin/zip.dll" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/accessibility.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/amd64/jvm.cfg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/calendars.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/charsets.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/classlist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/cmm/CIEXYZ.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/cmm/GRAY.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/cmm/LINEAR_RGB.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/cmm/PYCC.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/cmm/sRGB.pf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/content-types.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/currency.data" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/ffjcext.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_de.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_es.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_fr.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_it.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_ja.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_ko.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_pt_BR.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_sv.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_zh_CN.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_zh_HK.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/messages_zh_TW.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/splash.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/splash@2x.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/splash_11-lic.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/deploy/splash_11@2x-lic.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/access-bridge-64.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/cldrdata.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/dnsns.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/jaccess.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/jfxrt.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/localedata.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/meta-index" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/nashorn.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/sunec.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/sunjce_provider.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/sunmscapi.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/sunpkcs11.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/ext/zipfs.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/flavormap.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fontconfig.bfc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fontconfig.properties.src" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaBrightDemiBold.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaBrightDemiItalic.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaBrightItalic.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaBrightRegular.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaSansDemiBold.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaSansRegular.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaTypewriterBold.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/fonts/LucidaTypewriterRegular.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/hijrah-config-umalqura.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/cursors.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/invalid32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_CopyDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_CopyNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_LinkDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_LinkNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_MoveDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/images/cursors/win32_MoveNoDrop32x32.gif" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/javafx.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/javaws.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jce.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jfr.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jfr/default.jfc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jfr/profile.jfc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jfxswt.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jsse.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/jvm.hprof.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/logging.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/management-agent.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/management/jmxremote.access" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/management/jmxremote.password.template" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/management/management.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/management/snmp.acl.template" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/meta-index" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/net.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/plugin.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/psfont.properties.ja" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/psfontj2d.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/resources.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/rt.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/US_export_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/blacklist" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/blacklisted.certs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/cacerts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/java.policy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/java.security" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/javaws.policy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/local_policy.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/security/trusted.libraries" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/sound.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/tzdb.dat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/lib/tzmappings" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/JRE/release" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Release/lib/desktop-1.0.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EditView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EditView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Hit.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Hit.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Slider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Slider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Spinner.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Spinner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -151,24 +760,12 @@
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="TaikoEditor" type="f1a62948:ProjectNode" />
-                <item name="core" type="2d1252cf:ModuleNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
               </path>
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="TaikoEditor" type="f1a62948:ProjectNode" />
-                <item name="core" type="2d1252cf:ModuleNode" />
-                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
-              </path>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="TaikoEditor" type="f1a62948:ProjectNode" />
-                <item name="desktop" type="2d1252cf:ModuleNode" />
-              </path>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="TaikoEditor" type="f1a62948:ProjectNode" />
-                <item name="desktop" type="2d1252cf:ModuleNode" />
-                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
+                <item name="Run Configurations" type="7b0102dc:RunConfigurationsNode" />
               </path>
             </expand>
             <select />
@@ -199,10 +796,10 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/lib/TarsosDSP-2.4-bin.jar!/" />
-    <property name="project.structure.last.edited" value="Libraries" />
+    <property name="project.structure.last.edited" value="Artifacts" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.57471263" />
-    <property name="settings.editor.selected.configurable" value="project.propDebugger" />
+    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.project.gradle" />
     <property name="show.unlinked.gradle.project.popup" value="true" />
   </component>
   <component name="RecentsManager">
@@ -217,7 +814,7 @@
       <recent name="D:\Projects\Cresces\core\assets\Cresces" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DesktopLauncher">
+  <component name="RunManager" selected="Gradle.TaikoEditor [dist]">
     <configuration name="DesktopLauncher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="alchyr.taikoedit.desktop.DesktopLauncher" />
       <module name="TaikoEditor.desktop.main" />
@@ -250,7 +847,7 @@
       <GradleScriptDebugEnabled>true</GradleScriptDebugEnabled>
       <method v="2" />
     </configuration>
-    <configuration name="Cresces [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration name="TaikoEditor [buildDependents]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -261,7 +858,64 @@
         </option>
         <option name="taskNames">
           <list>
-            <option value="clean" />
+            <option value="buildDependents" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <GradleScriptDebugEnabled>true</GradleScriptDebugEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TaikoEditor [dist]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="dist" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <GradleScriptDebugEnabled>true</GradleScriptDebugEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TaikoEditor [jar]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="jar" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <GradleScriptDebugEnabled>true</GradleScriptDebugEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TaikoEditor:desktop [dist]" type="GradleRunConfiguration" factoryName="Gradle">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/desktop" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="dist" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -271,14 +925,19 @@
     </configuration>
     <list>
       <item itemvalue="Application.DesktopLauncher" />
+      <item itemvalue="Gradle.TaikoEditor:desktop [dist]" />
       <item itemvalue="Gradle.Cresces [build]" />
-      <item itemvalue="Gradle.Cresces [clean]" />
+      <item itemvalue="Gradle.TaikoEditor [jar]" />
+      <item itemvalue="Gradle.TaikoEditor [dist]" />
+      <item itemvalue="Gradle.TaikoEditor [buildDependents]" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.TaikoEditor [dist]" />
+        <item itemvalue="Gradle.TaikoEditor [buildDependents]" />
+        <item itemvalue="Gradle.TaikoEditor [jar]" />
         <item itemvalue="Application.DesktopLauncher" />
         <item itemvalue="Gradle.Cresces [build]" />
-        <item itemvalue="Gradle.Cresces [clean]" />
       </list>
     </recent_temporary>
   </component>
@@ -300,7 +959,14 @@
       <option name="project" value="LOCAL" />
       <updated>1587091710697</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="initial">
+      <created>1590013601898</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1590013601898</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -310,14 +976,22 @@
     <option name="LAST_COMMIT_MESSAGE" value="initial" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="844" y="383" key="#Notifications" timestamp="1590013639375">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="844" y="383" key="#Notifications/0.0.1920.1040@0.0.1920.1040" timestamp="1590013639375" />
+    <state x="439" y="93" key="#Project_Structure" timestamp="1590014045886">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="439" y="93" key="#Project_Structure/0.0.1920.1040@0.0.1920.1040" timestamp="1590014045886" />
     <state x="789" y="374" key="#com.intellij.debugger.actions.ViewTextAction" timestamp="1589946335165">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="789" y="374" key="#com.intellij.debugger.actions.ViewTextAction/0.0.1920.1040@0.0.1920.1040" timestamp="1589946335165" />
-    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1586975741601">
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1590016552333">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1586975741601" />
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1590016552333" />
     <state x="701" y="322" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1589107344973">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -354,18 +1028,18 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="714" y="223" key="#xdebugger.evaluate/0.0.1920.1040@0.0.1920.1040" timestamp="1589197851876" />
-    <state x="544" y="113" key="CommitChangelistDialog2" timestamp="1590013300044">
+    <state x="544" y="113" key="CommitChangelistDialog2" timestamp="1590018490500">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="544" y="113" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300044" />
+    <state x="544" y="113" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1590018490500" />
     <state width="517" height="466" key="DebuggerActiveHint" timestamp="1589907954218">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="517" height="466" key="DebuggerActiveHint/0.0.1920.1040@0.0.1920.1040" timestamp="1589907954218" />
-    <state x="609" y="280" key="FileChooserDialogImpl" timestamp="1589942811873">
+    <state x="609" y="280" key="FileChooserDialogImpl" timestamp="1590014132718">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="609" y="280" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1589942811873" />
+    <state x="609" y="280" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1590014132718" />
     <state x="794" y="399" key="Github.ShareDialog" timestamp="1590013175351">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -374,46 +1048,46 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="678" y="219" key="Github.UntrackedFilesDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1590012820619" />
-    <state width="1877" height="262" key="GridCell.Tab.0.bottom" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.0.bottom" timestamp="1590018108895">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.0.center" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108895" />
+    <state width="1877" height="262" key="GridCell.Tab.0.center" timestamp="1590018108895">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.0.left" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108895" />
+    <state width="1877" height="262" key="GridCell.Tab.0.left" timestamp="1590018108895">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.0.right" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108895" />
+    <state width="1877" height="262" key="GridCell.Tab.0.right" timestamp="1590018108895">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.1.bottom" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108895" />
+    <state width="1877" height="262" key="GridCell.Tab.1.bottom" timestamp="1590018108747">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.1.center" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108747" />
+    <state width="1877" height="262" key="GridCell.Tab.1.center" timestamp="1590018108747">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.1.left" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108747" />
+    <state width="1877" height="262" key="GridCell.Tab.1.left" timestamp="1590018108747">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state width="1877" height="262" key="GridCell.Tab.1.right" timestamp="1590013300088">
+    <state width="1877" height="262" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108747" />
+    <state width="1877" height="262" key="GridCell.Tab.1.right" timestamp="1590018108747">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="262" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590013300088" />
-    <state x="220" y="60" key="SettingsEditor" timestamp="1589942847833">
+    <state width="1877" height="262" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590018108747" />
+    <state x="220" y="60" key="SettingsEditor" timestamp="1590017136374">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="220" y="60" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1589942847833" />
-    <state x="551" y="252" key="Vcs.Push.Dialog.v2" timestamp="1587091712960">
+    <state x="220" y="60" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1590017136374" />
+    <state x="551" y="252" key="Vcs.Push.Dialog.v2" timestamp="1590013628951">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="551" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040@0.0.1920.1040" timestamp="1587091712960" />
+    <state x="551" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040@0.0.1920.1040" timestamp="1590013628951" />
     <state x="656" y="343" key="com.intellij.ide.util.TipDialog" timestamp="1587778364622">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -438,12 +1112,21 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="616" y="240" key="run.anything.popup/0.0.1920.1040@0.0.1920.1040" timestamp="1589155680609" />
-    <state x="623" y="225" width="672" height="678" key="search.everywhere.popup" timestamp="1589959976472">
+    <state x="623" y="225" width="672" height="678" key="search.everywhere.popup" timestamp="1590018246236">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="623" y="225" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040@0.0.1920.1040" timestamp="1589959976472" />
+    <state x="623" y="225" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040@0.0.1920.1040" timestamp="1590018246236" />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/ViewSet.java</url>
+          <line>48</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <pin-to-top-manager>
       <pinned-members>
         <PinnedItemInfo typeName="alchyr.alchemist.util.structures.ValueBinaryMap" fieldName="primary" />

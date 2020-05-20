@@ -44,10 +44,12 @@ project(":desktop") {
         api "com.badlogicgames.gdx:gdx-controllers-desktop:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-controllers-platform:$gdxVersion:natives-desktop"
         api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-        api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+        compile ("com.badlogicgames.gdx:gdx-tools:$gdxVersion") {
+            exclude group: 'com.badlogicgames.gdx', module: 'gdx-backend-lwjgl'
+        }
 
         compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.0'
-        runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
+        compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
     }
 }
 
@@ -66,6 +68,6 @@ project(":core") {
         compile fileTree(dir: '/lib', include: '*.jar')
 
         compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.0'
-        runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
+        compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
     }
 }

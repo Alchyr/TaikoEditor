@@ -101,6 +101,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         searchHeight = (int) (70 * SettingsMaster.SCALE);
         searchTextOffsetX = 10 * SettingsMaster.SCALE;
         searchTextOffsetY = 30 * SettingsMaster.SCALE;
+
+        organizeViews();
     }
 
     @Override
@@ -210,8 +212,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         {
             addEditView(info);
         }
-
-        organizeViews();
         editorLogger.info("Loaded beatmap successfully.");
     }
 

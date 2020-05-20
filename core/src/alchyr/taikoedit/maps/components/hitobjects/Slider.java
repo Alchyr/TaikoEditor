@@ -119,12 +119,12 @@ public class Slider extends HitObject {
         sb.setColor(slider);
         if (finish)
         {
-            sb.draw(headTexture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+            sb.draw(headTexture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                     LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
         }
         else
         {
-            sb.draw(headTexture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+            sb.draw(headTexture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                     1.0f, 1.0f, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
         }
     }
