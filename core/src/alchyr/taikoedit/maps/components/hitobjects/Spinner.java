@@ -58,7 +58,7 @@ public class Spinner extends HitObject {
     }
 
     @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y) {
         sb.setColor(spinner);
         sb.draw(texture, x + (this.endPos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);

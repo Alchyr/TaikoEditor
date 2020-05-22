@@ -25,13 +25,17 @@ public class ConfigMenu implements ActionListener, WindowListener {
     private Graphics.DisplayMode fullscreenMode;
 
     private JCheckBox fullscreenToggle;
+    private JCheckBox vsync;
+    private JCheckBox unlimited;
 
     private JTextField widthField;
     private JTextField heightField;
     private JTextField songsField;
+    private JTextField fpsField;
 
     private JButton accept;
     private JButton folder;
+
 
     private JFileChooser fileChooser;
 
@@ -91,16 +95,25 @@ public class ConfigMenu implements ActionListener, WindowListener {
         fullscreenToggle = new JCheckBox("Fullscreen", programConfig.fullscreen);
         fullscreenToggle.setSelected(programConfig.fullscreen);
 
+        vsync = new JCheckBox("Use VSync", programConfig.fpsMode == 0);
+        vsync.setSelected(programConfig.fpsMode == 0);
+
+        unlimited = new JCheckBox("Unlimited", programConfig.fpsMode == 2);
+        unlimited.setSelected(programConfig.fpsMode == 2);
+
         JLabel widthLabel = new JLabel("Width");
         JLabel heightLabel = new JLabel("Height");
+        JLabel fpsLabel = new JLabel("                    FPS Cap (If not VSync or Unlimited): ");
 
         widthField = new JTextField(Integer.toString(programConfig.width), 60);
         heightField = new JTextField(Integer.toString(programConfig.height), 60);
+        fpsField = new JTextField(Integer.toString(programConfig.fps), 20);
 
         IntFilter filter = new IntFilter();
 
         ((PlainDocument) widthField.getDocument()).setDocumentFilter(filter);
         ((PlainDocument) heightField.getDocument()).setDocumentFilter(filter);
+        ((PlainDocument) fpsField.getDocument()).setDocumentFilter(filter);
 
         widthField.setEnabled(!programConfig.fullscreen);
         heightField.setEnabled(!programConfig.fullscreen);
@@ -112,6 +125,8 @@ public class ConfigMenu implements ActionListener, WindowListener {
         accept.setActionCommand("ACCEPT");
         cancel.setActionCommand("CANCEL");
         folder.setActionCommand("FOLDER");
+        vsync.setActionCommand("VSYNC");
+        unlimited.setActionCommand("UNLIMITED");
 
         layout.setHorizontalGroup(
                 layout.createSequentialGroup()
@@ -120,6 +135,11 @@ public class ConfigMenu implements ActionListener, WindowListener {
                                 .addComponent(widthLabel)
                                 .addComponent(heightLabel)
                                 .addComponent(osuLocation)
+                                .addGroup(layout.createSequentialGroup()
+                                        .addComponent(vsync)
+                                        .addComponent(unlimited)
+                                        .addComponent(fpsLabel)
+                                        .addComponent(fpsField))
                                 .addComponent(accept))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                                 .addComponent(widthField)
@@ -143,6 +163,11 @@ public class ConfigMenu implements ActionListener, WindowListener {
                                 .addComponent(songsField)
                                 .addComponent(folder))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                                .addComponent(vsync)
+                                .addComponent(unlimited)
+                                .addComponent(fpsLabel)
+                                .addComponent(fpsField))
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                                 .addComponent(accept)
                                 .addComponent(cancel))
         );
@@ -159,6 +184,8 @@ public class ConfigMenu implements ActionListener, WindowListener {
         frame.add(cancel);*/
 
         fullscreenToggle.addActionListener(this);
+        vsync.addActionListener(this);
+        unlimited.addActionListener(this);
         accept.addActionListener(this);
         cancel.addActionListener(this);
         folder.addActionListener(this);
@@ -195,45 +222,71 @@ public class ConfigMenu implements ActionListener, WindowListener {
                 //validate
                 programConfig.fullscreen = fullscreenToggle.isSelected();
                 programConfig.osuFolder = songsField.getText();
+                programConfig.fpsMode = vsync.isSelected() ? 0 : (unlimited.isSelected() ? 2 : 1);
 
-                if (!programConfig.fullscreen)
-                {
-                    //width and height must be valid
-                    try {
-                        programConfig.width = Integer.parseInt(widthField.getText());
-                        programConfig.height = Integer.parseInt(heightField.getText());
 
-                        if (programConfig.width > 0 && programConfig.height > 0)
+                try {
+                    programConfig.fps = Integer.parseInt(fpsField.getText());
+
+                    if (programConfig.fpsMode == 1)
+                    {
+                        if (programConfig.fps > 480)
                         {
-                            //Give a warning for configurations that are smaller than recommended minimum or larger than the resolution of the display
-                            if (programConfig.width > fullscreenMode.width || programConfig.height > fullscreenMode.height)
+                            int result = JOptionPane.showConfirmDialog(frame, "Your chosen FPS cap seems unnecessarily high. Are you sure you wish to continue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                            if (result != JOptionPane.OK_OPTION)
                             {
-                                int result = JOptionPane.showConfirmDialog(frame, "Your chosen resolution may not fit on your screen. Are you sure you wish to continue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
-                                if (result != JOptionPane.OK_OPTION)
-                                {
-                                    break;
-                                }
+                                break;
                             }
-
-                            finish();
                         }
-                        else
+                        else if (programConfig.fps < 30)
                         {
-                            logger.error("Somehow an invalid dimension was entered.");
-                            JOptionPane.showMessageDialog(frame, "Invalid dimensions entered.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                            int result = JOptionPane.showConfirmDialog(frame, "Your chosen FPS cap seems unusually low. Are you sure you wish to continue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                            if (result != JOptionPane.OK_OPTION)
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!programConfig.fullscreen)
+                    {
+                        //width and height must be valid
+                            programConfig.width = Integer.parseInt(widthField.getText());
+                            programConfig.height = Integer.parseInt(heightField.getText());
+
+                            if (programConfig.width > 0 && programConfig.height > 0)
+                            {
+                                //Give a warning for configurations that are smaller than recommended minimum or larger than the resolution of the display
+                                if (programConfig.width > fullscreenMode.width || programConfig.height > fullscreenMode.height)
+                                {
+                                    int result = JOptionPane.showConfirmDialog(frame, "Your chosen resolution may not fit on your screen. Are you sure you wish to continue?", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                                    if (result != JOptionPane.OK_OPTION)
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                finish();
+                                break;
+                            }
+                            else
+                            {
+                                logger.error("Somehow an invalid dimension was entered.");
+                                JOptionPane.showMessageDialog(frame, "Invalid dimensions entered.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                                break;
+                            }
                         }
                     }
                     catch (Exception ex) {
                         //Error will be caught here if game crashes.
                         logger.error("Error; ", ex);
                         System.exit(ex.hashCode());
+                        break;
                     }
-                }
-                else
-                {
                     finish();
-                }
                 break;
             case "CANCEL":
                 frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
@@ -245,6 +298,15 @@ public class ConfigMenu implements ActionListener, WindowListener {
                     songsField.setText(file.getPath());
                     testSongFolder(file);
                 }
+                break;
+            case "VSYNC":
+                if (vsync.isSelected())
+                    unlimited.setSelected(false);
+                break;
+            case "UNLIMITED":
+                if (unlimited.isSelected())
+                    vsync.setSelected(false);
+                break;
         }
     }
 

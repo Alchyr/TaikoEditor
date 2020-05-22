@@ -1,6 +1,7 @@
 package alchyr.taikoedit;
 
 import alchyr.taikoedit.audio.MusicWrapper;
+import alchyr.taikoedit.audio.PreloadedMp3;
 import alchyr.taikoedit.core.GameLayer;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.layers.EditorLayer;
@@ -8,10 +9,13 @@ import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.management.AssetMaster;
 import alchyr.taikoedit.management.LocalizationMaster;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.management.SoundMaster;
+import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.TextRenderer;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.backends.lwjgl3.audio.OpenALAudio;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -29,6 +33,7 @@ public class TaikoEditor extends ApplicationAdapter {
     private ShapeRenderer sr;
 
     public static AssetMaster assetMaster;
+    public static SoundMaster soundMaster;
     public static TextRenderer textRenderer;
 
     private static Cursor hiddenCursor;
@@ -46,38 +51,34 @@ public class TaikoEditor extends ApplicationAdapter {
 
     //update/framerate control
     private boolean paused;
+    private boolean vsync;
+    private boolean unlimited;
+    private boolean useSync;
+    private int fps;
+
+    private static final Sync sync = new Sync();
+
+    public TaikoEditor(boolean vsyncEnabled, boolean unlimited, int fps) {
+        vsync = vsyncEnabled;
+        this.unlimited = unlimited;
+        useSync = !vsync && !unlimited;
+        this.fps = fps;
+    }
 
     @Override
     public void create() {
-        /*FileHandle h = Gdx.files.getFileHandle("taikoedit/data/worldgen/nodupe.txt", Files.FileType.Internal);
-        String data = h.readString();
-        String[] dataLines = data.split("\r\n");
-        StringBuilder result = new StringBuilder();
-        HashMap<String, Boolean> registeredStrings = new HashMap<>();
-        for (String s : dataLines)
-        {
-            if (!s.contains("iy") && !registeredStrings.containsKey(s))
-            {
-                registeredStrings.put(s, true);
-                result.append(s);
-                result.append('\n');
-            }
-        }
-
-        FileHandle outFile = Gdx.files.getFileHandle("C:\\Users\\User\\Documents\\output.txt", Files.FileType.Absolute);
-        outFile.writeString(result.toString(), false);*/
-
         createCursors();
         hideCursor();
 
         end = false;
 
 
-    	if (assetMaster != null)
+    	if (assetMaster != null) //shouldn't happen but I like being careful.
 		{
 			assetMaster.dispose();
 		}
         assetMaster = new AssetMaster();
+    	soundMaster = new SoundMaster();
 
     	if (sb != null)
     	    sb.dispose();
@@ -113,6 +114,9 @@ public class TaikoEditor extends ApplicationAdapter {
 
         SystemMaster.generate(currentGame.SEED);*/
 
+        //A U D I O
+
+        ((OpenALAudio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
         EditorLayer.music = new MusicWrapper();
     }
 
@@ -128,6 +132,9 @@ public class TaikoEditor extends ApplicationAdapter {
         if (paused)
             return;
 
+        if (useSync)
+            sync.sync(fps);
+
         float elapsed = Gdx.graphics.getDeltaTime();
 
         gameRender(gameUpdate(elapsed), elapsed);
@@ -137,6 +144,9 @@ public class TaikoEditor extends ApplicationAdapter {
 
     private int gameUpdate(float elapsed)
     {
+        //Update misc
+        soundMaster.update(elapsed);
+
         //Update layers
         boolean update = true;
         int renderIndex = -1;

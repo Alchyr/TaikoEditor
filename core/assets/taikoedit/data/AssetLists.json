@@ -35,16 +35,38 @@
       "class": "BitmapFont"
     },
     {
+      "name": "aller small",
+      "file": "taikoedit/fonts/Aller/Aller_Bd.ttf",
+      "class": "TrueTypeFont",
+      "params": "s_12 x_0 y_0 k_1"
+    },
+    {
       "name": "yugothl",
       "file": "YuGothM.ttc",
       "class": "SystemTrueTypeFont",
       "params": "s_32 x_0 k_0"
+    }
+  ],
+  "hitsound": [
+    {
+      "name": "don",
+      "file": "taikoedit/sfx/don.wav",
+      "class": "Sound"
     },
     {
-      "name": "small",
-      "file": "YuGothM.ttc",
-      "class": "SystemTrueTypeFont",
-      "params": "s_16 x_0 k_0"
+      "name": "don finish",
+      "file": "taikoedit/sfx/don-finish.wav",
+      "class": "Sound"
+    },
+    {
+      "name": "kat",
+      "file": "taikoedit/sfx/kat.wav",
+      "class": "Sound"
+    },
+    {
+      "name": "kat finish",
+      "file": "taikoedit/sfx/kat-finish.wav",
+      "class": "Sound"
     }
   ]
 }

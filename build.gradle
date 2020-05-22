@@ -59,6 +59,7 @@ project(":core") {
 
     dependencies {
         implementation 'com.google.code.gson:gson:2.8.6'
+        api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
@@ -67,6 +68,7 @@ project(":core") {
         //local file
         compile fileTree(dir: '/lib', include: '*.jar')
 
+        compile group: 'org.lwjgl', name: 'lwjgl-glfw', version: '3.2.3'
         compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.0'
         compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
     }

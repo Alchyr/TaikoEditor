@@ -11,9 +11,7 @@ import static alchyr.taikoedit.TaikoEditor.textRenderer;
 public class Mapset {
     public String key; //Map folder
 
-    private boolean sameSong; //Usually true, but will be false in some multi-mp3 beatmapsets. Should result in some features being disabled.
-
-    private boolean loadedData = false;
+    public boolean sameSong; //Usually true, but will be false in some multi-mp3 beatmapsets. Should result in some features being disabled.
 
     protected String songFile = "";
     protected String creator = "";
@@ -35,17 +33,7 @@ public class Mapset {
 
         for (File map : mapFiles)
         {
-            MapInfo info;
-
-            if (!loadedData)
-            {
-                info = new MapInfo(map, this);
-                loadedData = true;
-            }
-            else
-            {
-                info = new MapInfo(map);
-            }
+            MapInfo info = new MapInfo(map, this);
             if (info.mode == 1)
             {
                 maps.add(info);

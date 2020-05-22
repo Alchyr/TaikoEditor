@@ -1,14 +1,14 @@
 package alchyr.taikoedit.maps;
 
+import alchyr.taikoedit.editor.BeatDivisors;
+import alchyr.taikoedit.editor.DivisorOptions;
+import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.maps.components.HitObject;
 import alchyr.taikoedit.maps.components.TimingPoint;
 import alchyr.taikoedit.util.assets.FileHelper;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.SortedMap;
+import java.util.*;
 
 //Will be referenced by displays for rendering, and modifications in editor will be performed on it to ensure all displays are connected to the same map object
 public class EditorBeatmap {
@@ -19,6 +19,8 @@ public class EditorBeatmap {
     public final PositionalObjectTreeMap<HitObject> objects;
     //Extend tree map to provide more support for multiple stacked objects
 
+    private BeatDivisors divisor;
+
 
     private FullMapInfo fullMapInfo;
 
@@ -26,6 +28,10 @@ public class EditorBeatmap {
     //For edit objects
     private NavigableMap<Integer, ArrayList<HitObject>> editObjects;
     private int lastStart = Integer.MIN_VALUE, lastEnd = Integer.MIN_VALUE;
+
+
+    //TODO: When editing timing is implemented, add a hook "OnTimingChanged" which will be used by BeatDivisors to re-generate whatever values are necessary
+    //This should also be used to ensure that if sameSong is true, timing changes will be kept synced with the other difficulties.
 
 
     public EditorBeatmap(Mapset set, MapInfo map)
@@ -37,10 +43,25 @@ public class EditorBeatmap {
         parse(set, map);
     }
 
-    public boolean is(MapInfo info)
+
+    public int getDefaultDivisor()
     {
-        return fullMapInfo.mapFile.equals(info.mapFile);
+        return fullMapInfo.beatDivisor;
     }
+
+
+    public void setDivisorObject(BeatDivisors divisor)
+    {
+        this.divisor = divisor;
+    }
+    public BeatDivisors generateDivisor(DivisorOptions divisorOptions)
+    {
+        return divisor = new BeatDivisors(divisorOptions, this);
+    }
+
+
+
+
 
 
     public NavigableMap<Integer, ArrayList<HitObject>> getEditObjects(int startPos, int endPos)
@@ -53,9 +74,22 @@ public class EditorBeatmap {
         }
         return editObjects;
     }
+    public SortedSet<Snap> getActiveSnaps(int startPos, int endPos)
+    {
+        return divisor.getSnaps(startPos, endPos);
+    }
 
 
 
+
+
+
+
+
+    public boolean is(MapInfo info)
+    {
+        return fullMapInfo.mapFile.equals(info.mapFile);
+    }
 
     private void parse(Mapset set, MapInfo map)
     {
@@ -185,7 +219,7 @@ public class EditorBeatmap {
                                     fullMapInfo.distanceSpacing = line.substring(16).trim();
                                     break;
                                 case "BeatDivisor":
-                                    fullMapInfo.beatDivisor = line.substring(12).trim();
+                                    fullMapInfo.beatDivisor = Integer.parseInt(line.substring(12).trim());
                                     break;
                                 case "GridSize":
                                     fullMapInfo.gridSize = line.substring(9).trim();

@@ -16,7 +16,7 @@ public class FullMapInfo extends MapInfo {
     //[Editor]
     public List<Integer> bookmarks = new ArrayList<>();
     public String distanceSpacing = "0.8"; //similar to stackLeniency, irrelevant
-    public String beatDivisor = "4"; //irrelevant
+    public int beatDivisor = 4;
     public String gridSize = "32"; //irrelevant
     public String timelineZoom = "1"; //irrelevant
 

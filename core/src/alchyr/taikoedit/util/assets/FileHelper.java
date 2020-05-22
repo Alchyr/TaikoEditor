@@ -99,4 +99,50 @@ public class FileHelper {
         }
         return null;
     }
+
+    public static List<String> readFileLines(File f, String stopLine)
+    {
+        if (f.isFile() && f.canRead())
+        {
+            try
+            {
+                FileReader reader = new FileReader(f);
+
+                ArrayList<String> lines = new ArrayList<>();
+                StringBuilder line = new StringBuilder();
+
+                if (reader.ready())
+                {
+                    int c = reader.read();
+                    while (c != -1)
+                    {
+                        char ch = (char)c;
+                        if (ch == '\n')
+                        {
+                            String lineText = line.toString();
+                            lines.add(lineText);
+                            line = new StringBuilder();
+
+                            if (lineText.equals(stopLine))
+                                break;
+                        }
+                        else if (ch != '\r') //ignore carriage return
+                        {
+                            line.append(ch);
+                        }
+                        c = reader.read();
+                    }
+                }
+
+                reader.close();
+
+                return lines;
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
 }

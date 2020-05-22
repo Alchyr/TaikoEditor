@@ -5,8 +5,9 @@ import com.badlogic.gdx.Input;
 import java.util.HashMap;
 
 public class SettingsMaster {
-    private static int WIDTH;
-    private static int HEIGHT;
+    private static boolean fullscreen;
+
+    private static int WIDTH, HEIGHT, MIDDLE, GAMEPLAY_HEIGHT;
 
     public static boolean autoSprint = true;
 
@@ -19,6 +20,9 @@ public class SettingsMaster {
     }
 
     public static String osuFolder = "";
+
+    public static float musicVolume = 1.0f;
+    public static float effectVolume = 1.0f;
 
     public static void setLanguage(Language language) {
         boolean loadText = SettingsMaster.language != language;
@@ -35,9 +39,12 @@ public class SettingsMaster {
     public static int getWidth() {
         return WIDTH;
     }
+    public static int getMiddle() {
+        return MIDDLE;
+    }
 
     public static int getHeight() {
-        return HEIGHT;
+        return GAMEPLAY_HEIGHT;
     }
 
     public static void load()
@@ -49,9 +56,22 @@ public class SettingsMaster {
     public static void updateDimensions(int width, int height)
     {
         WIDTH = width;
+        MIDDLE = WIDTH / 2;
         HEIGHT = height;
+        GAMEPLAY_HEIGHT = HEIGHT - (fullscreen ? 20 : 0);
 
         //All things that are based on screen size should be recalculated here. A loading layer should be placed on top of the screen until this is complete.
+    }
+    public static void setFullscreen(boolean fullscreen)
+    {
+        if (SettingsMaster.fullscreen = fullscreen)
+        {
+            GAMEPLAY_HEIGHT = HEIGHT;
+        }
+        else
+        {
+            GAMEPLAY_HEIGHT = HEIGHT - 20;
+        }
     }
 
 

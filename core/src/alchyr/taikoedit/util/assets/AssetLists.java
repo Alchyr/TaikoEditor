@@ -3,8 +3,10 @@ package alchyr.taikoedit.util.assets;
 import alchyr.taikoedit.management.AssetMaster;
 import alchyr.taikoedit.util.TrueTypeFontGenerator;
 import alchyr.taikoedit.util.structures.Pair;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.TextureLoader;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.utils.Json;
@@ -15,8 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.editorLogger;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 public class AssetLists implements Json.Serializable {
     private final HashMap<String, ArrayList<AssetInfo>> lists = new HashMap<>();
@@ -67,12 +68,39 @@ public class AssetLists implements Json.Serializable {
                                 params = info.getParams().split(" ");
                                 assetMaster.loadingRegions.add(new Pair<>(info.getAssetName(name), new RegionInfo(info.getFileName(), params)));
                                 break;
+                            case "sound":
+                                soundMaster.addSfx(info.getAssetName(name), info.getFileName());
+                                break;
                             case "bitmapfont":
                                 manager.load(info.getFileName(), BitmapFont.class);
                                 assetMaster.loadedAssets.put(info.getAssetName(name), info.getFileName());
                                 break;
                             case "truetypefont":
+                                if (info.getParams() != null)
+                                {
+                                    params = info.getParams().split(" ");
+                                    for (String parameter : params)
+                                    {
+                                        String[] args = parameter.split("_");
 
+                                        switch (args[0])
+                                        {
+                                            case "s":
+                                                TrueTypeFontGenerator.getParameters().size = Integer.parseInt(args[1]);
+                                                break;
+                                            case "x":
+                                                TrueTypeFontGenerator.getParameters().spaceX = Integer.parseInt(args[1]);
+                                                break;
+                                            case "y":
+                                                TrueTypeFontGenerator.getParameters().spaceY = Integer.parseInt(args[1]);
+                                                break;
+                                            case "k":
+                                                TrueTypeFontGenerator.getParameters().kerning = Integer.parseInt(args[1]) != 0;
+                                                break;
+                                        }
+                                    }
+                                }
+                                assetMaster.loadedFonts.put(info.getAssetName(name), TrueTypeFontGenerator.generateFont(Gdx.files.internal(info.getFileName())));
                                 break;
                             case "systemtruetypefont": //loads from system fonts.
                                 if (info.getParams() != null)
@@ -159,6 +187,9 @@ public class AssetLists implements Json.Serializable {
                             }
                         }
                         master.unload(info.getFileName());
+                        break;
+                    case "sound":
+                        soundMaster.removeSfx(info.getAssetName(name));
                         break;
                     case "special":
                         if (info.getParams() != null)

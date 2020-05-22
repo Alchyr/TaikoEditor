@@ -25,11 +25,12 @@ import static alchyr.taikoedit.TaikoEditor.*;
 public class MenuLayer extends LoadedLayer implements InputLayer {
     private static MenuLayer menu;
 
-    private static final int PER_ROW = 5;
-    private static final int PER_COLUMN = 4;
-    private static final int PER_SCREEN = PER_ROW * (PER_COLUMN + 1); //add an extra row for those that poke off the edges of the screen
-
     private static int OPTION_WIDTH, OPTION_HEIGHT;
+
+    private static int PER_ROW;
+    private static int PER_COLUMN;
+    private static int PER_SCREEN;
+
 
     private boolean initialized;
 
@@ -44,7 +45,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     private int bgWidth, bgHeight;
 
     private Texture pixel;
-    private int searchHeight;
+    private int searchHeight, searchY;
     private float searchTextOffsetX, searchTextOffsetY;
 
     private TextInput searchInput;
@@ -73,8 +74,12 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     public void initialize() {
         if (!initialized)
         {
-            OPTION_WIDTH = SettingsMaster.getWidth() / PER_ROW;
-            OPTION_HEIGHT = SettingsMaster.getHeight() / PER_COLUMN;
+            OPTION_WIDTH = Math.max(300, SettingsMaster.getWidth() / 5);
+            OPTION_HEIGHT = Math.max(200, SettingsMaster.getHeight() / 4);
+
+            PER_ROW = SettingsMaster.getWidth() / OPTION_WIDTH;
+            PER_COLUMN = SettingsMaster.getHeight() / OPTION_HEIGHT;
+            PER_SCREEN = PER_ROW * (PER_COLUMN + 1); //add an extra row for those that poke off the edges of the screen
 
             if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
             {
@@ -86,9 +91,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             }
 
             pixel = assetMaster.get("ui:pixel");
-            searchHeight = (int) (70 * SettingsMaster.SCALE);
-            searchTextOffsetX = 10 * SettingsMaster.SCALE;
-            searchTextOffsetY = 30 * SettingsMaster.SCALE;
+            searchHeight = 85; //For the sake of text being rendered, I can't make this smaller.
+            searchY = SettingsMaster.getHeight() - searchHeight;
+            searchTextOffsetX = 10;
+            searchTextOffsetY = 40;
 
             for (String setFile : MapMaster.mapDatabase.keys)
             {
@@ -153,10 +159,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         }
 
         sb.setColor(Color.BLACK);
-        sb.draw(pixel, 0, SettingsMaster.getHeight() - searchHeight, SettingsMaster.getWidth(), searchHeight);
+        sb.draw(pixel, 0, searchY, SettingsMaster.getWidth(), searchHeight);
 
         sb.setColor(Color.WHITE);
-        searchInput.render(sb, searchTextOffsetX, SettingsMaster.getHeight() - searchTextOffsetY);
+        searchInput.render(sb, searchTextOffsetX, searchY + searchTextOffsetY);
     }
 
     @Override
@@ -200,7 +206,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                 "ui",
                 "font",
                 "menu",
-                "background"
+                "background",
+                "hitsound"
         }, this, true).addTask(MapMaster::load).addCallback(TaikoEditor::initialize);
     }
 
@@ -289,7 +296,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
         @Override
         public boolean scrolled(int amount) {
-            sourceLayer.scrollPos += amount * 10;
+            sourceLayer.scrollPos += amount * 30;
 
             if (sourceLayer.displayIndex == 0 && sourceLayer.scrollPos < 0)
                 sourceLayer.scrollPos = 0;

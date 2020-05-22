@@ -22,6 +22,9 @@ public class DesktopLauncher {
 
 	private static final String settingsPrefix = "settings" + File.separator;
 
+	private static int fpsMode = 0; //0 = vsync, 1 = sync, 2 = unlimited
+	private static int fps;
+
 	public static void main (String[] arg) {
 		/*logging test
 		logger.trace("trace");
@@ -35,14 +38,13 @@ public class DesktopLauncher {
 
 	public static void launch(Lwjgl3ApplicationConfiguration config)
 	{
-		new Lwjgl3Application(new TaikoEditor(), config);
+		new Lwjgl3Application(new TaikoEditor(fpsMode == 0, fpsMode == 2, fps), config);
 	}
 
 	private static void initialize()
 	{
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 
-		config.useVsync(false);
 		config.setAudioConfig(16, 2048, 6);
 
 		try {
@@ -70,7 +72,11 @@ public class DesktopLauncher {
 						config.setAutoIconify(false);
 					}
 
+					SettingsMaster.setFullscreen(programConfig.fullscreen);
+
 					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
+					config.useVsync((fpsMode = programConfig.fpsMode) == 0);
+					fps = programConfig.fps;
 				}
 				catch (Exception e)
 				{
@@ -131,6 +137,8 @@ public class DesktopLauncher {
 			}
 
 			SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
+			config.useVsync((fpsMode = programConfig.fpsMode) == 0);
+			fps = programConfig.fps;
 
 			return true;
 		}

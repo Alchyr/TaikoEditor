@@ -114,7 +114,7 @@ public class MapInfo {
         mapFile = map;
         background = "";
 
-        List<String> lines = FileHelper.readFileLines(mapFile);
+        List<String> lines = FileHelper.readFileLines(mapFile, "[TimingPoints]");
 
         if (lines != null)
         {
@@ -143,16 +143,20 @@ public class MapInfo {
                                 break read;
                             break;
                         case "Creator":
-                            owner.creator = line.substring(8).trim();
+                            if (owner.creator.isEmpty())
+                                owner.creator = line.substring(8).trim();
                             break;
                         case "Title":
-                            owner.title = line.substring(6).trim();
+                            if (owner.creator.isEmpty())
+                                owner.title = line.substring(6).trim();
                             break;
                         case "Artist":
-                            owner.artist = line.substring(7).trim();
+                            if (owner.creator.isEmpty())
+                                owner.artist = line.substring(7).trim();
                             break;
                         case "Version":
-                            difficultyName = line.substring(8).trim();
+                            if (owner.creator.isEmpty())
+                                difficultyName = line.substring(8).trim();
                             break;
                     }
                 }
@@ -198,7 +202,8 @@ public class MapInfo {
                             if (FileHelper.isImageFilename(parts[2]))
                             {
                                 background = FileHelper.concat(mapFile.getParent(), parts[2]);
-                                owner.background = background;
+                                if (owner.background.isEmpty())
+                                    owner.background = background;
                                 break;
                             }
                         }

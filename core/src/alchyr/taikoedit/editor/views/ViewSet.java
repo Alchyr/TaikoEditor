@@ -1,6 +1,6 @@
-package alchyr.taikoedit.util.structures;
+package alchyr.taikoedit.editor.views;
 
-import alchyr.taikoedit.editor.views.MapView;
+import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.maps.EditorBeatmap;
 import alchyr.taikoedit.maps.components.HitObject;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -23,19 +23,13 @@ public class ViewSet {
         viewObjects = new HashMap<>();
     }
 
-    public void update(int pos)
+    public void update(float exactPos, int pos, boolean isPlaying)
     {
+        prep(pos);
         for (MapView view : views)
         {
-            view.update(pos);
-        }
-    }
-
-    public void prep()
-    {
-        for (Map.Entry<Integer, ArrayList<MapView>> viewSet : organizedViews.entrySet())
-        {
-            viewObjects.put(viewSet.getKey(), viewSet.getValue().get(0).prep(map)); //Each type should only be prepped once
+            view.update(exactPos, pos);
+            view.primaryUpdate(isPlaying);
         }
     }
 
@@ -55,6 +49,38 @@ public class ViewSet {
                     }
                 }
             }
+        }
+    }
+
+    public boolean click(EditorLayer source, int x, int y, int pointer, int button)
+    {
+        for (MapView view : views) {
+            if (y < view.topY && y >= view.y)
+            {
+                if (view.click(x, y, pointer, button))
+                {
+                    if (source.primaryView != null)
+                        source.primaryView.isPrimary = false;
+                    source.primaryView = view;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public MapView first()
+    {
+        if (views.isEmpty())
+            return null;
+        return views.get(0);
+    }
+
+    public void prep(int pos)
+    {
+        for (Map.Entry<Integer, ArrayList<MapView>> viewSet : organizedViews.entrySet())
+        {
+            viewObjects.put(viewSet.getKey(), viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
         }
     }
 

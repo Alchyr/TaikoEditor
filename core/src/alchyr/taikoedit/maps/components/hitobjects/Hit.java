@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import static alchyr.taikoedit.TaikoEditor.soundMaster;
+
 public class Hit extends HitObject {
     public static Texture texture;
 
@@ -59,7 +61,7 @@ public class Hit extends HitObject {
     }
 
     @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y) {
         sb.setColor(isRim ? kat : don);
         if (finish)
         {
@@ -70,6 +72,33 @@ public class Hit extends HitObject {
         {
             sb.draw(texture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                     1.0f, 1.0f, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        }
+    }
+
+    @Override
+    public void playSound()
+    {
+        if (finish)
+        {
+            if (isRim)
+            {
+                soundMaster.playSfx("hitsound:kat finish", this.volume, true);
+            }
+            else
+            {
+                soundMaster.playSfx("hitsound:don finish", this.volume, true);
+            }
+        }
+        else
+        {
+            if (isRim)
+            {
+                soundMaster.playSfx("hitsound:kat", this.volume, true);
+            }
+            else
+            {
+                soundMaster.playSfx("hitsound:don", this.volume, true);
+            }
         }
     }
 }

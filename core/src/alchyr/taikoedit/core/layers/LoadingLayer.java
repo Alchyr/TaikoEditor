@@ -6,6 +6,7 @@ import alchyr.taikoedit.management.SettingsMaster;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.Queue;
 
 import java.util.ArrayList;
 import java.util.concurrent.*;
@@ -19,8 +20,8 @@ public class LoadingLayer extends GameLayer {
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    private final ArrayList<Runnable> tasks = new ArrayList<>();
-    private final ArrayList<Runnable> callbacks = new ArrayList<>();
+    private final Queue<ArrayList<Runnable>> tasks = new Queue<>();
+    private final Queue<ArrayList<Runnable>> callbacks = new Queue<>();
     private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
     private boolean assetsLoaded;
     private int taskCount;
@@ -67,16 +68,31 @@ public class LoadingLayer extends GameLayer {
         this(assetLists, replacementLayers, false);
     }
 
+    public LoadingLayer addCallback(boolean newSet, Runnable callback)
+    {
+        if (callbacks.isEmpty() || newSet)
+        {
+            callbacks.addFirst(new ArrayList<>());
+        }
+        callbacks.first().add(callback);
+        return this;
+    }
     public LoadingLayer addCallback(Runnable callback)
     {
-        callbacks.add(callback);
+        return addCallback(false, callback);
+    }
+    public LoadingLayer addTask(boolean newSet, Runnable runnable)
+    {
+        if (tasks.isEmpty() || newSet)
+        {
+            tasks.addFirst(new ArrayList<>());
+        }
+        tasks.first().add(runnable);
         return this;
     }
     public LoadingLayer addTask(Runnable runnable)
     {
-        tasks.add(runnable);
-        ++taskCount;
-        return this;
+        return addTask(false, runnable);
     }
     public LoadingLayer loadExtra(String key, String file, Class<?> type)
     {
@@ -87,25 +103,26 @@ public class LoadingLayer extends GameLayer {
 
     @Override
     public void update(float elapsed) {
-        if (!tasks.isEmpty())
-        {
-            for (Runnable task : tasks)
-                activeTasks.add(executor.submit(task));
-            tasks.clear();
-        }
-
         if (doneLoading())
         {
             //done with current tasks
             activeTasks.clear();
+
+            if (!tasks.isEmpty())
+            {
+                ArrayList<Runnable> taskSet = tasks.removeLast();
+                taskCount = taskSet.size();
+                for (Runnable task : taskSet)
+                    activeTasks.add(executor.submit(task));
+                return;
+            }
+
             if (!callbacks.isEmpty()) //Trigger callbacks
             {
-                taskCount = callbacks.size();
-
-                for (Runnable callback : callbacks)
-                    activeTasks.add(executor.submit(callback));
-
-                callbacks.clear();
+                ArrayList<Runnable> taskSet = callbacks.removeLast();
+                taskCount = taskSet.size();
+                for (Runnable task : taskSet)
+                    activeTasks.add(executor.submit(task));
                 return;
             }
 

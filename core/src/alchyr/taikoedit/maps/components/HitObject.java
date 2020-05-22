@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.soundMaster;
 
 public abstract class HitObject extends PositionalObject {
     protected final static int CIRCLE_SIZE = 100;
@@ -55,6 +56,8 @@ public abstract class HitObject extends PositionalObject {
     private static final int SPINNER = 8;
     protected static final int COLORSKIP = 0b1110000;
 
+    public float volume = 1.0f;
+
     public static HitObject create(String data)
     {
         String[] params = data.split(",");
@@ -90,5 +93,17 @@ public abstract class HitObject extends PositionalObject {
         Spinner.texture = assetMaster.get("editor:hit");
     }
 
-    public abstract void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y);
+    public void playSound()
+    {
+        if (finish)
+        {
+            soundMaster.playSfx("hitsound:don finish", this.volume, true);
+        }
+        else
+        {
+            soundMaster.playSfx("hitsound:don", this.volume, true);
+        }
+    }
+
+    public abstract void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y);
 }

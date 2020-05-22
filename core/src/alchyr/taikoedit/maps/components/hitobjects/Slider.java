@@ -115,7 +115,7 @@ public class Slider extends HitObject {
     }
 
     @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y) {
         sb.setColor(slider);
         if (finish)
         {

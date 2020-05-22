@@ -7,6 +7,8 @@ public class FilePathInfo {
     public String path;
     public String filename;
 
+    private int hash = 0;
+
     public FilePathInfo(String path, String filename)
     {
         this.path = path;
@@ -24,6 +26,8 @@ public class FilePathInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(path, filename);
+        if (hash == 0)
+            hash = Objects.hash(path, filename);
+        return hash;
     }
 }

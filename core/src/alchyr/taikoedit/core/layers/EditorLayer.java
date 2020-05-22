@@ -4,8 +4,10 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.audio.MusicWrapper;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.input.AdjustedInputProcessor;
-import alchyr.taikoedit.core.input.sub.TextInput;
-import alchyr.taikoedit.editor.views.EditView;
+import alchyr.taikoedit.editor.BeatDivisors;
+import alchyr.taikoedit.editor.DivisorOptions;
+import alchyr.taikoedit.editor.Timeline;
+import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.maps.EditorBeatmap;
@@ -13,7 +15,10 @@ import alchyr.taikoedit.maps.MapInfo;
 import alchyr.taikoedit.maps.Mapset;
 import alchyr.taikoedit.maps.components.HitObject;
 import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
-import alchyr.taikoedit.util.structures.ViewSet;
+import alchyr.taikoedit.editor.views.ViewSet;
+import alchyr.taikoedit.util.input.KeyHoldManager;
+import alchyr.taikoedit.util.input.KeyHoldObject;
+import alchyr.taikoedit.util.input.MouseHoldObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
@@ -37,22 +42,36 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private int bgWidth, bgHeight;
 
     private Texture pixel;
-    private int searchHeight;
-    private float searchTextOffsetX, searchTextOffsetY;
 
-    private TextInput searchInput;
+    //Title/top bar
+    private float titleOffsetX, titleOffsetY;
+    private int topBarHeight;
+    private int titleY;
+    private int topBarY;
+
+    private Timeline timeline;
 
     private static final Color bgColor = new Color(0.3f, 0.3f, 0.25f, 1.0f);
 
     private final Mapset set;
 
+    private DivisorOptions divisorOptions; //Always shared
+    private BeatDivisors universalDivisor; //Sometimes shared
+
+    //Only usable if sameSong is true
+    //private HashMap<Snap, int[]> snappings;
+
+    private float currentPos; //current second position in song.
+
     //Map views
     private final ArrayList<EditorBeatmap> activeMaps;
     private final HashMap<EditorBeatmap, ViewSet> mapViews;
 
+    public MapView primaryView;
+
     //View information
     public float viewScale = 1.0f;
-    public int viewTime = 1000; //number of milliseconds before and after current position
+    public int viewTime = 1500; //number of milliseconds before and after current position
 
 
     private float exitDelay = 0.5f;
@@ -79,6 +98,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             return;
         }
 
+        //input
+        processor.initializeInput();
+
+        //graphics positions/initialization
         if (backgroundImg != null && !backgroundImg.isEmpty())
         {
             background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like. assetMaster.get(backgroundImg.toLowerCase());
@@ -98,45 +121,61 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         pixel = assetMaster.get("ui:pixel");
-        searchHeight = (int) (70 * SettingsMaster.SCALE);
-        searchTextOffsetX = 10 * SettingsMaster.SCALE;
-        searchTextOffsetY = 30 * SettingsMaster.SCALE;
+        topBarHeight = 85 + Timeline.HEIGHT;
+        titleY = SettingsMaster.getHeight() - 85;
+        topBarY = SettingsMaster.getHeight() - topBarHeight;
+        titleOffsetX = 10;
+        titleOffsetY = 40;
 
-        organizeViews();
+        //Editor stuff
+        timeline = new Timeline(SettingsMaster.getHeight() - topBarHeight, music.getSecondLength());
+        organizeViews(); //Positions views and sets primary view
     }
 
     @Override
     public void update(float elapsed) {
-        super.update(elapsed);
-
         if (exitDelay > 0)
             exitDelay -= elapsed;
 
-        int pos = getMillisecondPosition(Gdx.graphics.getRawDeltaTime());
+        processor.keyHoldManager.update(elapsed);
+
+        currentPos = getSecondPosition(Gdx.graphics.getRawDeltaTime());
+        int msTime = (int) (currentPos * 1000);
         //editorLogger.info(pos);
+
+        timeline.update(currentPos);
 
         for (ViewSet views : mapViews.values())
         {
-            views.update(pos);
-            views.prep();
+            views.update(currentPos, msTime, music.isPlaying());
         }
     }
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
+        //Background
         if (background != null)
         {
             sb.setColor(bgColor);
             sb.draw(background, 0, 0, bgWidth, bgHeight);
         }
 
+        //Top bar
         sb.setColor(Color.BLACK);
-        sb.draw(pixel, 0, SettingsMaster.getHeight() - searchHeight, SettingsMaster.getWidth(), searchHeight);
+        sb.draw(pixel, 0, topBarY, SettingsMaster.getWidth(), topBarHeight);
 
+        timeline.render(sb, sr);
+
+        //Map views
         for (EditorBeatmap map : activeMaps)
         {
             mapViews.get(map).render(sb, sr);
         }
+
+        if (primaryView != null)
+            primaryView.primaryRender(sb, sr);
+
+        //For each mapview, render overlay (difficulty name)
 
         /*sb.setColor(Color.WHITE);
         searchInput.render(sb, searchTextOffsetX, SettingsMaster.getHeight() - searchTextOffsetY);*/
@@ -145,6 +184,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private static int getMillisecondPosition(float elapsed)
     {
         return music.getMsTime(elapsed);
+    }
+    private static float getSecondPosition(float elapsed)
+    {
+        return music.getSecondTime(elapsed);
     }
 
     @Override
@@ -190,12 +233,22 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         return new LoadingLayer(new String[] {
                 "editor",
                 "background"
-        }, this, true).addTask(this::loadBeatmap).addCallback(HitObject::loadTextures).addCallback(music::prep);
+        }, this, true).addTask(this::setMusic).addCallback(this::prepMusic).addCallback(true, HitObject::loadTextures).addCallback(this::loadBeatmap);
+    }
+
+    private void setMusic()
+    {
+        music.setMusic(Gdx.files.absolute(set.getSongFile()));
+    }
+    private void prepMusic() //preloads the music.
+    {
+        music.prep();
     }
 
     private void loadBeatmap()
     {
-        music.setMusic(Gdx.files.absolute(set.getSongFile()));
+        divisorOptions = new DivisorOptions();
+        divisorOptions.reset();
 
         //If single difficulty, load automatically
         /*if (set.getMaps().size() == 1)
@@ -207,18 +260,28 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
             mapViews.get(beatmap).addView(new EditView(this, beatmap));
         }*/
+
         //Test code: Load all diffs automatically
         for (MapInfo info : set.getMaps())
         {
-            addEditView(info);
+            EditorBeatmap beatmap = getEditorBeatmap(info);
+            addEditView(beatmap);
+        }
+
+        if (activeMaps.isEmpty())
+        {
+            divisorOptions.activate(4);
+        }
+        else
+        {
+            divisorOptions.activate(activeMaps.get(0).getDefaultDivisor());
         }
         editorLogger.info("Loaded beatmap successfully.");
     }
 
-    private void addEditView(MapInfo info)
+    private void addEditView(EditorBeatmap beatmap)
     {
-        EditorBeatmap beatmap = getEditorBeatmap(info);
-        mapViews.get(beatmap).addView(new EditView(this, beatmap));
+        mapViews.get(beatmap).addView(new ObjectView(this, beatmap));
     }
 
     private EditorBeatmap getEditorBeatmap(MapInfo info)
@@ -229,6 +292,23 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 return map;
         }
         EditorBeatmap newMap = new EditorBeatmap(set, info);
+
+        if (!set.sameSong)
+        {
+            newMap.generateDivisor(divisorOptions);
+        }
+        else
+        {
+            if (universalDivisor == null)
+            {
+                universalDivisor = newMap.generateDivisor(divisorOptions);
+            }
+            else
+            {
+                newMap.setDivisorObject(universalDivisor);
+            }
+        }
+
         activeMaps.add(newMap);
         mapViews.put(newMap, new ViewSet(newMap));
         return newMap;
@@ -236,27 +316,71 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void organizeViews()
     {
-        int y = SettingsMaster.getHeight() - searchHeight;
+        int y = topBarY;
 
         for (EditorBeatmap b : activeMaps)
         {
             y = mapViews.get(b).reposition(y);
+
+            if (primaryView == null)
+            {
+                primaryView = mapViews.get(b).first();
+                if (primaryView != null)
+                    primaryView.isPrimary = true;
+            }
         }
+    }
+
+
+    private void seekLeft()
+    {
+        music.seekSecond(currentPos - 1);
+    }
+    private void seekRight()
+    {
+        music.seekSecond(currentPos + 1);
     }
 
 
     private static class EditorProcessor extends AdjustedInputProcessor {
         private final EditorLayer sourceLayer;
 
+        private final KeyHoldManager keyHoldManager;
+        private MouseHoldObject mouseHold;
+
+        private KeyHoldObject left;
+        private KeyHoldObject right;
+
         public EditorProcessor(EditorLayer source)
         {
             this.sourceLayer = source;
+            this.keyHoldManager = new KeyHoldManager();
+        }
+
+        private void initializeInput()
+        {
+            left = new KeyHoldObject(Input.Keys.LEFT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i)->sourceLayer.seekLeft(), null).addConflictingKey(Input.Keys.RIGHT);
+            right = new KeyHoldObject(Input.Keys.RIGHT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i)->sourceLayer.seekRight(), null).addConflictingKey(Input.Keys.LEFT);
         }
 
         @Override
         public boolean keyDown(int keycode) {
-            switch (keycode)
+            switch (keycode) //Process input using the current primary view?
             {
+                case Input.Keys.RIGHT:
+                    sourceLayer.seekRight();
+                    keyHoldManager.add(right);
+                    return true;
+                case Input.Keys.LEFT:
+                    sourceLayer.seekLeft();
+                    keyHoldManager.add(left);
+                    return true;
+                case Input.Keys.UP:
+                    music.changeTempo(0.1f);
+                    return true;
+                case Input.Keys.DOWN:
+                    music.changeTempo(-0.1f);
+                    return true;
                 case Input.Keys.SPACE:
                     music.toggle();
                     return true;
@@ -270,7 +394,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         @Override
         public boolean keyUp(int keycode) {
-            return false;
+            return keyHoldManager.release(keycode);
         }
 
         @Override
@@ -296,17 +420,58 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         @Override
         public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            //gameLogger.trace("Game coordinates: " + gameX + ", " + gameY);
+            editorLogger.trace("Game coordinates: " + gameX + ", " + gameY);
+            editorLogger.trace("Pointer: " + pointer);
+            editorLogger.trace("Button: " + button);
             /*for (Button b : sourceLayer.buttons)
             {
                 if (b.click(gameX, gameY, button))
                     return true;
             }*/
+
+            if (mouseHold != null) //shouldn't be possible to have mouseHold non-null here, but just in case of some cases like alt-tabbing and missing release or something.
+            {
+                mouseHold.onRelease(gameX, gameY);
+                mouseHold = null;
+            }
+
+            if (gameY > sourceLayer.topBarY)
+            {
+                if (gameY < sourceLayer.titleY)
+                {
+                    //timeline area
+                    mouseHold = sourceLayer.timeline.click(gameX, gameY, pointer, button);
+                    if (mouseHold != null)
+                        return true;
+                }
+                return false;
+            }
+            for (EditorBeatmap m : sourceLayer.activeMaps)
+            {
+                ViewSet set = sourceLayer.mapViews.get(m);
+                if (set.click(sourceLayer, gameX, gameY, pointer, button))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
+            if (mouseHold != null) //shouldn't be possible to have mouseHold non-null here, but just in case of some cases like alt-tabbing and missing release or something.
+            {
+                boolean consumed = mouseHold.onRelease(gameX, gameY);
+                mouseHold = null;
+                return consumed;
+            }
             return false;
         }
 
         @Override
         public boolean touchDragged(int screenX, int screenY, int pointer) {
+            if (mouseHold != null)
+                mouseHold.onDrag(screenX, screenY);
             return false;
         }
 
