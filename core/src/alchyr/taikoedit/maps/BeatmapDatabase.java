@@ -76,16 +76,24 @@ public class BeatmapDatabase {
     public Set<Mapset> search(String[] terms) {
         Set<Mapset> results = new HashSet<>();
 
+        boolean firstTerm = true;
+
         for (String term : terms)
         {
             List<Mapset> partialResult = indexedMapsets.find(term.toLowerCase());
 
-            if (results.isEmpty())
+            if (firstTerm)
+            {
+                firstTerm = false;
                 results.addAll(partialResult);
+            }
             else
             {
                 results.retainAll(partialResult);
             }
+
+            if (results.isEmpty())
+                break;
         }
 
         return results;

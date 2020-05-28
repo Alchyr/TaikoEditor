@@ -1,20 +1,44 @@
 package alchyr.taikoedit.maps.components.hitobjects;
 
 import alchyr.taikoedit.maps.components.HitObject;
+import alchyr.taikoedit.maps.components.ILongObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-public class Spinner extends HitObject {
-    public static Texture texture;
+import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
+public class Spinner extends HitObject implements ILongObject {
     private static final Color spinner = Color.LIGHT_GRAY.cpy();
 
-    private int endPos;
+    private int duration;
+    public int endPos;
+
+    public Spinner(int start, int duration)
+    {
+        this.type = HitType.SPINNER;
+
+        this.pos = start;
+        this.duration = duration;
+        this.endPos = this.pos + this.duration;
+        this.x = 256;
+        this.y = 192;
+        this.newCombo = true;
+
+        colorSkip = 0;
+
+        normal = false;
+        whistle = false;
+        finish = false;
+        clap = false;
+
+        hitSample = null;
+    }
 
     public Spinner(String[] params)
     {
+        type = HitType.SPINNER;
         for (int i = 0; i < params.length; ++i) //to avoid out of bounds.
         {
             switch (i)
@@ -42,8 +66,8 @@ public class Spinner extends HitObject {
                     clap = (hitSound & CLAP) > 0;
                     break;
                 case 5:
-                    duration = Integer.parseInt(params[i]);
-                    endPos = pos + duration;
+                    endPos = Integer.parseInt(params[i]);
+                    duration = endPos - pos;
                     break;
                 case 6:
                     //hitsamples
@@ -58,11 +82,67 @@ public class Spinner extends HitObject {
     }
 
     @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y) {
+    public void setPosition(int newPos) {
+        super.setPosition(newPos);
+        endPos = pos + duration;
+    }
+    @Override
+    public int getDuration() {
+        return duration;
+    }
+    @Override
+    public int getEndPos() {
+        return endPos;
+    }
+    @Override
+    public void setDuration(int duration) {
+        this.duration = duration;
+        this.endPos = this.pos + this.duration;
+    }
+    @Override
+    public void setEndPos(int endPos) {
+        this.endPos = endPos;
+        this.duration = this.endPos - this.pos;
+    }
+
+    @Override
+    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y, float alpha) {
+        spinner.a = alpha;
+        float startX = x + (this.pos - pos) * viewScale;
+        float endX = x + (this.endPos - pos) * viewScale;
         sb.setColor(spinner);
-        sb.draw(texture, x + (this.endPos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        if (duration > 0)
+        {
+            sb.draw(body, startX, y - (CIRCLE_OFFSET * LARGE_SCALE), endX - startX, CIRCLE_SIZE * LARGE_SCALE);
+        }
+        sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        sb.draw(texture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+
+        sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+
+
+        if (selected)
+        {
+            renderSelection(sb, sr, pos, viewScale, x, y);
+        }
+    }
+
+    @Override
+    public void renderSelection(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+        sb.setColor(Color.WHITE);
+
+        sb.draw(selection, (x + (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        sb.draw(selection, (x + (this.pos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+    }
+
+    @Override
+    public String toString() {
+        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (pos + duration) + "," + getHitSamples();
+    }
+    public String toString(double beatLength, double sliderMultiplier) {
+        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (pos + duration) + "," + getHitSamples();
     }
 }

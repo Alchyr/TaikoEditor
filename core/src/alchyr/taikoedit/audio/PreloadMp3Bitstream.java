@@ -169,6 +169,15 @@ public class PreloadMp3Bitstream {
         // current_frame_number = -1;
         // last_frame_number = -1;
         preload();
+
+        try
+        {
+            close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
 
@@ -228,6 +237,10 @@ public class PreloadMp3Bitstream {
         if (currentFrame < frames.size())
             return frames.get(currentFrame++);
         return null;
+    }
+    public boolean hasNextFrame()
+    {
+        return currentFrame < frames.size();
     }
 
     public void setFrame(int frame)
@@ -695,6 +708,7 @@ public class PreloadMp3Bitstream {
 
     /**
      * Determines if the next 4 bytes of the stream represent a frame header.
+     * Only used while reading the header to process the stream.
      */
     public boolean isSyncCurrentPosition (int syncmode) throws BitstreamException {
         int read = readBytes(syncbuf, 0, 4);

@@ -2,7 +2,9 @@ package alchyr.taikoedit.editor.views;
 
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.HitObject;
+import alchyr.taikoedit.util.input.KeyHoldManager;
+import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -10,8 +12,8 @@ import java.util.*;
 
 public class ViewSet {
     private final ArrayList<MapView> views;
-    private final TreeMap<Integer, ArrayList<MapView>> organizedViews;
-    private final HashMap<Integer, NavigableMap<Integer, ArrayList<HitObject>>> viewObjects;
+    private final TreeMap<MapView.ViewType, ArrayList<MapView>> organizedViews;
+    private final HashMap<MapView.ViewType, NavigableMap<Integer, ArrayList<? extends PositionalObject>>> viewObjects;
     private final EditorBeatmap map;
 
     public ViewSet(EditorBeatmap map)
@@ -39,11 +41,11 @@ public class ViewSet {
             view.renderBase(sb, sr); //render the stuff that goes under objects
         }
 
-        for (Map.Entry<Integer, ArrayList<MapView>> viewSet : organizedViews.entrySet()) {
+        for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet()) {
             ArrayList<MapView> views = viewSet.getValue();
             int index;
-            for (ArrayList<HitObject> objects : viewObjects.get(viewSet.getKey()).values()) {
-                for (HitObject o : objects) {
+            for (ArrayList<? extends PositionalObject> objects : viewObjects.get(viewSet.getKey()).values()) {
+                for (PositionalObject o : objects) {
                     for (index = 0; index < views.size(); ++index) {
                         views.get(0).renderObject(o, sb, sr);
                     }
@@ -52,21 +54,64 @@ public class ViewSet {
         }
     }
 
-    public boolean click(EditorLayer source, int x, int y, int pointer, int button)
+    public void renderOverlays(SpriteBatch sb, ShapeRenderer sr)
     {
         for (MapView view : views) {
-            if (y < view.topY && y >= view.y)
+            view.renderOverlay(sb, sr);
+        }
+    }
+
+    public void setOffset(int offset)
+    {
+        for (MapView view : views)
+        {
+            view.setOffset(offset);
+        }
+    }
+
+    public boolean containsY(int y)
+    {
+        if (views.isEmpty())
+            return false;
+
+        return y >= views.get(views.size() - 1).bottom;
+    }
+    public MapView getView(int y)
+    {
+        for (MapView view : views) {
+            if (y >= view.bottom) //Since views are positioned by their index in this array, there's no need to check that y < view.topY
             {
+                return view;
+            }
+        }
+        return null;
+    }
+    public MouseHoldObject click(EditorLayer source, int x, int y, int pointer, int button, KeyHoldManager keyHolds)
+    {
+        for (MapView view : views) {
+            if (y >= view.bottom) //Since views are positioned by their index in this array, there's no need to check that y < view.topY
+            {
+                if (view.clickOverlay(x, y, button))
+                {
+                    return null;
+                }
+                MouseHoldObject returnVal = null;
+                if (source.tools.changeToolset(view)) //If the current tool is valid for the new toolset, use it immediately
+                {
+                    returnVal = source.tools.getCurrentTool().click(view, x, y, button, keyHolds);
+                }
+
                 if (view.click(x, y, pointer, button))
                 {
                     if (source.primaryView != null)
                         source.primaryView.isPrimary = false;
                     source.primaryView = view;
                 }
-                return true;
+
+                return returnVal;
             }
         }
-        return false;
+        return null;
     }
 
     public MapView first()
@@ -76,11 +121,12 @@ public class ViewSet {
         return views.get(0);
     }
 
+    @SuppressWarnings("unchecked")
     public void prep(int pos)
     {
-        for (Map.Entry<Integer, ArrayList<MapView>> viewSet : organizedViews.entrySet())
+        for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet())
         {
-            viewObjects.put(viewSet.getKey(), viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
+            viewObjects.put(viewSet.getKey(), (NavigableMap<Integer, ArrayList<? extends PositionalObject>>) viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
         }
     }
 
@@ -107,5 +153,34 @@ public class ViewSet {
         {
             throw new IllegalArgumentException("Attempted to add a view of the wrong map to ViewSet.");
         }
+    }
+    public void removeView(MapView toRemove)
+    {
+        views.remove(toRemove);
+        if (organizedViews.containsKey(toRemove.type))
+        {
+            organizedViews.get(toRemove.type).remove(toRemove);
+            if (organizedViews.get(toRemove.type).isEmpty())
+            {
+                organizedViews.remove(toRemove.type);
+                viewObjects.remove(toRemove.type);
+            }
+        }
+    }
+
+    public boolean isEmpty()
+    {
+        return views.isEmpty();
+    }
+
+    public void dispose()
+    {
+        for (MapView view : views)
+        {
+            view.dispose();
+        }
+        views.clear();
+        organizedViews.clear();
+        viewObjects.clear();
     }
 }

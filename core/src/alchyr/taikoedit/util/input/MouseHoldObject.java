@@ -26,4 +26,9 @@ public class MouseHoldObject {
         if (onDrag != null)
             onDrag.accept(x, y);
     }
+
+    public void update(float elapsed)
+    {
+
+    }
 }

@@ -59,11 +59,21 @@ public class TextRenderer {
         currentRendering.draw(sb, s, x, y);
         return this;
     }
+    public TextRenderer renderText(SpriteBatch sb, Color c, String s, float x, float y)
+    {
+        sb.setColor(c);
+        currentRendering.draw(sb, s, x, y);
+        return this;
+    }
     public TextRenderer renderTextCentered(SpriteBatch sb, String s, float x, float y)
+    {
+        return renderTextCentered(sb, s, x, y, Color.WHITE);
+    }
+    public TextRenderer renderTextCentered(SpriteBatch sb, String s, float x, float y, Color c)
     {
         layout.reset();
 
-        layout.setText(currentRendering, s, Color.WHITE.cpy(), 1, Align.center, false);
+        layout.setText(currentRendering, s, c.cpy(), 1, Align.center, false);
 
         currentRendering.draw(sb, layout, x, y + currentRendering.getCapHeight() / 2.0f);
 

@@ -72,7 +72,7 @@ public class DesktopLauncher {
 						config.setAutoIconify(false);
 					}
 
-					SettingsMaster.setFullscreen(programConfig.fullscreen);
+					SettingsMaster.useFullscreenOffset(programConfig.fullscreen || (programConfig.width != primaryDesktopMode.width && programConfig.height != primaryDesktopMode.height));
 
 					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 					config.useVsync((fpsMode = programConfig.fpsMode) == 0);
@@ -135,6 +135,9 @@ public class DesktopLauncher {
 				config.setResizable(false);
 				config.setAutoIconify(false);
 			}
+
+
+			SettingsMaster.useFullscreenOffset(programConfig.fullscreen || (programConfig.width != displayMode.width && programConfig.height != displayMode.height));
 
 			SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 			config.useVsync((fpsMode = programConfig.fpsMode) == 0);

@@ -1,8 +1,7 @@
 package alchyr.taikoedit.util.assets;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,7 +63,8 @@ public class FileHelper {
         {
             try
             {
-                FileReader reader = new FileReader(f);
+                FileInputStream in = new FileInputStream(f);
+                InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
 
                 ArrayList<String> lines = new ArrayList<>();
                 StringBuilder line = new StringBuilder();
@@ -89,7 +89,7 @@ public class FileHelper {
                 }
 
                 reader.close();
-
+                in.close();
                 return lines;
             }
             catch (IOException e)

@@ -1,8 +1,14 @@
 package alchyr.taikoedit.maps.components;
 
 import alchyr.taikoedit.util.structures.PositionalObject;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class TimingPoint extends PositionalObject {
+    private static final Color red = Color.RED.cpy();
+    private static final Color green = Color.GREEN.cpy();
+
     //time,beatLength,meter,sampleSet,sampleIndex,volume,uninherited,effects
     /** Data from osu! wiki on File Format.
      * time (Integer): Start time of the timing section, in milliseconds from the beginning of the beatmap's audio. The end of the timing section is the next timing point's time (or never, if this is the last timing point).
@@ -65,5 +71,28 @@ public class TimingPoint extends PositionalObject {
                     break;
             }
         }
+    }
+
+    public double getBPM()
+    {
+        return 60000 / value;
+    }
+
+    @Override
+    public String toString()
+    {
+        return pos + "," + (uninherited ? value : -100 / value) + "," + meter + "," + sampleSet + "," + sampleIndex + "," + volume + "," + (uninherited ? 1 : 0) + "," + ((kiai ? KIAI : 0) | (omitted ? OMITTED : 0));
+    }
+
+    @Override
+    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y, float alpha) {
+        Color c = uninherited ? red : green;
+        c.a = alpha;
+        sb.setColor(c);
+    }
+
+    @Override
+    public void renderSelection(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+
     }
 }

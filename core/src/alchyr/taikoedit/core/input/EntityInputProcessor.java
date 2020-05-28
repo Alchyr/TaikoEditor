@@ -116,20 +116,20 @@ public class EntityInputProcessor extends AdjustedInputProcessor {
     }
 
     @Override
-    public boolean touchDragged(int screenX, int screenY, int pointer) {
+    public boolean onTouchDragged(int gameX, int gameY, int pointer) {
         for (EntityInput i : touchDraggedInputs)
         {
-            if (i.touchDragged(screenX, screenY, pointer))
+            if (i.touchDragged(gameX, gameY, pointer))
                 return true;
         }
         return false;
     }
 
     @Override
-    public boolean mouseMoved(int screenX, int screenY) {
+    public boolean onMouseMoved(int gameX, int gameY) {
         for (EntityInput i : mouseMovedInputs)
         {
-            if (i.mouseMoved(screenX, screenY))
+            if (i.mouseMoved(gameX, gameY))
                 return true;
         }
         return false;

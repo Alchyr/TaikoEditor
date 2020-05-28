@@ -25,6 +25,7 @@ public class AssetLists implements Json.Serializable {
 
     public static final TextureLoader.TextureParameter mipmaps;
     public static final TextureLoader.TextureParameter linear;
+    public static final TextureLoader.TextureParameter nearest;
 
     static {
         mipmaps = new TextureLoader.TextureParameter();
@@ -35,6 +36,10 @@ public class AssetLists implements Json.Serializable {
         linear = new TextureLoader.TextureParameter();
         linear.magFilter = Texture.TextureFilter.Linear;
         linear.minFilter = Texture.TextureFilter.Linear;
+
+        nearest = new TextureLoader.TextureParameter();
+        nearest.magFilter = Texture.TextureFilter.Nearest;
+        nearest.minFilter = Texture.TextureFilter.Nearest;
     }
 
     public void loadList(String name, AssetManager manager)
@@ -54,7 +59,25 @@ public class AssetLists implements Json.Serializable {
                         switch (info.getType())
                         {
                             case "texture":
-                                manager.load(info.getFileName(), Texture.class, linear);
+                                if (info.getParams() != null)
+                                {
+                                    switch (info.getParams().toLowerCase())
+                                    {
+                                        case "linear":
+                                            manager.load(info.getFileName(), Texture.class, linear);
+                                            break;
+                                        case "nearest":
+                                            manager.load(info.getFileName(), Texture.class, nearest);
+                                            break;
+                                        case "mipmap":
+                                            manager.load(info.getFileName(), Texture.class, mipmaps);
+                                            break;
+                                    }
+                                }
+                                else
+                                {
+                                    manager.load(info.getFileName(), Texture.class, linear);
+                                }
                                 assetMaster.loadedAssets.put(info.getAssetName(name), info.getFileName());
                                 break;
                             case "largetexture":

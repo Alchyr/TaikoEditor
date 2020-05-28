@@ -74,12 +74,13 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     public void initialize() {
         if (!initialized)
         {
-            OPTION_WIDTH = Math.max(300, SettingsMaster.getWidth() / 5);
-            OPTION_HEIGHT = Math.max(200, SettingsMaster.getHeight() / 4);
-
-            PER_ROW = SettingsMaster.getWidth() / OPTION_WIDTH;
-            PER_COLUMN = SettingsMaster.getHeight() / OPTION_HEIGHT;
+            PER_ROW = SettingsMaster.getWidth() / 300; //number of 300 pixel wide tiles that fit.
+            PER_COLUMN = SettingsMaster.getHeight() / 200;
             PER_SCREEN = PER_ROW * (PER_COLUMN + 1); //add an extra row for those that poke off the edges of the screen
+
+            OPTION_WIDTH = SettingsMaster.getWidth() / PER_ROW;
+            OPTION_HEIGHT = SettingsMaster.getHeight() / PER_COLUMN;
+
 
             if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
             {
@@ -91,10 +92,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             }
 
             pixel = assetMaster.get("ui:pixel");
-            searchHeight = 85; //For the sake of text being rendered, I can't make this smaller.
+            searchHeight = 60;
             searchY = SettingsMaster.getHeight() - searchHeight;
             searchTextOffsetX = 10;
-            searchTextOffsetY = 40;
+            searchTextOffsetY = 35;
 
             for (String setFile : MapMaster.mapDatabase.keys)
             {
@@ -285,12 +286,12 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         }
 
         @Override
-        public boolean touchDragged(int screenX, int screenY, int pointer) {
+        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
             return false;
         }
 
         @Override
-        public boolean mouseMoved(int screenX, int screenY) {
+        public boolean onMouseMoved(int gameX, int gameY) {
             return false;
         }
 

@@ -3,7 +3,10 @@ package alchyr.taikoedit.util;
 import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.utils.JsonValue;
 
+import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.util.*;
+import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 

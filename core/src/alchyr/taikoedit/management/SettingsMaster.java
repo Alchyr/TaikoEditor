@@ -62,7 +62,7 @@ public class SettingsMaster {
 
         //All things that are based on screen size should be recalculated here. A loading layer should be placed on top of the screen until this is complete.
     }
-    public static void setFullscreen(boolean fullscreen)
+    public static void useFullscreenOffset(boolean fullscreen)
     {
         if (SettingsMaster.fullscreen = fullscreen)
         {

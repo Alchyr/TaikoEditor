@@ -4,6 +4,7 @@ import alchyr.taikoedit.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.maps.components.hitobjects.Spinner;
 import alchyr.taikoedit.util.structures.PositionalObject;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -15,11 +16,16 @@ public abstract class HitObject extends PositionalObject {
     protected final static int CIRCLE_OFFSET = CIRCLE_SIZE / 2;
     protected final static float LARGE_SCALE = 1.5f;
 
+    protected static Texture circle;
+    protected static Texture selection;
+    protected static Texture body;
+
+
     /*
                      x,  y,  time,type,hitSound,objectParams,hitSample
-    Example circle:  130,145,0,   1,   0,                    0:0:0:0:
-    Example slider:  263,127,500, 2,   0,       L|263:273,1,140
-    Example spinner: 256,192,1500,12,  0,       2000,        0:0:0:0:
+    Example circle:  130,145,0,   1,   1,                    0:0:0:0:
+    Example slider:  263,127,500, 2,   1,       L|263:273,1,140
+    Example spinner: 256,192,1500,12,  1,       2000,        0:0:0:0:
 */
     /** Data from osu! wiki on File Format.
      * x (Integer) and y (Integer): Position in osu! pixels of the object.
@@ -36,25 +42,6 @@ public abstract class HitObject extends PositionalObject {
     public int colorSkip;
 
     public int[] hitSample; //Colon (:) separated list
-
-    public int duration; //0 for circles, matters for spinners and sliders
-
-    public enum HitType {
-        CIRCLE,
-        SLIDER,
-        SPINNER
-    }
-
-    //hitsound flags
-    public static final int NORMAL = 1;
-    public static final int WHISTLE = 2;
-    public static final int FINISH = 4;
-    public static final int CLAP = 8;
-
-    private static final int SLIDER = 2;
-    protected static final int NEWCOMBO = 4;
-    private static final int SPINNER = 8;
-    protected static final int COLORSKIP = 0b1110000;
 
     public float volume = 1.0f;
 
@@ -88,9 +75,9 @@ public abstract class HitObject extends PositionalObject {
 
     public static void loadTextures()
     {
-        Hit.texture = assetMaster.get("editor:hit");
-        Slider.headTexture = assetMaster.get("editor:hit");
-        Spinner.texture = assetMaster.get("editor:hit");
+        circle = assetMaster.get("editor:hit");
+        selection = assetMaster.get("editor:selection");
+        body = assetMaster.get("editor:body");
     }
 
     public void playSound()
@@ -105,5 +92,67 @@ public abstract class HitObject extends PositionalObject {
         }
     }
 
-    public abstract void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y);
+    @Override
+    public abstract String toString(); //Force override.
+    public abstract String toString(double beatLength, double sliderMultiplier);
+
+    protected int getTypeFlag()
+    {
+        int base = 0;
+        switch (type)
+        {
+            case CIRCLE:
+                base = 1;
+                break;
+            case SLIDER:
+                base = SLIDER;
+                break;
+            case SPINNER:
+                base = SPINNER;
+                break;
+        }
+
+        if (newCombo)
+            base |= NEWCOMBO;
+
+        return base | (colorSkip << 4);
+    }
+
+    protected int getHitsoundFlag()
+    {
+        int base = normal ? NORMAL : 0; //NORMAL doesn't seem to actually do anything in standard or taiko maps, at least.
+        base |= whistle ? WHISTLE : 0;
+        base |= finish ? FINISH : 0;
+        base |= clap ? CLAP : 0;
+
+        return base;
+    }
+
+    protected String getHitSamples()
+    {
+        if (hitSample == null) {
+            return "0:0:0:0:";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < hitSample.length; ++i)
+            sb.append(hitSample[i]).append(":");
+        return sb.toString();
+    }
+
+    public enum HitType {
+        CIRCLE,
+        SLIDER,
+        SPINNER
+    }
+
+    //hitsound flags
+    public static final int NORMAL = 1;
+    public static final int WHISTLE = 2;
+    public static final int FINISH = 4;
+    public static final int CLAP = 8;
+
+    private static final int SLIDER = 2;
+    protected static final int NEWCOMBO = 4;
+    private static final int SPINNER = 8;
+    protected static final int COLORSKIP = 0b1110000;
 }

@@ -36,8 +36,16 @@ public class KeyHoldManager {
         KeyHoldObject released = holds.remove(keycode);
 
         if (released != null)
+        {
+            released.reset();
             return released.onRelease();
+        }
 
         return false;
+    }
+
+    public boolean isHeld(int keycode)
+    {
+        return holds.containsKey(keycode);
     }
 }

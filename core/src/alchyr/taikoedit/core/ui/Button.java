@@ -154,7 +154,7 @@ public class Button implements UIElement {
                 sb.begin();
             }
 
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX, y);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX, this.centerY);
         }
     }
 
@@ -185,7 +185,7 @@ public class Button implements UIElement {
                 sb.begin();
             }
 
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX + x, centerY + y);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX + x, this.centerY + y);
         }
     }
 }

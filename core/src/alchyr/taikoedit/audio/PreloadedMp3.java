@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.GdxRuntimeException;
+import com.badlogic.gdx.utils.Queue;
 import javazoom.jl.decoder.OutputBuffer;
 import org.lwjgl.BufferUtils;
 
@@ -17,8 +18,9 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import org.lwjgl.openal.AL10;
 import org.lwjgl.openal.AL11;
+
+import static alchyr.taikoedit.TaikoEditor.editorLogger;
 import static org.lwjgl.openal.AL10.*;
 import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
 
@@ -30,11 +32,14 @@ import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
 //Make a fancier ByteStream (used in read method) to support seek operations?
 
 public class PreloadedMp3 extends OpenALMusic {
-    static private final int bufferSize = 4096 * 10;
-    static private final int bufferCount = 3;
+    static private final int bufferSize = 4096 * 4;
+    static private final int bufferCount = 4;
     static private final int bytesPerSample = 2;
     static private final byte[] tempBytes = new byte[bufferSize];
     static private final ByteBuffer tempBuffer = BufferUtils.createByteBuffer(bufferSize);
+
+    private boolean update;
+    private final int[] bufferIDs = new int[bufferCount];
 
     //Breaking the rules. This is Bad!
     private static Method obtainSource;
@@ -61,7 +66,7 @@ public class PreloadedMp3 extends OpenALMusic {
         }
     }
 
-    private FloatArray renderedSecondsQueue = new FloatArray(bufferCount);
+    private final FloatArray renderedSecondsQueue = new FloatArray(bufferCount);
 
     private PreloadMp3Bitstream bitstream;
 
@@ -81,6 +86,8 @@ public class PreloadedMp3 extends OpenALMusic {
 
     public float tempo = 1.0f;
 
+    protected float snapOffset = 0; //Adjustment to getPosition when seeking while paused
+
 
     private Music.OnCompletionListener onCompletionListener;
 
@@ -88,6 +95,7 @@ public class PreloadedMp3 extends OpenALMusic {
     public PreloadedMp3 (OpenALAudio audio, FileHandle file) {
         super(audio, file);
         this.audio = audio;
+        update = false;
 
         try
         {
@@ -115,37 +123,52 @@ public class PreloadedMp3 extends OpenALMusic {
     public void play () {
         if (hasNoDevice) return;
         if (sourceID == -1) {
-            if (!initialize())
+            if (!initialize(0))
                 return;
         }
 
         if (!isPlaying) {
             if (stoppedAtEnd)
             {
-                reset();
+                setPosition(0, false);
             }
             alSourcePlay(sourceID);
             isPlaying = true;
+            update = true;
+            snapOffset = 0;
         }
     }
 
-    private boolean initialize()
+    public boolean initialize(float offset)
     {
         if (sourceID == -1) {
             try
             {
+                if (buffers == null) {
+                    int errorCode = alGetError(); //Clear any existing errors
+                    buffers = BufferUtils.createIntBuffer(bufferCount);
+                    alGenBuffers(buffers);
+                    errorCode = alGetError();
+                    if (errorCode != AL_NO_ERROR)
+                    {
+                        buffers = null;
+                        throw new GdxRuntimeException("Unable to allocate audio buffers. AL Error: " + errorCode);
+                    }
+
+                    //Track buffers
+                    for (int i = 0; i < bufferCount; ++i)
+                    {
+                        bufferIDs[i] = buffers.get(i);
+                    }
+                    buffers.clear();
+                    buffers.put(bufferIDs);
+                    buffers.rewind();
+                }
+
                 sourceID = (int) obtainSource.invoke(audio, true);
                 if (sourceID == -1) return false;
 
                 audioMusic.add(this);
-
-                if (buffers == null) {
-                    buffers = BufferUtils.createIntBuffer(bufferCount);
-                    alGenBuffers(buffers);
-                    int errorCode = alGetError();
-                    if (errorCode != AL_NO_ERROR)
-                        throw new GdxRuntimeException("Unable to allocate audio buffers. AL Error: " + errorCode);
-                }
 
                 alSourcei(sourceID, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
                 alSourcei(sourceID, AL_LOOPING, AL_FALSE);
@@ -169,8 +192,10 @@ public class PreloadedMp3 extends OpenALMusic {
                 e.printStackTrace();
                 return false;
             }
-        }
 
+            //Successfully initialized
+            snapOffset = -offset; //Ensure starting position is at 0 to compensate for offset
+        }
         return true;
     }
 
@@ -182,8 +207,6 @@ public class PreloadedMp3 extends OpenALMusic {
             audioMusic.removeValue(this, true);
             reset();
             sourceID = -1;
-            renderedSeconds = 0;
-            renderedSecondsQueue.clear();
             isPlaying = false;
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
@@ -194,6 +217,7 @@ public class PreloadedMp3 extends OpenALMusic {
         if (hasNoDevice) return;
         if (sourceID != -1) alSourcePause(sourceID);
         isPlaying = false;
+        snapOffset = 0;
     }
 
     public boolean isPlaying () {
@@ -233,37 +257,74 @@ public class PreloadedMp3 extends OpenALMusic {
 
         boolean wasPlaying = isPlaying && continuePlay;
         isPlaying = false;
-        alSourceStop(sourceID);
-        alSourceUnqueueBuffers(sourceID, buffers);
+        stoppedAtEnd = false;
 
+        update = false;
+
+        alSourceStop(sourceID);
+        while (alGetSourcei(sourceID, AL_BUFFERS_PROCESSED) > 0)
+        {
+            alSourceUnqueueBuffers(sourceID);
+        }
         renderedSecondsQueue.clear();
+        buffers.clear();
+        buffers.put(bufferIDs); //Ensure buffer IDs are always the same 4
+        buffers.rewind();
 
         //Move to closest frame
         renderedSeconds = bitstream.seekTime(position);
-
+        /*
         //Move forward until the target position is within the next buffer to be read
         while (renderedSeconds < (position - maxSecondsPerBuffer)) {
-            if (read(tempBytes) <= 0) break;
-            renderedSeconds += maxSecondsPerBuffer;
-        }
-
+            int length = read(tempBytes);
+            if (length <= 0) {
+                break;
+            }
+            renderedSeconds += maxSecondsPerBuffer * (float)length / (float)bufferSize; //Calculate the number of seconds this buffer has IGNORING tempo
+        }*/
         renderedSecondsQueue.add(renderedSeconds);
+
+
         boolean filled = false;
-        for (int i = 0; i < bufferCount; i++) {
+
+        int i = 0;
+        for (; i < bufferCount; i++) {
             int bufferID = buffers.get(i);
             if (!fill(bufferID)) break;
             filled = true;
+            alSourceQueueBuffers(sourceID, bufferID); //Queue buffers as far as possible
+        }
+        for (; i < bufferCount; i++) { //This is messy, but seems to generally result in the problem fixing itself.
+            int bufferID = buffers.get(i);
+            empty(bufferID);
             alSourceQueueBuffers(sourceID, bufferID);
         }
-        renderedSecondsQueue.pop();
-        if (!filled) {
-            stopAtEnd();
+        //ISSUE : Repeatedly seeking backwards while not queueing all buffers results in issues.
+
+
+        if (!filled) { //if NO buffers were filled. This is fine.
+            snapOffset = position - renderedSeconds;
+            if (renderedSeconds + snapOffset > getLength() + maxSecondsPerBuffer)
+            {
+                snapOffset = getLength() + maxSecondsPerBuffer - renderedSeconds;
+            }
+            stoppedAtEnd = true;
             if (onCompletionListener != null) onCompletionListener.onCompletion(this);
         }
-        alSourcef(sourceID, AL11.AL_SEC_OFFSET, position - renderedSeconds);
-        if (wasPlaying) {
-            alSourcePlay(sourceID);
-            isPlaying = true;
+        else
+        {
+            snapOffset = position - renderedSeconds;
+
+            renderedSecondsQueue.pop();
+
+            alSourcef(sourceID, AL11.AL_SEC_OFFSET, snapOffset);
+
+            if (wasPlaying) {
+                alSourcePlay(sourceID);
+                isPlaying = true;
+
+                update = true;
+            }
         }
     }
 
@@ -271,7 +332,7 @@ public class PreloadedMp3 extends OpenALMusic {
     public float getPosition () {
         if (hasNoDevice) return 0;
         if (sourceID == -1) return 0;
-        return (renderedSeconds + alGetSourcef(sourceID, AL11.AL_SEC_OFFSET) * tempo);
+        return (renderedSeconds + snapOffset + alGetSourcef(sourceID, AL11.AL_SEC_OFFSET) * tempo);
     }
 
     public float getLength() {
@@ -290,6 +351,10 @@ public class PreloadedMp3 extends OpenALMusic {
                 System.arraycopy(frame, 0, buffer, totalLength, frame.length);
                 totalLength += frame.length;
             }
+            /*if (totalLength == 0)
+            {
+                editorLogger.info("Reached 0 length buffer.");
+            }*/
             return totalLength;
         } catch (Throwable ex) {
             reset();
@@ -316,20 +381,27 @@ public class PreloadedMp3 extends OpenALMusic {
     public void update () {
         if (hasNoDevice) return;
         if (sourceID == -1) return;
-        if (!isPlaying) return; //It's already decoded, stop here
+        if (!update) return;
+        if (isPlaying) snapOffset = 0;
 
         boolean end = false;
         int buffers = alGetSourcei(sourceID, AL_BUFFERS_PROCESSED);
         while (buffers-- > 0) {
             int bufferID = alSourceUnqueueBuffers(sourceID);
             if (bufferID == AL_INVALID_VALUE) break;
+            //editorLogger.info("Unenqueued buffer " + bufferID);
             if (renderedSecondsQueue.size > 0) renderedSeconds = renderedSecondsQueue.pop();
-            if (end) continue;
+            if (end)
+                continue; //Stop filling buffers, but continue to unenqueue them all as there is nothing left to play.
             if (fill(bufferID))
+            {
                 alSourceQueueBuffers(sourceID, bufferID);
+                //editorLogger.info("Queued buffer " + bufferID);
+            }
             else
                 end = true;
         }
+
         if (end && alGetSourcei(sourceID, AL_BUFFERS_QUEUED) == 0) {
             stopAtEnd();
             if (onCompletionListener != null) onCompletionListener.onCompletion(this);
@@ -352,13 +424,17 @@ public class PreloadedMp3 extends OpenALMusic {
         }
         float previousLoadedSeconds = renderedSecondsQueue.size > 0 ? renderedSecondsQueue.first() : 0;
         float currentBufferSeconds = maxSecondsPerBuffer * (float)length / (float)bufferSize; //Calculate the number of seconds this buffer has IGNORING tempo
-        renderedSecondsQueue.insert(0, previousLoadedSeconds + currentBufferSeconds);
+        renderedSecondsQueue.insert(0, previousLoadedSeconds + currentBufferSeconds); //When this buffer is removed in update, time will be updated to the new calculated value.
 
         tempBuffer.put(tempBytes, 0, length).flip();
 
         alBufferData(bufferID, format, tempBuffer, (int) (sampleRate * tempo));
 
         return true;
+    }
+    private void empty (int bufferID) {
+        tempBuffer.clear();
+        alBufferData(bufferID, format, tempBuffer, (int) (sampleRate * tempo));
     }
 
     public void changeTempo(float newTempo, float position)

@@ -34,7 +34,7 @@ public class SoundMaster {
 
     public void update(float elapsed)
     {
-        audioFade = Math.min(1, audioFade + ((1 - audioFade) * elapsed * 4));
+        audioFade = Math.min(1, audioFade + elapsed * 20);
     }
 
     /**

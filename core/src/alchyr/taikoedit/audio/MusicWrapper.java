@@ -3,11 +3,13 @@ package alchyr.taikoedit.audio;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 public class MusicWrapper implements Music.OnCompletionListener {
-    public static float OFFSET = -0.085f;
+    private static final float BASE_OFFSET = -0.083f;
+    public float offset = BASE_OFFSET;
 
     private PreloadedMp3 music;
     private FileHandle musicFile;
@@ -86,6 +88,46 @@ public class MusicWrapper implements Music.OnCompletionListener {
         }
     }
 
+    public boolean initialize() throws InterruptedException {
+        if (this.music != null)
+        {
+            if (this.music.getSourceId() == -1)
+            {
+                int retry = 5;
+
+                while (retry > 0)
+                {
+                    try
+                    {
+                        if (this.music.initialize(offset))
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            if (this.music.getSourceId() == -1) //Failed to get audio source.
+                            {
+                                editorLogger.info("Failed to obtain audio source.");
+                            }
+                            return false;
+                        }
+                        //Returning false means a non-audio buffer failure.
+                    }
+                    catch (GdxRuntimeException e)
+                    {
+                        //Failed to allocate audio buffers.
+                        --retry;
+                        editorLogger.info("Failed to allocate audio buffers. Attempts remaining: " + retry);
+                        Thread.sleep(100);
+                    }
+                }
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
     public boolean isPlaying()
     {
         return playing = music.isPlaying();
@@ -111,13 +153,13 @@ public class MusicWrapper implements Music.OnCompletionListener {
             if (time == last) //Music has not updated position, but the song is playing
             {
                 precise = (time + (totalElapsed) * music.tempo);
-                return precise + OFFSET;
+                return precise + offset;
             }
         }
 
         totalElapsed = 0;
         precise = last = time;
-        return time + OFFSET;
+        return time + offset;
     }
 
     public int getMsLength()
@@ -174,22 +216,17 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     public void seekMs(int newPos)
     {
-        if (lockKey != null)
-        {
-            seekMs(newPos);
-            return;
-        }
-        music.setPosition(newPos / 1000.0f);
+        seekSecond(newPos / 1000.0f);
     }
     public void seekMs(int newPos, boolean continuePlaying)
     {
         if (!continuePlaying)
             playing = false;
-        music.setPosition(newPos / 1000.0f, continuePlaying);
+        seekSecond(newPos / 1000.0f, continuePlaying);
     }
     public void seekSecond(float newPos)
     {
-        music.setPosition(newPos);
+        music.setPosition(Math.max(0, newPos) - offset);
     }
     public void seekSecond(float newPos, boolean continuePlaying)
     {
@@ -200,7 +237,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
         }
         if (!continuePlaying)
             playing = false;
-        music.setPosition(newPos, continuePlaying);
+        music.setPosition(Math.max(0, newPos) - offset, continuePlaying);
     }
 
     public void setTempo(float newTempo)
@@ -215,6 +252,17 @@ public class MusicWrapper implements Music.OnCompletionListener {
     public void changeTempo(float add)
     {
         setTempo(music.tempo + add);
+    }
+
+    public void modifyOffset(float change)
+    {
+        offset += change;
+        if (music != null)
+            music.snapOffset -= change;
+    }
+    public int getDisplayOffset()
+    {
+        return (int) ((offset - BASE_OFFSET) * 1000);
     }
 
     @Override

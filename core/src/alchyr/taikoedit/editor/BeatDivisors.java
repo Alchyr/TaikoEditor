@@ -17,10 +17,10 @@ public class BeatDivisors {
     private EditorBeatmap timingMap; //The map whose timing will be used to generate objects.
 
     private final HashMap<Integer, HashSet<Snap>> divisorSnappings;
-    private TreeSet<Snap> combinedSnaps;
+    private TreeMap<Integer, Snap> combinedSnaps;
 
     private int lastStart, lastEnd;
-    private SortedSet<Snap> activeSnaps;
+    private NavigableMap<Integer, Snap> activeSnaps;
 
     //When initially generated, construct all standard divisors. If timing is changed or another custom divisor is desired, they will be generated on-demand.
 
@@ -28,16 +28,23 @@ public class BeatDivisors {
     public BeatDivisors(DivisorOptions divisorOptions, EditorBeatmap timingMap)
     {
         this.divisorOptions = divisorOptions;
+        this.divisorOptions.addDependent(this);
 
         this.timingMap = timingMap;
 
         divisorSnappings = new HashMap<>();
-        combinedSnaps = new TreeSet<>();
+        combinedSnaps = new TreeMap<>();
 
         generateCommonSnappings();
     }
 
-    public SortedSet<Snap> getSnaps(int startPos, int endPos)
+    public void refresh()
+    {
+        combinedSnaps.clear();
+        generateCombinedSnaps();
+    }
+
+    public NavigableMap<Integer, Snap> getSnaps(int startPos, int endPos)
     {
         if (combinedSnaps.isEmpty())
         {
@@ -46,20 +53,20 @@ public class BeatDivisors {
 
         if (startPos != lastStart || endPos != lastEnd)
         {
-            Snap start = combinedSnaps.floor(new Snap(startPos));
-            Snap end = combinedSnaps.ceiling(new Snap(endPos));
+            Integer start = combinedSnaps.floorKey(startPos);
+            Integer end = combinedSnaps.ceilingKey(endPos);
 
             if (start != null && end != null)
             {
-                activeSnaps = combinedSnaps.subSet(start, end);
+                activeSnaps = combinedSnaps.subMap(start, true, end, true);
             }
             else if (end != null)
             {
-                activeSnaps = combinedSnaps.subSet(combinedSnaps.first(), end);
+                activeSnaps = combinedSnaps.subMap(combinedSnaps.firstKey(), true, end, true);
             }
             else if (start != null)
             {
-                activeSnaps = combinedSnaps.subSet(start, combinedSnaps.last());
+                activeSnaps = combinedSnaps.subMap(start, true, combinedSnaps.lastKey(), true);
             }
             else
             {
@@ -68,14 +75,21 @@ public class BeatDivisors {
         }
         return activeSnaps;
     }
+    public TreeMap<Integer, Snap> getSnaps()
+    {
+        if (combinedSnaps.isEmpty())
+        {
+            generateCombinedSnaps();
+        }
+        return combinedSnaps;
+    }
 
 
     private void generateCombinedSnaps()
     {
         for (int divisor : divisorOptions.activeSnappings)
-        {
-            combinedSnaps.addAll(getSnappings(divisor));
-        }
+            for (Snap s : getSnappings(divisor))
+                combinedSnaps.put(s.pos, s);
     }
 
 
@@ -94,7 +108,7 @@ public class BeatDivisors {
             generateSnappings(divisor);
             for (int existingDivisor : divisorSnappings.keySet())
             {
-                if (existingDivisor % divisor == 0) //The newly generated divisor is a sub-set of this existing set. Re-generate it.
+                if (existingDivisor != divisor && existingDivisor % divisor == 0) //The newly generated divisor is a sub-set of this existing set. Re-generate it.
                 {
                     generateSnappings(existingDivisor);
                 }
@@ -106,6 +120,12 @@ public class BeatDivisors {
     private void generateSnappings(int divisor)
     {
         HashSet<Snap> snappings = new HashSet<>(); //Sorted set as it must be iterated through in a reliable order.
+
+        if (divisor <= 0)
+        {
+            divisorSnappings.put(divisor, snappings);
+            return;
+        }
 
         HashSet<Integer> subSnaps = new HashSet<>(); //Contains all the points that shouldn't be repeated. HashSet as it is used entirely for contains() operations.
         for (Map.Entry<Integer, HashSet<Snap>> snaps : divisorSnappings.entrySet())
@@ -153,26 +173,24 @@ public class BeatDivisors {
             if (beatSegment == 0)
                 ++beat;
 
-            pos = Math.round((float) t);
+            pos = (int) t;
 
             beat = beat % meter;
 
-            if (ignoreSnaps.contains(pos))
+            if (ignoreSnaps.contains(pos) || ignoreSnaps.contains(pos + 1) || ignoreSnaps.contains(pos - 1))
                 continue;
 
             if (beat == 0 && beatSegment == 0)
             {
-                if (skipLine)
+                if (!skipLine)
                 {
-                    skipLine = false;
+                    snapList.add(new Snap(pos, 0));
                     continue;
                 }
-                snapList.add(new Snap(pos, 0));
+
+                skipLine = false;
             }
-            else
-            {
-                snapList.add(new Snap(pos, divisor));
-            }
+            snapList.add(new Snap(pos, divisor));
         }
     }
 
@@ -183,6 +201,9 @@ public class BeatDivisors {
 
         for (double t = start - rate / divisor; t > 0; t -= rate / divisor)
         {
+            if (beat == 0)
+                beat += meter;
+
             --beatSegment;
             if (beatSegment == 0)
             {
@@ -192,11 +213,19 @@ public class BeatDivisors {
 
             pos = (int) t;
 
-            if (!ignoreSnaps.contains(pos))
-                snapList.add(new Snap(pos, beat == 0 ? 0 : divisor));
+            if (ignoreSnaps.contains(pos) || ignoreSnaps.contains(pos + 1) || ignoreSnaps.contains(pos - 1))
+                continue;
 
-            if (beat == 0)
-                beat += meter;
+            snapList.add(new Snap(pos, beat == 0 ? 0 : divisor));
         }
+    }
+
+    public void dispose()
+    {
+        timingMap = null;
+        divisorOptions = null;
+        divisorSnappings.clear();
+        combinedSnaps = null;
+        activeSnaps = null;
     }
 }

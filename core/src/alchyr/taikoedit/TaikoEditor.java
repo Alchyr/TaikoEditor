@@ -204,6 +204,7 @@ public class TaikoEditor extends ApplicationAdapter {
         for (GameLayer l : addBottomLayers)
         {
             layers.add(0, l);
+            editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
                 input.addProcessor(0, ((InputLayer) l).getProcessor());
         }
@@ -212,6 +213,7 @@ public class TaikoEditor extends ApplicationAdapter {
         for (GameLayer l : addTopLayers)
         {
             layers.add(l);
+            editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
                 input.addProcessor(((InputLayer) l).getProcessor());
         }
@@ -221,6 +223,7 @@ public class TaikoEditor extends ApplicationAdapter {
         {
             l.dispose();
             layers.remove(l);
+            editorLogger.info("Removed " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
                 input.removeProcessor(((InputLayer) l).getProcessor());
         }

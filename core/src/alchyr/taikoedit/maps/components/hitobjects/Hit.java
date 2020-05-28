@@ -9,15 +9,51 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import static alchyr.taikoedit.TaikoEditor.soundMaster;
 
 public class Hit extends HitObject {
-    public static Texture texture;
-
     private static final Color don = Color.RED.cpy();
     private static final Color kat = Color.BLUE.cpy();
 
     private boolean isRim;
 
+    public Hit(int pos, boolean isRim)
+    {
+        type = HitType.CIRCLE;
+        this.pos = pos;
+        this.isRim = isRim;
+        x = 0;
+        y = 0;
+
+        newCombo = false;
+        colorSkip = 0;
+
+        normal = false;
+        whistle = false;
+        finish = false;
+        clap = isRim;
+
+        hitSample = null;
+    }
+    public Hit(int pos, boolean isRim, boolean isFinish)
+    {
+        type = HitType.CIRCLE;
+        this.pos = pos;
+        this.isRim = isRim;
+        x = 0;
+        y = 0;
+
+        newCombo = false;
+        colorSkip = 0;
+
+        normal = false;
+        whistle = false;
+        finish = isFinish;
+        clap = isRim;
+
+        hitSample = null;
+    }
+
     public Hit(String[] params)
     {
+        type = HitType.CIRCLE;
         for (int i = 0; i < params.length; ++i) //to avoid out of bounds.
         {
             switch (i)
@@ -48,8 +84,6 @@ public class Hit extends HitObject {
                     break;
                 case 5:
                     //Hit samples
-                    duration = 0;
-                    //Move directly to hitsamples
                     String[] samples = params[i].split(":");
                     hitSample = new int[samples.length];
                     for (int n = 0; n < samples.length; ++n)
@@ -61,18 +95,30 @@ public class Hit extends HitObject {
     }
 
     @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y) {
-        sb.setColor(isRim ? kat : don);
-        if (finish)
+    public void render(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y, float alpha) {
+        Color c = isRim ? kat : don;
+        c.a = alpha;
+        sb.setColor(c);
+
+        float scale = finish ? LARGE_SCALE : 1.0f;
+
+        sb.draw(circle, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+
+        if (selected)
         {
-            sb.draw(texture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                    LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+            renderSelection(sb, sr, pos, viewScale, x, y);
         }
-        else
-        {
-            sb.draw(texture, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                    1.0f, 1.0f, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        }
+    }
+
+    @Override
+    public void renderSelection(SpriteBatch sb, ShapeRenderer sr, int pos, float viewScale, float x, float y) {
+        sb.setColor(Color.WHITE);
+
+        float scale = finish ? LARGE_SCALE : 1.0f;
+
+        sb.draw(selection, x + (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
     }
 
     @Override
@@ -100,5 +146,13 @@ public class Hit extends HitObject {
                 soundMaster.playSfx("hitsound:don", this.volume, true);
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
+    }
+    public String toString(double beatLength, double sliderMultiplier) {
+        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
     }
 }
