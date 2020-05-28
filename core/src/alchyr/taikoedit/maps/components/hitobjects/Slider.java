@@ -152,7 +152,7 @@ public class Slider extends HitObject implements ILongObject {
 
         if (duration > 0)
         {
-            sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, scale);
+            sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
         }
         sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
