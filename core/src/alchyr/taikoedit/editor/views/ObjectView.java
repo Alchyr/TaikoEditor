@@ -432,18 +432,30 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Snap next = map.getAllSnaps().higherEntry(EditorLayer.music.isPlaying() ? time + 250 : time).getValue();
-        if (next != null && next.pos - time < 2)
-            next = map.getAllSnaps().higherEntry(next.pos).getValue();
-        return next;
+        Map.Entry<Integer, Snap> next = map.getAllSnaps().higherEntry(EditorLayer.music.isPlaying() ? time - 250 : time);
+        if (next == null)
+            return null;
+        if (next.getKey() - time < 2)
+        {
+            next = map.getAllSnaps().higherEntry(next.getKey());
+            if (next == null)
+                return null;
+        }
+        return next.getValue();
     }
 
     @Override
     public Snap getPreviousSnap() {
-        Snap previous = map.getAllSnaps().lowerEntry(EditorLayer.music.isPlaying() ? time - 250 : time).getValue();
-        if (previous != null && time - previous.pos < 2)
-            previous = map.getAllSnaps().lowerEntry(previous.pos).getValue();
-        return previous;
+        Map.Entry<Integer, Snap> previous = map.getAllSnaps().lowerEntry(EditorLayer.music.isPlaying() ? time - 250 : time);
+        if (previous == null)
+            return null;
+        if (time - previous.getKey() < 2)
+        {
+            previous = map.getAllSnaps().lowerEntry(previous.getKey());
+            if (previous == null)
+                return null;
+        }
+        return previous.getValue();
     }
 
     @Override

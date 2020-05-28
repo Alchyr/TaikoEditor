@@ -11,6 +11,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import java.text.DecimalFormat;
+
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
@@ -28,15 +30,16 @@ public class Timeline {
 
     private final int y;
     private final int timeX;
-    private final int timeY;
+    private final int textY;
     private final float length;
     private final float lineY;
     private float tickY;
 
-    private float minClickY, maxClickY;
+    private float minClickY, maxClickY, percentage;
 
     private EditorTime time;
     private int pos;
+    private DecimalFormat percentFormat = new DecimalFormat("##0.#%");
 
     private MouseHoldObject holdObject;
 
@@ -46,7 +49,7 @@ public class Timeline {
 
         this.y = y;
         this.timeX = 20;
-        this.timeY = y + 17;
+        this.textY = y + 18;
         this.lineY = y + HEIGHT / 2.0f - LINE_THICKNESS / 2.0f;
         this.tickY = y + HEIGHT / 2.0f - TICK_HEIGHT / 2.0f;
         this.length = length;
@@ -90,7 +93,8 @@ public class Timeline {
     public void update(float pos)
     {
         this.time.setMilliseconds((int) (pos * 1000));
-        this.pos = convertPercent(pos / length);
+        this.percentage = pos / length;
+        this.pos = convertPercent(this.percentage);
     }
 
     private int convertPercent(float percentage)
@@ -111,6 +115,6 @@ public class Timeline {
         sb.draw(pix, TIMELINE_START, lineY, TIMELINE_LENGTH, LINE_THICKNESS);
         sb.draw(pix, pos - 1, tickY, 2, TICK_HEIGHT);
 
-        textRenderer.setFont(font).renderText(sb, time.toString(), 20, timeY);
+        textRenderer.setFont(font).renderText(sb, time.toString(), 20, textY).renderText(sb, percentFormat.format(percentage), 100, textY);
     }
 }
