@@ -117,7 +117,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             mapOptionY = new int[PER_COLUMN + 1];
             for (int i = 0; i < PER_COLUMN + 1; ++i)
             {
-                mapOptionY[i] = OPTION_HEIGHT * (PER_COLUMN - 1 - i);
+                mapOptionY[i] = OPTION_HEIGHT * (PER_COLUMN - 1 - i) - searchHeight;
             }
 
             searchInput = new TextInput(128, assetMaster.getFont("default"));

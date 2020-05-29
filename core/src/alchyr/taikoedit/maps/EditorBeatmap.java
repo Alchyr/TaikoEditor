@@ -686,4 +686,66 @@ public class EditorBeatmap {
     {
         return fullMapInfo.difficultyName;
     }
+
+
+
+
+
+
+    /// EXPERIMENTAL TJA SAVE SUPPORT ///
+
+    //ASSUMPTION: The version of TJA used requires 16 notes per line.
+    //No fancy features will be implemented, only the basics.
+
+    public boolean saveTJA()
+    {
+        return false;
+        /*
+        FileOutputStream out = null;
+        BufferedWriter w = null;
+        try
+        {
+            String tjaFile = fullMapInfo.mapFile.getPath();
+            tjaFile = tjaFile.substring(0, tjaFile.lastIndexOf(".")) + ".tja";
+
+            out = new FileOutputStream(new File(tjaFile), false);
+            w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+
+            Map.Entry<Integer, ArrayList<TimingPoint>> firstEntry = timingPoints.firstEntry();
+
+            //required part of file header
+            double bpm = firstEntry.getValue().get(0).getBPM();
+            int offset = firstEntry.getValue().get(0).pos;
+
+            w.write("// CONVERTED FROM .osu\n");
+            w.write("TITLE:" + fullMapInfo.titleUnicode + "\n");
+            w.write("TITLEEN:" + fullMapInfo.title + "\n"); //Is this even supported?
+
+            w.close();
+            out.close();
+            return true;
+        }
+        catch (Exception e)
+        {
+            if (w != null)
+            {
+                try
+                {
+                    w.close();
+                }
+                catch (Exception ignored) {}
+            }
+            if (out != null)
+            {
+                try
+                {
+                    out.close();
+                }
+                catch (Exception ignored) {}
+            }
+            editorLogger.error("Failed to save beatmap.");
+            e.printStackTrace();
+            return false;
+        }*/
+    }
 }

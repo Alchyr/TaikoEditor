@@ -1,0 +1,17 @@
+LOADING SUCKS MAKE IT BETTER
+Object Paste
+
+Better loading bar for loading?
+
+SV View
+
+Difficulty choosing/creating/menu
+
+
+
+
+EXTRA STUFF:
+Alternate song select - Simply file open dialog, without preloading all maps (= no load time)
+Loading osu! skins
+
+save as tja?

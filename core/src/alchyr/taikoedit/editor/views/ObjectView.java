@@ -12,6 +12,7 @@ import alchyr.taikoedit.maps.components.HitObject;
 import alchyr.taikoedit.maps.components.ILongObject;
 import alchyr.taikoedit.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.maps.components.hitobjects.Spinner;
+import alchyr.taikoedit.util.EditorTime;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -176,6 +177,102 @@ public class ObjectView extends MapView {
             return null;
 
         return source.subMap(end, true, start, true);
+    }
+
+    @Override
+    public String getSelectionString() {
+        if (hasSelection())
+        {
+            StringBuilder sb = new StringBuilder(new EditorTime(selectedObjects.firstKey()).toString()).append(" (");
+
+            int comboCount = 0;
+            boolean foundStart = false;
+
+            NavigableMap<Integer, ArrayList<HitObject>> precedingObjects = map.objects.descendingSubMap(selectedObjects.firstKey(), true);
+
+            //Find initial combo count
+            for (Map.Entry<Integer, ArrayList<HitObject>> entry : precedingObjects.entrySet())
+            {
+                for (HitObject h : entry.getValue())
+                {
+                    if (foundStart)
+                    {
+                        ++comboCount;
+                        if (h.newCombo)
+                            break;
+                    }
+                    else
+                    {
+                        if (h.equals(selectedObjects.firstEntry().getValue().get(0)))
+                        {
+                            foundStart = true;
+                            comboCount = 0;
+                            if (h.newCombo)
+                                break;
+                        }
+                    }
+                }
+            }
+
+            Iterator<Map.Entry<Integer, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
+            Iterator<Map.Entry<Integer, ArrayList<PositionalObject>>> selectionObjects = selectedObjects.entrySet().iterator();
+
+            Map.Entry<Integer, ArrayList<HitObject>> currentList = null;
+            Map.Entry<Integer, ArrayList<PositionalObject>> selectedObjectList = null;
+
+            if (allObjects.hasNext())
+                currentList = allObjects.next();
+
+            if (selectionObjects.hasNext())
+                selectedObjectList = selectionObjects.next();
+
+            while (currentList != null && selectedObjectList != null)
+            {
+                if (currentList.getKey().equals(selectedObjectList.getKey())) //Position of lists match.
+                {
+                    for (HitObject h : currentList.getValue()) //For each object in map. Have to go through all of them to track combo count.
+                    {
+                        ++comboCount;
+                        if (h.newCombo)
+                            comboCount = 1;
+
+                        if (selectedObjectList.getValue().contains(h)) //This is a selected object, so add it to text
+                        {
+                            sb.append(comboCount).append(",");
+                        }
+                    }
+                    //This part of selected objects is done, move to next list in selected objects.
+                    if (selectionObjects.hasNext())
+                        selectedObjectList = selectionObjects.next();
+                    else
+                        selectedObjectList = null;
+                }
+                else //This list has no selected objects, just track combo.
+                {
+                    for (HitObject h : currentList.getValue())
+                    {
+                        if (h.newCombo)
+                        {
+                            comboCount = 1;
+                        }
+                        ++comboCount;
+                    }
+                }
+
+                //Move to next list in map.
+                if (allObjects.hasNext())
+                    currentList = allObjects.next();
+                else
+                    currentList = null;
+            }
+
+            //All done.
+            sb.deleteCharAt(sb.length() - 1).append(") - ");
+
+            return sb.toString();
+        }
+
+        return new EditorTime(time).toString() + " - ";
     }
 
     @Override
@@ -432,7 +529,7 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Map.Entry<Integer, Snap> next = map.getAllSnaps().higherEntry(EditorLayer.music.isPlaying() ? time - 250 : time);
+        Map.Entry<Integer, Snap> next = map.getAllSnaps().higherEntry(EditorLayer.music.isPlaying() ? time + 250 : time);
         if (next == null)
             return null;
         if (next.getKey() - time < 2)
@@ -510,6 +607,14 @@ public class ObjectView extends MapView {
     @Override
     public void deleteObject(PositionalObject o) {
         this.map.delete(MapChange.ChangeType.OBJECTS, o);
+    }
+
+    @Override
+    public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
+        //This should overwrite existing objects.
+
+        //Make copies of the hitobjects (add a copy() method to the HitObject class) and shift their position appropriately
+        //Find closest (1 ms before or after limit) snap (of any existing snap, not just the active one) and put objects at that position
     }
 
     @Override

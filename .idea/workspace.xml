@@ -2,8 +2,24 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/DifficultyMenuLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Slider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/components/hitobjects/Slider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/people.txt" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/TODO LIST.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/LoadingLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/LoadingLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/TextOverlay.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/TextOverlay.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/DivisorOptions.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/DivisorOptions.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Timeline.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Timeline.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/MapView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/MapView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ObjectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ObjectView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/MapMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/MapMaster.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/BeatmapDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/BeatmapDatabase.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/EditorBeatmap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/maps/EditorBeatmap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/EditorTime.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/EditorTime.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TextRenderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TextRenderer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObjectTreeMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObjectTreeMap.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -207,8 +223,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.DesktopLauncher" />
         <item itemvalue="Gradle.TaikoEditor [dist]" />
+        <item itemvalue="Application.DesktopLauncher" />
         <item itemvalue="Gradle.TaikoEditor [buildDependents]" />
         <item itemvalue="Gradle.TaikoEditor [jar]" />
         <item itemvalue="Gradle.Cresces [build]" />
@@ -268,7 +284,14 @@
       <option name="project" value="LOCAL" />
       <updated>1590685667026</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="render slider body correctly">
+      <created>1590685991406</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1590685991406</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -277,7 +300,8 @@
     <MESSAGE value="initial" />
     <MESSAGE value="update" />
     <MESSAGE value="fix null on seeking past end of map" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix null on seeking past end of map" />
+    <MESSAGE value="render slider body correctly" />
+    <option name="LAST_COMMIT_MESSAGE" value="render slider body correctly" />
   </component>
   <component name="WindowStateProjectService">
     <state x="844" y="383" key="#Notifications" timestamp="1590140326677">
@@ -332,10 +356,10 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="714" y="223" key="#xdebugger.evaluate/0.0.1920.1040@0.0.1920.1040" timestamp="1589197851876" />
-    <state x="544" y="113" key="CommitChangelistDialog2" timestamp="1590685666097">
+    <state x="544" y="113" key="CommitChangelistDialog2" timestamp="1590685990462">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="544" y="113" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1590685666097" />
+    <state x="544" y="113" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1590685990462" />
     <state width="517" height="466" key="DebuggerActiveHint" timestamp="1590220747536">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -352,38 +376,38 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="678" y="219" key="Github.UntrackedFilesDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1590012820619" />
-    <state width="1877" height="260" key="GridCell.Tab.0.bottom" timestamp="1590685706203">
+    <state width="1877" height="256" key="GridCell.Tab.0.bottom" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706203" />
-    <state width="1877" height="260" key="GridCell.Tab.0.center" timestamp="1590685706203">
+    <state width="1877" height="256" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.0.center" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706203" />
-    <state width="1877" height="260" key="GridCell.Tab.0.left" timestamp="1590685706203">
+    <state width="1877" height="256" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.0.left" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706203" />
-    <state width="1877" height="260" key="GridCell.Tab.0.right" timestamp="1590685706203">
+    <state width="1877" height="256" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.0.right" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706203" />
-    <state width="1877" height="260" key="GridCell.Tab.1.bottom" timestamp="1590685706090">
+    <state width="1877" height="256" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.1.bottom" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706090" />
-    <state width="1877" height="260" key="GridCell.Tab.1.center" timestamp="1590685706090">
+    <state width="1877" height="256" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.1.center" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706090" />
-    <state width="1877" height="260" key="GridCell.Tab.1.left" timestamp="1590685706090">
+    <state width="1877" height="256" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.1.left" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706090" />
-    <state width="1877" height="260" key="GridCell.Tab.1.right" timestamp="1590685706090">
+    <state width="1877" height="256" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
+    <state width="1877" height="256" key="GridCell.Tab.1.right" timestamp="1590741812138">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="260" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590685706090" />
+    <state width="1877" height="256" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1590741812138" />
     <state x="783" y="240" key="RollbackChangesDialog" timestamp="1590018616165">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -445,9 +469,9 @@
     </pin-to-top-manager>
     <watches-manager>
       <configuration name="Remote">
-        <watch expression="effectPoints.get(139113)" language="JAVA" />
-        <watch expression="sliderProperties.length / sliderMultiplier" language="JAVA" />
-        <watch expression="obj.getEndPos()" language="JAVA" />
+        <watch expression="source.entrySet()" language="JAVA" />
+        <watch expression="((PositionalObjectTreeMap.DescendingSubMap) source).fromStart" language="JAVA" custom="alchyr.taikoedit.util.structures.PositionalObjectTreeMap" />
+        <watch expression="source.entrySet().isEmpty()" language="JAVA" />
       </configuration>
     </watches-manager>
   </component>

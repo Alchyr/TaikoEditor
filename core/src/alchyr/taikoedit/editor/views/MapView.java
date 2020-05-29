@@ -194,12 +194,14 @@ public abstract class MapView {
 
     //Other methods
     public abstract void deleteObject(PositionalObject o);
+    public abstract void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects);
 
     //Selection logic
     public abstract NavigableMap<Integer, ? extends ArrayList<? extends PositionalObject>> getVisisbleRange(int start, int end);
     public PositionalObjectTreeMap<PositionalObject> getSelection() {
         return selectedObjects;
     }
+    public abstract String getSelectionString();
 
     public abstract void deleteSelection();
     public abstract void registerMove(int totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support

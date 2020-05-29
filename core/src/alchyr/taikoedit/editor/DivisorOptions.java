@@ -86,11 +86,11 @@ public class DivisorOptions {
 
     public void set(int divisor)
     {
-        snappingOptions.add(divisor);
         activeSnappings.clear();
 
         if (divisor > 0)
         {
+            snappingOptions.add(divisor);
             for (Integer option : snappingOptions)
             {
                 if (divisor % option == 0)

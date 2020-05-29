@@ -82,6 +82,6 @@ public class EditorTime implements Comparable<EditorTime> {
 
     @Override
     public String toString() {
-        return String.format("%03d:%02d:%03d", minutes, seconds, milliseconds);
+        return String.format("%02d:%02d:%03d", minutes, seconds, milliseconds);
     }
 }

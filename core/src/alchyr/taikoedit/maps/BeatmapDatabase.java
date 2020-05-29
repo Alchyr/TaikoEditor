@@ -23,6 +23,8 @@ public class BeatmapDatabase {
 
         try
         {
+            logger.info("Loading Songs folder: " + songsFolder.getPath());
+
             FileHandle mapData = Gdx.files.local("maps");
 
             mapsets = new HashMap<>();
@@ -31,10 +33,11 @@ public class BeatmapDatabase {
 
             if (mapData.exists())
             {
-
+                logger.info("Existing map data found.");
             }
-            else
-            {
+
+            //else
+            //{
                 File[] songFolders = songsFolder.listFiles(File::isDirectory);
 
                 if (songFolders != null)
@@ -45,6 +48,7 @@ public class BeatmapDatabase {
 
                         if (maps != null && maps.length > 0) //There are maps in this folder.
                         {
+                            logger.info("Mapset: " + songFolder.getName());
                             Mapset set = new Mapset(songFolder.getName(), maps);
 
                             if (!set.isEmpty())
@@ -54,6 +58,11 @@ public class BeatmapDatabase {
                                 indexedMapsets.put(set.getArtist().toLowerCase().split(" "), set);
                                 indexedMapsets.put(set.getCreator().toLowerCase().split(" "), set);
                                 indexedMapsets.put(set.getTitle().toLowerCase().split(" "), set);
+                                logger.info("\t - Set has " + set.getMaps().size() + " taiko difficulties.");
+                            }
+                            else
+                            {
+                                logger.info("\t - No taiko maps found in this set.");
                             }
                         }
                     }
@@ -64,7 +73,7 @@ public class BeatmapDatabase {
                 {
                     logger.error("Failed to read Song folder. Incorrect osu! folder path provided?");
                 }
-            }
+            //}
         }
         catch (Exception e)
         {

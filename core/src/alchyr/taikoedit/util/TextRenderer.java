@@ -75,7 +75,7 @@ public class TextRenderer {
 
         layout.setText(currentRendering, s, c.cpy(), 1, Align.center, false);
 
-        currentRendering.draw(sb, layout, x, y + currentRendering.getCapHeight() / 2.0f);
+        currentRendering.draw(sb, layout, x, y + layout.height / 2.0f);
 
         return this;
     }

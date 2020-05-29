@@ -54,8 +54,8 @@ public class Timeline {
         this.tickY = y + HEIGHT / 2.0f - TICK_HEIGHT / 2.0f;
         this.length = length;
 
-        minClickY = y + 5;
-        maxClickY = y + HEIGHT - 5;
+        minClickY = y + 3;
+        maxClickY = y + HEIGHT - 3;
 
         holdObject = new MouseHoldObject(this::drag, this::release);
 
@@ -104,6 +104,11 @@ public class Timeline {
     private float convertPosition(int position)
     {
         return MathUtils.clamp((float) (position - TIMELINE_START) * length / TIMELINE_LENGTH, 0, length);
+    }
+
+    public String getTimeString()
+    {
+        return time.toString();
     }
 
     public void render(SpriteBatch sb, ShapeRenderer sr)

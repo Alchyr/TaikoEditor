@@ -112,6 +112,7 @@ public class LoadingLayer extends GameLayer {
             {
                 ArrayList<Runnable> taskSet = tasks.removeLast();
                 taskCount = taskSet.size();
+                editorLogger.info("Starting next loading task set. Tasks: " + taskCount);
                 for (Runnable task : taskSet)
                     activeTasks.add(executor.submit(task));
                 return;
@@ -121,6 +122,7 @@ public class LoadingLayer extends GameLayer {
             {
                 ArrayList<Runnable> taskSet = callbacks.removeLast();
                 taskCount = taskSet.size();
+                editorLogger.info("Starting next callback set. Tasks: " + taskCount);
                 for (Runnable task : taskSet)
                     activeTasks.add(executor.submit(task));
                 return;
@@ -128,6 +130,7 @@ public class LoadingLayer extends GameLayer {
 
             if (replacementLayers != null && replacementLayers.length != 0)
             {
+                editorLogger.info("Loading complete. Adding replacement layers: " + replacementLayers.length);
                 for (GameLayer l : replacementLayers) {
                     l.initialize();
 
@@ -141,6 +144,10 @@ public class LoadingLayer extends GameLayer {
                     }
                 }
                 //use a fancy effect instead later instead of sharp change
+            }
+            else
+            {
+                editorLogger.info("Loading complete. No replacement layers.");
             }
 
             TaikoEditor.removeLayer(this);

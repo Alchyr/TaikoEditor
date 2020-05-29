@@ -12,7 +12,7 @@ import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
 public class TextOverlay {
     private final Color textColor = new Color(1.0f, 1.0f, 1.0f, 0.0f);
-    private final Color backColor = new Color(0.2f, 0.2f, 0.2f, 0.0f);
+    private final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.0f);
     private float fadeDelay = 0.0f;
 
     private final float cX, cY, bY;

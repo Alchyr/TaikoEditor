@@ -18,6 +18,8 @@ import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.util.input.KeyHoldManager;
 import alchyr.taikoedit.util.input.KeyHoldObject;
 import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
@@ -27,6 +29,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import static alchyr.taikoedit.TaikoEditor.*;
@@ -79,6 +83,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private DivisorOptions divisorOptions; //Always shared
     private BeatDivisors universalDivisor; //Sometimes shared
     private float currentPos; //current second position in song.
+
+
+    //Copy and Paste
+    private static PositionalObjectTreeMap<PositionalObject> copyObjects = null;
+    private static MapView.ViewType copyType;
 
 
     //Vertical scroll, when too many views exist
@@ -227,21 +236,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         return processor;
     }
 
-    private void play(int button)
-    {
-        TaikoEditor.removeLayer(this);
-
-        /*AlchemistGame.addLayer(new LoadingLayer("game", new GameLayer[] {
-                new AttackLayer(),
-                new GameplayLayer().addEntity(new Player(new PlayerController(), SettingsMaster.getWidth() / 2.0f, SettingsMaster.getHeight() / 2.0f))
-        }, true));*/
-
-        //AlchemistGame.addLayer(new MapTestLayer().getLoader());
-    }
-    private void settings(int button)
-    {
-        editorLogger.trace("Settings!");
-    }
     private void returnToMenu()
     {
         TaikoEditor.removeLayer(this);
@@ -492,6 +486,19 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     }
 
 
+    /// Overlays?
+    private void openDifficultyMenu(int button)
+    {
+        if (music.isPlaying())
+            music.pause();
+        TaikoEditor.addLayer(new DifficultyMenuLayer(this));
+    }
+
+
+
+
+
+
     public static class EditorProcessor extends AdjustedInputProcessor {
         private final EditorLayer sourceLayer;
 
@@ -550,8 +557,53 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         return true;
                     }
                     break;
-                case Input.Keys.S:
+                case Input.Keys.C:
                     if (keyHoldManager.isHeld(Input.Keys.CONTROL_LEFT))
+                    {
+                        if (sourceLayer.primaryView.hasSelection())
+                        {
+                            copyObjects = sourceLayer.primaryView.getSelection().copy();
+                            copyType = sourceLayer.primaryView.type; //Can only paste into same type of layer.
+                            Toolkit.getDefaultToolkit()
+                                    .getSystemClipboard()
+                                    .setContents(new StringSelection(sourceLayer.primaryView.getSelectionString()), null);
+                        }
+                        else
+                        {
+                            Toolkit.getDefaultToolkit()
+                                    .getSystemClipboard()
+                                    .setContents(new StringSelection(sourceLayer.timeline.getTimeString() + " - "), null);
+                        }
+                        return true;
+                    }
+                    break;
+                case Input.Keys.O:
+                    if (keyHoldManager.isHeld(Input.Keys.CONTROL_LEFT))
+                    {
+                        sourceLayer.openDifficultyMenu(0);
+                        return true;
+                    }
+                    break;
+                case Input.Keys.V:
+                    if (keyHoldManager.isHeld(Input.Keys.CONTROL_LEFT) && copyObjects != null && sourceLayer.primaryView.type == copyType)
+                    {
+                        sourceLayer.primaryView.pasteObjects(copyObjects);
+                        return true;
+                    }
+                    break;
+                case Input.Keys.S:
+                    if (keyHoldManager.isHeld(Input.Keys.CONTROL_LEFT) && Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) && Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT))
+                    {
+                        if (sourceLayer.primaryView.map.saveTJA())
+                        {
+                            sourceLayer.textOverlay.setText("Difficulty \"" + sourceLayer.primaryView.map.getName() + "\" saved as TJA file!", 0.5f);
+                        }
+                        else
+                        {
+                            sourceLayer.textOverlay.setText("TJA Save is not yet supported!", 2.0f); //Failed to save!", 2.0f);
+                        }
+                    }
+                    else if (keyHoldManager.isHeld(Input.Keys.CONTROL_LEFT))
                     {
                         if (sourceLayer.primaryView.map.save())
                         {

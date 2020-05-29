@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final Logger editorLogger = LogManager.getLogger("Alchemy");
+    public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
 
     private SpriteBatch sb;
     private ShapeRenderer sr;
@@ -289,8 +289,15 @@ public class TaikoEditor extends ApplicationAdapter {
     //Callback of MenuLayer. Todo: Allow TextReader to be instantiated sooner, and then initialized here to actually load fonts.
     public static void initialize()
     {
-        textRenderer = new TextRenderer(assetMaster.getFont("default"));
-        showCursor();
+        try
+        {
+            textRenderer = new TextRenderer(assetMaster.getFont("default"));
+            showCursor();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Override
