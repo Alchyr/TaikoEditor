@@ -18,6 +18,11 @@ public class KeyHoldManager {
         }
     }
 
+    public void clear()
+    {
+        holds.clear();
+    }
+
     public void add(KeyHoldObject hold)
     {
         KeyHoldObject replaced = holds.put(hold.keycode, hold);

@@ -36,11 +36,11 @@ public class Snap implements Comparable<Snap> {
     private Texture pix;
 
     public final int divisor; //1 = 1/1, 2 = 1/2, 3 = 1/3, etc.
-    public final int pos;
+    public final double pos;
 
     private int hash;
 
-    public Snap(int pos, int divisor)
+    public Snap(double pos, int divisor)
     {
         this.pos = pos;
         this.divisor = divisor;
@@ -50,26 +50,34 @@ public class Snap implements Comparable<Snap> {
     }
 
     //DUMMY CONSTRUCTOR
-    public Snap(int pos)
+    public Snap(double pos)
     {
         this.pos = pos;
         this.divisor = 0;
     }
 
-    public void render(SpriteBatch sb, ShapeRenderer sr, float pos, float viewScale, float x, float y)
+    public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int viewHeight)
     {
         sb.setColor(getDivisorColor(divisor));
-        x = x + (this.pos - pos) * viewScale;
-        sb.draw(pix, x, y, 1, getHeight());
-        sb.draw(pix, x, y + 200 - getHeight(), 1, getHeight());
+        x = x + (float) (this.pos - pos) * viewScale;
+        sb.draw(pix, x, y, 1, getHeight(viewHeight));
+        if (divisor != 0) //mirrored line on top
+            sb.draw(pix, x, y + viewHeight - getHeight(viewHeight), 1, getHeight(viewHeight));
     }
 
-    private float getHeight()
+    public void halfRender(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int max)
+    {
+        sb.setColor(getDivisorColor(divisor));
+        x = x + (float) (this.pos - pos) * viewScale;
+        sb.draw(pix, x, y, 1, getHeight(max));
+    }
+
+    private float getHeight(float max)
     {
         switch (divisor)
         {
             case 0:
-                return ObjectView.HEIGHT;
+                return max;
             case 1:
                 return ObjectView.MEDIUM_HEIGHT;
             default:
@@ -96,6 +104,6 @@ public class Snap implements Comparable<Snap> {
 
     @Override
     public int compareTo(Snap o) {
-        return this.pos - o.pos;
+        return Double.compare(this.pos, o.pos);
     }
 }

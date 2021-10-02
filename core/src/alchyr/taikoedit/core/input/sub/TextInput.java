@@ -20,12 +20,12 @@ public class TextInput {
     static private final char DELETE = 127;
     static private final char BULLET = 149;
 
-    private final int cap;
-
     private static char lastTyped = '\n';
 
+    public int cap;
+
     public String text = "";
-    private final BitmapFont font;
+    public BitmapFont font;
 
     private Function<String, Boolean> onPushEnter;
 
@@ -71,7 +71,7 @@ public class TextInput {
         if (UIUtils.isMac && Gdx.input.isKeyPressed(Input.Keys.SYM)) return false;
 
         boolean backspace = character == BACKSPACE;
-        boolean add = font.getData().hasGlyph(character);
+        boolean add = font == null || font.getData().hasGlyph(character);
 
         if (backspace && text.length() > 1) {
             lastTyped = BACKSPACE;
@@ -92,7 +92,6 @@ public class TextInput {
                 text = text.concat(String.valueOf(character));
                 return true;
             }
-            //scheduleKeyRepeatTask()
         }
         return false;
     }
@@ -100,16 +99,5 @@ public class TextInput {
     public void clear()
     {
         text = "";
-    }
-
-    private static class KeyRepeatTask extends Timer.Task {
-        int keycode;
-
-        public void run () {
-            if (lastTyped != '\n')
-            {
-                Gdx.input.getInputProcessor().keyTyped(lastTyped);
-            }
-        }
     }
 }

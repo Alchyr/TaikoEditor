@@ -15,14 +15,16 @@ import java.util.function.Consumer;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class Button implements UIElement {
-    private static final float UNDERLINE_THICKNESS = 3;
-    private static float UNDERLINE_OFFSET = 5 * SettingsMaster.SCALE;
+    private static final float BORDER_THICKNESS = 3 * SettingsMaster.SCALE;
+    private static final float UNDERLINE_OFFSET = 5 * SettingsMaster.SCALE;
 
     private static final float X_BUFFER = 4;
 
     private float x, y, width, height, x2, y2, dx, dy;
     private int centerX, centerY;
     private float underlineOffset;
+
+    private final Texture pixel = assetMaster.get("ui:pixel");
 
     private Texture back;
     private String text;
@@ -34,12 +36,16 @@ public class Button implements UIElement {
 
     public String action = "";
 
+    private boolean useBorderRendering;
+    public boolean renderBorder;
+
     public Button(float x, float y, float width, float height, Consumer<Integer> onClick)
     {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        underlineOffset = UNDERLINE_OFFSET;
 
         dx = 0;
         dy = 0;
@@ -51,6 +57,7 @@ public class Button implements UIElement {
         centerY = MathUtils.floor(y + height / 2.0f);
 
         hovered = false;
+        renderBorder = false;
 
         this.onClick = onClick;
     }
@@ -77,7 +84,6 @@ public class Button implements UIElement {
         this.back = image;
         this.text = text;
         this.font = font;
-        underlineOffset = UNDERLINE_OFFSET;
     }
 
     public Button(float centerX, float centerY, String text, BitmapFont font, Consumer<Integer> onClick)
@@ -97,6 +103,9 @@ public class Button implements UIElement {
         this.centerX = MathUtils.floor(centerX);
         this.centerY = MathUtils.floor(centerY);
 
+        this.hovered = false;
+        this.renderBorder = false;
+
         this.back = null;
         this.text = text;
         this.font = font;
@@ -107,6 +116,12 @@ public class Button implements UIElement {
     public Button setAction(String action)
     {
         this.action = action;
+        return this;
+    }
+
+    public Button useBorderRendering()
+    {
+        this.useBorderRendering = true;
         return this;
     }
 
@@ -133,59 +148,100 @@ public class Button implements UIElement {
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         if (back != null)
         {
-            sb.setColor(Color.WHITE.cpy());
+            sb.setColor(Color.WHITE);
             sb.draw(back, x, y);
         }
         if (text != null)
         {
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX, this.centerY);
+        }
+        sb.setColor(Color.WHITE);
+        if (useBorderRendering)
+        {
+            if (hovered || renderBorder)
+            {
+                sb.draw(pixel, this.x, this.y, width, BORDER_THICKNESS);
+
+                if (renderBorder)
+                {
+                    sb.draw(pixel, this.x, this.y, BORDER_THICKNESS, height);
+                    sb.draw(pixel, this.x, this.y + height - BORDER_THICKNESS, width, BORDER_THICKNESS);
+                    sb.draw(pixel, this.x + width - BORDER_THICKNESS, this.y, BORDER_THICKNESS, height);
+                }
+            }
+        }
+        else
+        {
             if (hovered)
             {
-                //textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX + 1 * SettingsMaster.SCALE, centerY + 1 * SettingsMaster.SCALE);
-
-                sb.end();
-
-                sr.begin(ShapeRenderer.ShapeType.Filled);
-
-                sr.setColor(Color.WHITE);
-                sr.rect(x, y - underlineOffset, width, UNDERLINE_THICKNESS);
-
-                sr.end();
-
-                sb.begin();
+                sb.draw(pixel, this.x, this.y - underlineOffset, width, BORDER_THICKNESS);
             }
-
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX, this.centerY);
         }
     }
 
-    public void render(SpriteBatch sb, ShapeRenderer sr, int x, int y) {
+    public void render(SpriteBatch sb, ShapeRenderer sr, float x, float y) {
         dx = x; //adjustment to hover/click check position
         dy = y;
 
         if (back != null)
         {
-            sb.setColor(Color.WHITE.cpy());
+            sb.setColor(Color.WHITE);
             sb.draw(back, this.x + x, this.y + y);
         }
         if (text != null)
         {
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX + x, this.centerY + y);
+        }
+        sb.setColor(Color.WHITE);
+        if (useBorderRendering)
+        {
+            if (hovered || renderBorder)
+            {
+                sb.draw(pixel, this.x + x, this.y + y, width, BORDER_THICKNESS);
+
+                if (renderBorder)
+                {
+                    sb.draw(pixel, this.x + x, this.y + y, BORDER_THICKNESS, height);
+                    sb.draw(pixel, this.x + x, this.y + y + height - BORDER_THICKNESS, width, BORDER_THICKNESS);
+                    sb.draw(pixel, this.x + x + width - BORDER_THICKNESS, this.y + y, BORDER_THICKNESS, height);
+                }
+            }
+        }
+        else
+        {
             if (hovered)
             {
-                //textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX + 1 * SettingsMaster.SCALE, centerY + 1 * SettingsMaster.SCALE);
-
-                sb.end();
-
-                sr.begin(ShapeRenderer.ShapeType.Filled);
-
-                sr.setColor(Color.WHITE);
-                sr.rect(this.x + x, this.y + y - underlineOffset, width, UNDERLINE_THICKNESS);
-
-                sr.end();
-
-                sb.begin();
+                sb.draw(pixel, this.x + x, this.y + y - underlineOffset, width, BORDER_THICKNESS);
             }
+        }
+    }
 
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.centerX + x, this.centerY + y);
+    public float startX()
+    {
+        return x + dx;
+    }
+    public float endX()
+    {
+        return x2 + dx;
+    }
+
+    public void setText(String newText)
+    {
+        setText(newText, false);
+    }
+
+    public void setText(String newText, boolean resize)
+    {
+        this.text = newText;
+        if (resize)
+        {
+            width = textRenderer.setFont(font).getWidth(text);
+            height = textRenderer.getHeight(text);
+
+            x = centerX - width / 2.0f;
+            y = centerY - height / 2.0f;
+            x2 = x + width;
+            y2 = y + height;
         }
     }
 }

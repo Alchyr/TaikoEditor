@@ -4,9 +4,8 @@ import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.hitobjects.Slider;
-import alchyr.taikoedit.util.input.KeyHoldManager;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.util.input.MouseHoldObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -53,16 +52,16 @@ public class SliderTool extends EditorTool {
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
         if (isPlacing)
         {
-            int time = currentlyPlacing.getTimeFromPosition(Gdx.input.getX());
+            double time = currentlyPlacing.getTimeFromPosition(Gdx.input.getX());
             Snap closest = currentlyPlacing.getClosestSnap(time, MAX_PLACEMENT_OFFSET);
 
             if (closest != null && closest.pos > placementObject.pos)
             {
-                placementObject.setDuration(closest.pos - placementObject.pos);
+                placementObject.setDuration((int) closest.pos - placementObject.pos);
             }
             else if (time > placementObject.pos)
             {
-                placementObject.setDuration(time - placementObject.pos);
+                placementObject.setDuration((int) time - placementObject.pos);
             }
         }
         else
@@ -83,13 +82,14 @@ public class SliderTool extends EditorTool {
                 if (v.containsY(y))
                 {
                     MapView hovered = v.getView(y);
-                    Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
+                    if (this.supportsView(hovered)) {
+                        Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
 
-                    if (closest != null)
-                    {
-                        previewView = hovered;
-                        renderPreview = true;
-                        placementObject.setPosition(closest.pos);
+                        if (closest != null) {
+                            previewView = hovered;
+                            renderPreview = true;
+                            placementObject.setPosition((int) closest.pos);
+                        }
                     }
                     return;
                 }
@@ -117,7 +117,12 @@ public class SliderTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, KeyHoldManager keyHolds) {
+    public boolean consumesRightClick() {
+        return isPlacing;
+    }
+
+    @Override
+    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
         //Place an object at current previewed placement position
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (isPlacing)
@@ -144,5 +149,10 @@ public class SliderTool extends EditorTool {
         }
 
         return null;
+    }
+
+    @Override
+    public boolean supportsView(MapView view) {
+        return view.type == MapView.ViewType.OBJECT_VIEW;
     }
 }

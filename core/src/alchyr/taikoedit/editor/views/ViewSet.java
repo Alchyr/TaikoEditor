@@ -1,31 +1,52 @@
 package alchyr.taikoedit.editor.views;
 
+import alchyr.diffcalc.TaikoDifficultyCalculator;
+import alchyr.diffcalc.taiko.difficulty.TaikoDifficultyAttributes;
+import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.util.input.KeyHoldManager;
+import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.util.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
+import java.util.function.Predicate;
+
+import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ViewSet {
+    private final EditorLayer owner;
     private final ArrayList<MapView> views;
     private final TreeMap<MapView.ViewType, ArrayList<MapView>> organizedViews;
-    private final HashMap<MapView.ViewType, NavigableMap<Integer, ArrayList<? extends PositionalObject>>> viewObjects;
+    private final HashMap<MapView.ViewType, NavigableMap<Long, ArrayList<? extends PositionalObject>>> viewObjects;
     private final EditorBeatmap map;
 
-    public ViewSet(EditorBeatmap map)
+    private final HashMap<HitObject, TaikoDifficultyHitObject> difficultyInfo = new HashMap<>();
+
+    private final BitmapFont difficultyFont;
+    private final float difficultyX;
+    private int yOffset;
+
+    public ViewSet(EditorLayer owner, EditorBeatmap map)
     {
+        this.owner = owner;
         this.map = map;
+
+        difficultyFont = assetMaster.getFont("aller medium");
+        difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
 
         views = new ArrayList<>();
         organizedViews = new TreeMap<>();
         viewObjects = new HashMap<>();
     }
 
-    public void update(float exactPos, int pos, boolean isPlaying)
+    public void update(double exactPos, long pos, boolean isPlaying)
     {
         prep(pos);
         for (MapView view : views)
@@ -56,13 +77,20 @@ public class ViewSet {
 
     public void renderOverlays(SpriteBatch sb, ShapeRenderer sr)
     {
+        boolean first = true;
         for (MapView view : views) {
             view.renderOverlay(sb, sr);
+            if (first)
+            {
+                textRenderer.setFont(difficultyFont).renderText(sb, map.getName(), difficultyX, view.top - 10);
+                first = false;
+            }
         }
     }
 
     public void setOffset(int offset)
     {
+        yOffset = offset;
         for (MapView view : views)
         {
             view.setOffset(offset);
@@ -76,6 +104,11 @@ public class ViewSet {
 
         return y >= views.get(views.size() - 1).bottom;
     }
+
+    public ArrayList<MapView> getViews() {
+        return views;
+    }
+
     public MapView getView(int y)
     {
         for (MapView view : views) {
@@ -86,7 +119,7 @@ public class ViewSet {
         }
         return null;
     }
-    public MouseHoldObject click(EditorLayer source, int x, int y, int pointer, int button, KeyHoldManager keyHolds)
+    public MouseHoldObject click(int x, int y, int pointer, int button, int modifiers)
     {
         for (MapView view : views) {
             if (y >= view.bottom) //Since views are positioned by their index in this array, there's no need to check that y < view.topY
@@ -96,16 +129,14 @@ public class ViewSet {
                     return null;
                 }
                 MouseHoldObject returnVal = null;
-                if (source.tools.changeToolset(view)) //If the current tool is valid for the new toolset, use it immediately
+                if (owner.tools.changeToolset(view)) //If the current tool is valid for the new toolset, use it immediately
                 {
-                    returnVal = source.tools.getCurrentTool().click(view, x, y, button, keyHolds);
+                    returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
                 }
 
                 if (view.click(x, y, pointer, button))
                 {
-                    if (source.primaryView != null)
-                        source.primaryView.isPrimary = false;
-                    source.primaryView = view;
+                    owner.setPrimaryView(view);
                 }
 
                 return returnVal;
@@ -122,11 +153,11 @@ public class ViewSet {
     }
 
     @SuppressWarnings("unchecked")
-    public void prep(int pos)
+    public void prep(long pos)
     {
         for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet())
         {
-            viewObjects.put(viewSet.getKey(), (NavigableMap<Integer, ArrayList<? extends PositionalObject>>) viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
+            viewObjects.put(viewSet.getKey(), (NavigableMap<Long, ArrayList<? extends PositionalObject>>) viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
         }
     }
 
@@ -148,6 +179,13 @@ public class ViewSet {
                 organizedViews.put(toAdd.type, new ArrayList<>());
 
             organizedViews.get(toAdd.type).add(toAdd);
+
+            switch (toAdd.type) //Bind to certain hooks
+            {
+                case EFFECT_VIEW:
+                    map.bindEffectView((SvView) toAdd);
+                    break;
+            }
         }
         else
         {
@@ -165,7 +203,26 @@ public class ViewSet {
                 organizedViews.remove(toRemove.type);
                 viewObjects.remove(toRemove.type);
             }
+
+            switch (toRemove.type)
+            {
+                case EFFECT_VIEW:
+                    map.removeEffectView((SvView) toRemove);
+                    break;
+            }
         }
+    }
+
+    public boolean contains(Predicate<MapView> condition)
+    {
+        for (MapView view : views)
+        {
+            if (condition.test(view))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean isEmpty()
@@ -182,5 +239,12 @@ public class ViewSet {
         views.clear();
         organizedViews.clear();
         viewObjects.clear();
+    }
+
+    public void calculateDifficulty() {
+        TaikoDifficultyAttributes attributes = (TaikoDifficultyAttributes) TaikoDifficultyCalculator.calculateDifficulty(map, difficultyInfo);
+        owner.showText(attributes.StarRating + " : " + attributes.ContinuousRating + " : " + attributes.BurstRating);
+
+        owner.addView(new DifficultyView(owner, map, difficultyInfo), true);
     }
 }

@@ -4,10 +4,13 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.AdjustedInputProcessor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.input.sub.TextInput;
+import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
+import alchyr.taikoedit.core.layers.tests.BindingTestLayer;
 import alchyr.taikoedit.core.ui.Button;
+import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.maps.Mapset;
+import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
@@ -17,13 +20,14 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class MenuLayer extends LoadedLayer implements InputLayer {
-    private static MenuLayer menu;
+    public static LoadedLayer menu;
 
     private static int OPTION_WIDTH, OPTION_HEIGHT;
 
@@ -49,6 +53,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     private float searchTextOffsetX, searchTextOffsetY;
 
     private TextInput searchInput;
+
+    private ImageButton exitButton;
+    private ImageButton settingsButton;
 
     private int displayIndex = 0;
     private int scrollPos = 0;
@@ -85,14 +92,18 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
             {
                 background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
-
-                float bgScale = Math.max((float) SettingsMaster.getWidth()/ background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
-                bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
-                bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+            }
+            else
+            {
+                background = assetMaster.get("menu:background");
             }
 
+            float bgScale = Math.max((float) SettingsMaster.getWidth()/ background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+            bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+            bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+
             pixel = assetMaster.get("ui:pixel");
-            searchHeight = 60;
+            searchHeight = 40;
             searchY = SettingsMaster.getHeight() - searchHeight;
             searchTextOffsetX = 10;
             searchTextOffsetY = 35;
@@ -122,6 +133,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
             searchInput = new TextInput(128, assetMaster.getFont("default"));
 
+            exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"), this::quit);
+            settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh"), this::settings);
+
             initialized = true;
         }
     }
@@ -134,6 +148,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         {
             mapOptions.get(i).update();
         }
+
+        exitButton.update();
+        settingsButton.update();
     }
 
     @Override
@@ -164,6 +181,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
         sb.setColor(Color.WHITE);
         searchInput.render(sb, searchTextOffsetX, searchY + searchTextOffsetY);
+
+        settingsButton.render(sb, sr);
+        exitButton.render(sb, sr);
     }
 
     @Override
@@ -179,25 +199,28 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         TaikoEditor.addLayer(edit.getLoader());
     }
 
-    private void play(int button)
+    private void test()
     {
         TaikoEditor.removeLayer(this);
-
-        /*AlchemistGame.addLayer(new LoadingLayer("game", new GameLayer[] {
-                new AttackLayer(),
-                new GameplayLayer().addEntity(new Player(new PlayerController(), SettingsMaster.getWidth() / 2.0f, SettingsMaster.getHeight() / 2.0f))
-        }, true));*/
-
-        //AlchemistGame.addLayer(new MapTestLayer().getLoader());
+        TaikoEditor.addLayer(new BindingTestLayer().getLoader());
     }
+
     private void settings(int button)
     {
         editorLogger.trace("Settings!");
+
+        TaikoEditor.addLayer(new SettingsLayer());
     }
     private void quit(int button)
     {
-        editorLogger.trace("Goodbye!");
-        TaikoEditor.end();
+        TaikoEditor.addLayer(new ConfirmationLayer("Exit?", "Yes", "No").onConfirm(TaikoEditor::end).onCancel(TaikoEditor::end));
+        //editorLogger.trace("Goodbye!");
+        /*int result = JOptionPane.showConfirmDialog(null, "Exit?", "Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+        if (result == 0) {
+
+        }*/
+        //TaikoEditor.end();
     }
 
     @Override
@@ -206,15 +229,16 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         return new LoadingLayer(new String[] {
                 "ui",
                 "font",
-                "menu",
                 "background",
+                "menu",
                 "hitsound"
-        }, this, true).addTask(MapMaster::load).addCallback(TaikoEditor::initialize);
+        }, this, true)
+                .addTask(MapMaster::load).addTracker(MapMaster::getProgress)
+                .addCallback(TaikoEditor::initialize);
     }
 
     public static LoadingLayer getReturnLoader() {
         return new LoadingLayer(new String[] {
-                "menu"
         }, menu, true);
     }
 
@@ -232,9 +256,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             switch (keycode)
             {
                 case Input.Keys.ESCAPE:
-                    TaikoEditor.end();
+                    sourceLayer.quit(0);
                     return true;
             }
+            //sourceLayer.test();
             return false;
         }
 
@@ -267,18 +292,24 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
         @Override
         public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            //gameLogger.trace("Game coordinates: " + gameX + ", " + gameY);
+            editorLogger.trace("Game coordinates: " + gameX + ", " + gameY);
             /*for (Button b : sourceLayer.buttons)
             {
                 if (b.click(gameX, gameY, button))
                     return true;
             }*/
 
-            for (Button b : sourceLayer.mapOptions)
+            if (sourceLayer.settingsButton.click(gameX, gameY, button))
+                return true;
+
+            if (sourceLayer.exitButton.click(gameX, gameY, button))
+                return true;
+
+            for (int i = sourceLayer.displayIndex; i < sourceLayer.displayIndex + PER_SCREEN && i < sourceLayer.mapOptions.size(); ++i)
             {
-                if (b.click(gameX, gameY, button))
+                if (sourceLayer.mapOptions.get(i).click(gameX, gameY, button))
                 {
-                    sourceLayer.chooseMap(b.action);
+                    sourceLayer.chooseMap(sourceLayer.mapOptions.get(i).action);
                     return true;
                 }
             }

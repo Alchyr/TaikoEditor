@@ -14,9 +14,9 @@ public class MusicWrapper implements Music.OnCompletionListener {
     private PreloadedMp3 music;
     private FileHandle musicFile;
 
-    public float precise = -1; //The last value returned
-    public float time = -1; //Refresher to see if music has give a new value
-    public float last = -1; //The last updated value obtained from music
+    public double precise = -1; //The last value returned
+    public double time = -1; //Refresher to see if music has give a new value
+    public double last = -1; //The last updated value obtained from music
 
     private float totalElapsed = 0;
 
@@ -138,13 +138,13 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return music == null;
     }
 
-    public int getMsTime(float elapsed)
+    public double getMsTime(float elapsed)
     {
-        return (int) (getSecondTime(elapsed) * 1000);
+        return getSecondTime(elapsed) * 1000.0f;
     }
-    public float getSecondTime(float elapsed)
+    public double getSecondTime(float elapsed)
     {
-        time = music.getPosition();
+        time = music.getPrecisePosition();
 
         if (playing)
         {
@@ -162,9 +162,9 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return time + offset;
     }
 
-    public int getMsLength()
+    public double getMsLength()
     {
-        return (int) (music.getLength() * 1000);
+        return music.getLength() * 1000.0;
     }
     public float getSecondLength()
     {
@@ -214,21 +214,21 @@ public class MusicWrapper implements Music.OnCompletionListener {
         last = time;
     }
 
-    public void seekMs(int newPos)
+    public void seekMs(double newPos)
     {
-        seekSecond(newPos / 1000.0f);
+        seekSecond(newPos / 1000.0);
     }
-    public void seekMs(int newPos, boolean continuePlaying)
+    public void seekMs(double newPos, boolean continuePlaying)
     {
         if (!continuePlaying)
             playing = false;
-        seekSecond(newPos / 1000.0f, continuePlaying);
+        seekSecond(newPos / 1000.0, continuePlaying);
     }
-    public void seekSecond(float newPos)
+    public void seekSecond(double newPos)
     {
-        music.setPosition(Math.max(0, newPos) - offset);
+        music.setPosition((float) Math.max(0, newPos) - offset);
     }
-    public void seekSecond(float newPos, boolean continuePlaying)
+    public void seekSecond(double newPos, boolean continuePlaying)
     {
         if (lockKey != null)
         {
@@ -237,21 +237,26 @@ public class MusicWrapper implements Music.OnCompletionListener {
         }
         if (!continuePlaying)
             playing = false;
-        music.setPosition(Math.max(0, newPos) - offset, continuePlaying);
+        music.setPosition((float) Math.max(0, newPos) - offset, continuePlaying);
     }
 
-    public void setTempo(float newTempo)
+    public float setTempo(float newTempo)
     {
         if (newTempo < 0.5f)
             newTempo = 0.5f;
         if (newTempo > 1.5f)
             newTempo = 1.5f;
 
-        music.changeTempo(newTempo, precise);
+        music.changeTempo(newTempo, (float) precise);
+        return newTempo;
     }
-    public void changeTempo(float add)
+    public float changeTempo(float add)
     {
-        setTempo(music.tempo + add);
+        return setTempo(music.tempo + add);
+    }
+    public float getTempo()
+    {
+        return music.tempo;
     }
 
     public void modifyOffset(float change)

@@ -65,6 +65,16 @@ public class TextRenderer {
         currentRendering.draw(sb, s, x, y);
         return this;
     }
+    public TextRenderer renderTextYCentered(SpriteBatch sb, String s, float x, float y)
+    {
+        layout.reset();
+
+        layout.setText(currentRendering, s, Color.WHITE.cpy(), 1, Align.left, false);
+
+        currentRendering.draw(sb, layout, x, y + layout.height / 2.0f);
+
+        return this;
+    }
     public TextRenderer renderTextCentered(SpriteBatch sb, String s, float x, float y)
     {
         return renderTextCentered(sb, s, x, y, Color.WHITE);

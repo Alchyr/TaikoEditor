@@ -1,7 +1,7 @@
 package alchyr.taikoedit.core.layers;
 
-import alchyr.taikoedit.core.GameLayer;
+import alchyr.taikoedit.core.ProgramLayer;
 
-public abstract class LoadedLayer extends GameLayer {
+public abstract class LoadedLayer extends ProgramLayer {
     public abstract LoadingLayer getLoader();
 }

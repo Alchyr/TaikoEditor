@@ -1,13 +1,13 @@
 package alchyr.taikoedit.editor.changes;
 
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.ILongObject;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.ILongObject;
 
 public class DurationChange extends MapChange {
     private final ILongObject changed;
-    private final int changeAmount;
+    private final long changeAmount;
 
-    public DurationChange(EditorBeatmap map, ILongObject changed, int changeAmount)
+    public DurationChange(EditorBeatmap map, ILongObject changed, long changeAmount)
     {
         super(map);
         this.changed = changed;

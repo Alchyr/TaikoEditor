@@ -6,7 +6,6 @@ import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.TextureLoader;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.utils.Json;
@@ -92,7 +91,7 @@ public class AssetLists implements Json.Serializable {
                                 assetMaster.loadingRegions.add(new Pair<>(info.getAssetName(name), new RegionInfo(info.getFileName(), params)));
                                 break;
                             case "sound":
-                                soundMaster.addSfx(info.getAssetName(name), info.getFileName());
+                                audioMaster.addSfx(info.getAssetName(name), info.getFileName());
                                 break;
                             case "bitmapfont":
                                 manager.load(info.getFileName(), BitmapFont.class);
@@ -212,7 +211,7 @@ public class AssetLists implements Json.Serializable {
                         master.unload(info.getFileName());
                         break;
                     case "sound":
-                        soundMaster.removeSfx(info.getAssetName(name));
+                        audioMaster.removeSfx(info.getAssetName(name));
                         break;
                     case "special":
                         if (info.getParams() != null)

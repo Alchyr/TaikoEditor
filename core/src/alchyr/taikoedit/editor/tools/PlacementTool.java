@@ -4,7 +4,7 @@ import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.util.input.KeyHoldManager;
 import alchyr.taikoedit.util.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;

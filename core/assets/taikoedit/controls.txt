@@ -1,0 +1,52 @@
+BASICS:
+Click stuff to do things.
+
+
+Escape to exit.
+
+Navigation:
+Click on timeline to jump.
+Space to play/pause.
+Left/Right arrows or z/x to move to previous/next snap.
+Ctrl+left/right arrows/z/x to move to previous/next bookmark.
+
+Editor Controls:
+Numbers for hotkeys to swap tools.
+wertyuiop: instant use tools starting from index 2. Not all tools support instant use. In fact, only one does.
+    For placing objects, w and e will place a don/kat at the current position. If objects are selected, it will convert them to dons/kats instead.
+q - toggle finisher lock (makes placed objects finishers). Pressing q while objects are selected will convert them to/from finishers instead.
+Holding Shift while placing dons/kats/sliders will make them finishers.
+Mouse to use tools.
+Right click to delete things.
+Up/Down arrows to change playback rate. Speed changing was done through a lazy method, so pitch is also affected.
+Ctrl+a - select all
+ctrl+c - copy selection
+ctrl+x - cut selection
+` (~ key) - clear selection
+ctrl+v - paste
+ctrl+b - add bookmark at current position
+ctrl+g - reverse selection
+ctrl+alt+r - resnap selection - TEST FEATURE, I would not rely on this.
+ctrl+n or top right button - open a new view
+ctrl+s - save
+ctrl+z - undo
+ctrl+y - redo
+delete/backspace - delete selection, or if nothing is selected, delete object near the current time.
+
+ctrl+scroll wheel to change snaps
+shift+scroll wheel to change zoom
+Scroll wheel can also be used to navigate through song.
+If there are enough views to enable view scrolling, the scroll wheel will do that instead.
+
+Selection tool:
+Click an object to select it. Clicking directly on an object and dragging it will move it.
+Clicking and dragging not directly on an object will select a range.
+
+You can hold alt while dragging an object to ignore snaps. No idea why you'd want this, maybe for moving a green line? Idk, it was less than a line of code so I did it.
+
+
+Other:
+- and = to adjust offset. Some songs may not play with the correct offset. Use this to adjust. Hold ctrl to increase how much offset is adjusted by.
+I can never remember which way positive/negative numbers are supposed to go so if they're opposite how they should be tell me x d
+(I think I have it backwards right now.)
+if sfx are late, use +. Early, use -.

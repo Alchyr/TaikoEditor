@@ -1,21 +1,20 @@
 package alchyr.taikoedit.editor.changes;
 
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.HitObject;
-import alchyr.taikoedit.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.structures.PositionalObject;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.NavigableMap;
 
 public class Deletion extends MapChange {
     private final ChangeType type;
     private final boolean singleObject;
-    private final NavigableMap<Integer, ArrayList<PositionalObject>> deletedObjects;
+    private final NavigableMap<Long, ArrayList<PositionalObject>> deletedObjects;
     private final PositionalObject deletedObject;
 
-    public Deletion(EditorBeatmap map, ChangeType type, NavigableMap<Integer, ArrayList<PositionalObject>> deletedObjects)
+    public Deletion(EditorBeatmap map, ChangeType type, NavigableMap<Long, ArrayList<PositionalObject>> deletedObjects)
     {
         super(map);
 
@@ -36,7 +35,6 @@ public class Deletion extends MapChange {
         deletedObjects = null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public MapChange undo() {
         if (singleObject)
@@ -46,12 +44,11 @@ public class Deletion extends MapChange {
             {
                 case OBJECTS:
                     map.objects.add((HitObject) deletedObject);
-                    break;
-                case TIMING:
-                    map.timingPoints.add((TimingPoint) deletedObject);
+                    map.updateVolume((HitObject) deletedObject);
                     break;
                 case EFFECT:
                     map.effectPoints.add((TimingPoint) deletedObject);
+                    map.updateEffectPoints((TimingPoint) deletedObject, null);
                     break;
             }
         }
@@ -62,12 +59,11 @@ public class Deletion extends MapChange {
             {
                 case OBJECTS:
                     map.objects.addAll(deletedObjects);
-                    break;
-                case TIMING:
-                    map.timingPoints.addAll(deletedObjects);
+                    map.updateVolume(deletedObjects);
                     break;
                 case EFFECT:
                     map.effectPoints.addAll(deletedObjects);
+                    map.updateEffectPoints(deletedObjects, null);
                     break;
             }
         }
@@ -75,35 +71,29 @@ public class Deletion extends MapChange {
     }
     @Override
     public MapChange perform() {
-        if (singleObject)
+        if (singleObject && deletedObject != null)
         {
-            assert deletedObject != null;
             switch (type)
             {
                 case OBJECTS:
                     map.objects.removeObject(deletedObject);
                     break;
-                case TIMING:
-                    map.timingPoints.removeObject(deletedObject);
-                    break;
                 case EFFECT:
                     map.effectPoints.removeObject(deletedObject);
+                    map.updateEffectPoints(null, (TimingPoint) deletedObject);
                     break;
             }
         }
-        else
+        else if (deletedObjects != null)
         {
-            assert deletedObjects != null;
             switch (type)
             {
                 case OBJECTS:
                     map.objects.removeAll(deletedObjects);
                     break;
-                case TIMING:
-                    map.timingPoints.removeAll(deletedObjects);
-                    break;
                 case EFFECT:
                     map.effectPoints.removeAll(deletedObjects);
+                    map.updateEffectPoints(null, deletedObjects);
                     break;
             }
         }

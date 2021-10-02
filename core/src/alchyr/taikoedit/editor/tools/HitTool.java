@@ -1,20 +1,22 @@
 package alchyr.taikoedit.editor.tools;
 
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.changes.RimChange;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.HitObject;
-import alchyr.taikoedit.maps.components.hitobjects.Hit;
-import alchyr.taikoedit.util.input.KeyHoldManager;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -75,13 +77,16 @@ public class HitTool extends EditorTool {
             if (v.containsY(y))
             {
                 MapView hovered = v.getView(y);
-                Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
-
-                if (closest != null)
+                if (this.supportsView(hovered))
                 {
-                    previewView = hovered;
-                    renderPreview = true;
-                    placementObject.setPosition(closest.pos);
+                    Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
+
+                    if (closest != null)
+                    {
+                        previewView = hovered;
+                        renderPreview = true;
+                        placementObject.setPosition((long) closest.pos);
+                    }
                 }
                 return;
             }
@@ -97,7 +102,7 @@ public class HitTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, KeyHoldManager keyHolds) {
+    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
         //Place an object at current previewed placement position
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
@@ -112,7 +117,40 @@ public class HitTool extends EditorTool {
     }
 
     @Override
+    public void instantUse(MapView view) {
+        if (view.hasSelection()) { //Type is already checked by supportsView
+            List<Hit> hits = new ArrayList<>();
+
+            for (ArrayList<PositionalObject> stack : view.getSelection().values()) {
+                for (PositionalObject h : stack) {
+                    if (h instanceof Hit && ((Hit) h).isRim() ^ isRim) {
+                        hits.add((Hit) h);
+                    }
+                }
+            }
+
+            view.map.registerChange(new RimChange(view.map, hits, isRim).perform());
+        }
+        else {
+            double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
+            Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
+
+            if (closest != null)
+            {
+                time = closest.pos;
+            }
+
+            view.map.addObject(new Hit((long) time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)));
+        }
+    }
+
+    @Override
     public void cancel() {
 
+    }
+
+    @Override
+    public boolean supportsView(MapView view) {
+        return view.type == MapView.ViewType.OBJECT_VIEW;
     }
 }

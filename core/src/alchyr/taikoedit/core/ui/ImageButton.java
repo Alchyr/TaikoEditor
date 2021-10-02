@@ -18,13 +18,14 @@ import static alchyr.taikoedit.TaikoEditor.textRenderer;
 public class ImageButton implements UIElement {
     private int x, y, width, height, x2, y2, dx, dy;
     private int centerX, centerY;
+    private int imgWidth, imgHeight, hoverWidth, hoverHeight;
 
     private Texture image;
     private Texture hoveredImage;
     private String text;
     private BitmapFont font;
 
-    private boolean hovered;
+    public boolean hovered;
 
     private Consumer<Integer> onClick;
 
@@ -34,6 +35,10 @@ public class ImageButton implements UIElement {
     {
         this(0, 0, image, hoverImage, "", assetMaster.getFont("default"), onClick);
     }
+    public ImageButton(int x, int y, Texture image, Texture hoverImage, Consumer<Integer> onClick)
+    {
+        this(x, y, image, hoverImage, "", assetMaster.getFont("default"), onClick);
+    }
     public ImageButton(int x, int y, Texture image, String text, Consumer<Integer> onClick)
     {
         this(x, y, image, image, text, assetMaster.getFont("default"), onClick);
@@ -42,7 +47,11 @@ public class ImageButton implements UIElement {
     {
         this(x, y, image.getWidth(), image.getHeight(), onClick);
         this.image = image;
+        imgWidth = image.getWidth();
+        imgHeight = image.getHeight();
         this.hoveredImage = hoveredImage;
+        hoverWidth = hoveredImage.getWidth();
+        hoverHeight = hoveredImage.getHeight();
         this.text = text;
         this.font = font;
     }
@@ -65,6 +74,12 @@ public class ImageButton implements UIElement {
         hovered = false;
 
         this.onClick = onClick;
+    }
+
+    //Assumed that they are the same size.
+    public void setTextures(Texture image, Texture hover) {
+        this.image = image;
+        this.hoveredImage = hover;
     }
 
     public ImageButton setAction(String action)
@@ -94,16 +109,16 @@ public class ImageButton implements UIElement {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
+        sb.setColor(Color.WHITE.cpy());
         if (hovered) {
-            sb.draw(hoveredImage, x, y);
+            sb.draw(hoveredImage, x, y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, false, false);
         }
         else {
-            sb.setColor(Color.WHITE.cpy());
-            sb.draw(image, x, y);
+            sb.draw(image, x, y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, false, false);
         }
         if (text != null)
         {
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX, y);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX, this.centerY);
         }
     }
 
@@ -112,11 +127,11 @@ public class ImageButton implements UIElement {
         dy = y;
 
         if (hovered) {
-            sb.draw(hoveredImage, this.x + x, this.y + y);
+            sb.draw(hoveredImage, this.x + x, this.y + y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, false, false);
         }
         else {
             sb.setColor(Color.WHITE.cpy());
-            sb.draw(image, this.x + x, this.y + y);
+            sb.draw(image, this.x + x, this.y + y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, false, false);
         }
         if (text != null)
         {
@@ -124,7 +139,16 @@ public class ImageButton implements UIElement {
         }
     }
 
+    public int getX() {
+        return x;
+    }
+    public int getY() {
+        return y;
+    }
     public int getWidth() {
         return width;
+    }
+    public int getHeight() {
+        return height;
     }
 }

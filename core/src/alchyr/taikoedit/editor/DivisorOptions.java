@@ -3,7 +3,7 @@ package alchyr.taikoedit.editor;
 import java.util.*;
 
 public class DivisorOptions {
-    private final Set<Integer> snappingOptions;
+    public final Set<Integer> snappingOptions;
     public final List<Integer> activeSnappings;
 
     private int maxDivisor;
@@ -130,5 +130,10 @@ public class DivisorOptions {
         {
             set(Math.min(16, ++maxDivisor));
         }
+    }
+
+    @Override
+    public String toString() {
+        return maxDivisor > 0 ? "1/" + maxDivisor : "None";
     }
 }

@@ -1,7 +1,7 @@
 package alchyr.taikoedit.editor.changes;
 
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.HitObject;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 
@@ -13,8 +13,8 @@ import java.util.NavigableMap;
 public class ObjectAddition extends MapChange {
     private final HitObject added;
     private final boolean singleObject;
-    private final NavigableMap<Integer, ArrayList<PositionalObject>> addedObjects;
-    private List<Pair<Integer, ArrayList<HitObject>>> replacedObjects;
+    private final NavigableMap<Long, ArrayList<PositionalObject>> addedObjects;
+    private List<Pair<Long, ArrayList<HitObject>>> replacedObjects;
 
     public ObjectAddition(EditorBeatmap map, HitObject addedObject)
     {
@@ -23,6 +23,16 @@ public class ObjectAddition extends MapChange {
         singleObject = true;
         this.added = addedObject;
         addedObjects = null;
+        replacedObjects = null;
+    }
+
+    public ObjectAddition(EditorBeatmap map, NavigableMap<Long, ArrayList<PositionalObject>> addedObjects)
+    {
+        super(map);
+
+        singleObject = false;
+        this.added = null;
+        this.addedObjects = addedObjects;
         replacedObjects = null;
     }
 
@@ -38,10 +48,11 @@ public class ObjectAddition extends MapChange {
         }
         if (replacedObjects != null)
         {
-            for (Pair<Integer, ArrayList<HitObject>> replaced : replacedObjects)
+            for (Pair<Long, ArrayList<HitObject>> replaced : replacedObjects)
             {
                 map.objects.put(replaced.a, replaced.b);
             }
+            map.updateVolume(replacedObjects);
         }
         return this;
     }
@@ -61,11 +72,12 @@ public class ObjectAddition extends MapChange {
                 replacedObjects = null;
             }
             map.objects.add(added);
+            map.updateVolume(added);
         }
         else if (addedObjects != null)
         {
             replacedObjects = new ArrayList<>();
-            for (Map.Entry<Integer, ArrayList<PositionalObject>> e : addedObjects.entrySet())
+            for (Map.Entry<Long, ArrayList<PositionalObject>> e : addedObjects.entrySet())
             {
                 ArrayList<HitObject> replaced = map.objects.remove(e.getKey());
                 if (replaced != null)
@@ -78,6 +90,8 @@ public class ObjectAddition extends MapChange {
             }
             if (replacedObjects.isEmpty())
                 replacedObjects = null;
+
+            map.updateVolume(addedObjects);
         }
         return this;
     }

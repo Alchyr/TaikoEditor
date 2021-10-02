@@ -1,12 +1,40 @@
-LOADING SUCKS MAKE IT BETTER
-Object Paste
+LOADING SUCKS MAKE IT BETTER.
+Loading takes way too long on some pcs or if you have a huge amount of maps.
 
-Better loading bar for loading?
+MAJOR:
+- Existing break periods will not be updated, resulting in breaks over gameplay which is Unrankable
 
-SV View
+- Settings menu
+
+
+MAYBE:
+Add scaling so lower resolutions can see a reasonable amount of stuff
+
+
+MINOR:
+Add toggle for effect view to swap between sv and volume editing?
+
+Sliders are not the correct length in gameplay view when SV is not 1.0x
+
+Add view starts on whatever difficulty was opened last? Current primary difficulty?
+Sort difficulties by difficulty? Maybe.
+
+
+Selection tool shift + click to select all between currently selection and clicked point
+If on left, from left end of selection, on right, from right end of selection (doesn't affect existing selection)
+If in the middle, left middle: Selects from left side. Right middle, selects from right side. (smaller side)
 
 Difficulty choosing/creating/menu
+    - Partially complete. Todo: New difficulty creation. Difficulty Settings Menu.
 
+Double-click to jump to an object
+
+ability to configure placement of objects
+
+
+
+NOTE - Timing generation does not match stable?
+I think stable generates one beat at a time, skipping to the next beat directly rather than incrementally
 
 
 
@@ -14,4 +42,23 @@ EXTRA STUFF:
 Alternate song select - Simply file open dialog, without preloading all maps (= no load time)
 Loading osu! skins
 
+Snaps beyond 1/16? Using a custom set of snappings?
+
+Limited selection - ex. only select kats or only select dons
+
 save as tja?
+
+
+NOTE:
+Because snaps store precise positions and timing points are placed at integer positions, they may intermittently overlap/unoverlap depending on song position.
+Anything that is placed on a snap will round using truncation.
+Snaps are calculated based on the method used by lazer in its open source code.
+As such, snap generation *does not* match live, and thus may result in 1ms unsnaps.
+
+
+BUGS:
+Sometimes audio will not play the first time you seek. Seeking again fixes this.
+Seems to be kind of fixed?
+Changing speed before playing the audio at least once will result in audio issues. Seeking or pausing and playing again will fix this.
+Seems ok?
+When the snap divisor is set to 0 (none) the program is much (?) laggier. May simply be a visual illusion thing.

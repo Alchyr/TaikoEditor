@@ -17,15 +17,30 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 
+/*
+ * Display modes:
+ * Fullscreen. Works as expected. Great, except swing popups will not be visible, and will be covered but uninteractable. So, don't use them.
+ * Windowed. Works as expected.
+ * Windowed Fullscreen -
+ * If the taskbar is shown, totally fucked. Reports window size of 1061, while the maximum value input is 1041, effectively cutting off 20 pixels.
+ *
+ * Fix: Initialize window at a smaller size, then resize to windowed fullscreen after. Works as expected whether taskbar is shown or hidden.
+ * TODO: Implement this properly, passing the necessary information to the program.
+ */
+
 public class DesktopLauncher {
 	public static final Logger logger = LogManager.getLogger("DesktopLauncher");
 
 	private static final String settingsPrefix = "settings" + File.separator;
 
+	private static int width = -1, height = -1;
+	private static boolean borderless = false;
 	private static int fpsMode = 0; //0 = vsync, 1 = sync, 2 = unlimited
 	private static int fps;
 
-	public static void main (String[] arg) {
+	private static boolean fast = false;
+
+	public static void main(String[] args) {
 		/*logging test
 		logger.trace("trace");
 		logger.info("info");
@@ -33,12 +48,26 @@ public class DesktopLauncher {
 
 		SystemUtils.log(logger);
 
+		for (String arg : args) {
+			logger.info(arg);
+
+			switch (arg) {
+				case "-fast":
+					logger.info("Loading fast menu.");
+					fast = true;
+					break;
+				default:
+					logger.info("Unknown launch parameter.");
+					break;
+			}
+		}
+
 		initialize();
 	}
 
 	public static void launch(Lwjgl3ApplicationConfiguration config)
 	{
-		new Lwjgl3Application(new TaikoEditor(fpsMode == 0, fpsMode == 2, fps), config);
+		new Lwjgl3Application(new TaikoEditor(width, height, borderless, fpsMode == 0, fpsMode == 2, fps, fast), config);
 	}
 
 	private static void initialize()
@@ -62,17 +91,29 @@ public class DesktopLauncher {
 
 					if (programConfig.fullscreen) {
 						config.setFullscreenMode(primaryDesktopMode);
-						SettingsMaster.updateDimensions(primaryDesktopMode.width, primaryDesktopMode.height);
 						config.setAutoIconify(true);
+						width = -1;
+						height = -1;
+						borderless = false;
 					}
 					else {
-						SettingsMaster.updateDimensions(programConfig.width, programConfig.height);
-						config.setWindowedMode(programConfig.width, programConfig.height);
+						/*if (programConfig.height == primaryDesktopMode.height)
+							++programConfig.height;*/
+
+						/*config.setWindowedMode(programConfig.width, programConfig.height);
+						config.setWindowSizeLimits(programConfig.width, programConfig.height, programConfig.width, programConfig.height);
+						config.setResizable(false);
+						config.setAutoIconify(false);
+						config.setDecorated(false);*/
+						width = Math.min(programConfig.width, primaryDesktopMode.width);
+						height = Math.min(programConfig.height, primaryDesktopMode.height);
+
+						borderless = (width >= primaryDesktopMode.width) && (height >= primaryDesktopMode.height);
+
+						config.setWindowedMode(400, 400);
 						config.setResizable(false);
 						config.setAutoIconify(false);
 					}
-
-					SettingsMaster.useFullscreenOffset(programConfig.fullscreen || (programConfig.width != primaryDesktopMode.width && programConfig.height != primaryDesktopMode.height));
 
 					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 					config.useVsync((fpsMode = programConfig.fpsMode) == 0);
@@ -126,18 +167,21 @@ public class DesktopLauncher {
 		if (configMenu.state == 2) {
 			if (programConfig.fullscreen) {
 				config.setFullscreenMode(displayMode);
-				SettingsMaster.updateDimensions(displayMode.width, displayMode.height);
 				config.setAutoIconify(true);
+				width = -1;
+				height = -1;
+				borderless = false;
 			}
 			else {
-				SettingsMaster.updateDimensions(programConfig.width, programConfig.height);
-				config.setWindowedMode(programConfig.width, programConfig.height);
+				width = Math.min(programConfig.width, displayMode.width);
+				height = Math.min(programConfig.height, displayMode.height);
+
+				borderless = (width >= displayMode.width) && (height >= displayMode.height);
+
+				config.setWindowedMode(400, 400);
 				config.setResizable(false);
 				config.setAutoIconify(false);
 			}
-
-
-			SettingsMaster.useFullscreenOffset(programConfig.fullscreen || (programConfig.width != displayMode.width && programConfig.height != displayMode.height));
 
 			SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 			config.useVsync((fpsMode = programConfig.fpsMode) == 0);

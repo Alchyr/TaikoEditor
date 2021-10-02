@@ -3,15 +3,12 @@ package alchyr.taikoedit.editor.views;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.Deletion;
 import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.tools.*;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.HitObject;
-import alchyr.taikoedit.maps.components.ILongObject;
-import alchyr.taikoedit.maps.components.hitobjects.Slider;
-import alchyr.taikoedit.maps.components.hitobjects.Spinner;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.util.EditorTime;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
@@ -28,7 +25,6 @@ import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class ObjectView extends MapView {
     public static final int HEIGHT = 200;
-    private static final int BIG_HEIGHT = 50;
     public static final int MEDIUM_HEIGHT = 30;
     public static final int SMALL_HEIGHT = 15;
 
@@ -40,25 +36,23 @@ public class ObjectView extends MapView {
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.7f);
 
-    private static final int midPos = SettingsMaster.getWidth() / 2;
-
     //Base position values
     private int baseObjectY = 0;
-    private int baseTopBigY = 0;
+    //private int baseTopBigY = 0;
 
     //Offset
     private int objectY = 0;
-    private int topBigY = 0;
+    //private int topBigY = 0;
 
-    private int lastSounded;
+    private double lastSounded;
 
-    private SortedMap<Integer, Snap> activeSnaps;
+    private SortedMap<Long, Snap> activeSnaps;
 
     public ObjectView(EditorLayer parent, EditorBeatmap beatmap) {
         super(ViewType.OBJECT_VIEW, parent, beatmap, HEIGHT);
         lastSounded = 0;
 
-        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith"), this::close));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith"), this::close).setAction("Close View"));
     }
 
     public void close(int button)
@@ -74,8 +68,8 @@ public class ObjectView extends MapView {
     public int setPos(int y) {
         super.setPos(y);
 
-        baseObjectY = this.y + 100;
-        baseTopBigY = this.y + HEIGHT - BIG_HEIGHT;
+        baseObjectY = this.y + HEIGHT / 2;
+        //baseTopBigY = this.y + HEIGHT - BIG_HEIGHT;
 
         return this.y;
     }
@@ -85,7 +79,7 @@ public class ObjectView extends MapView {
         super.setOffset(offset);
 
         objectY = baseObjectY + yOffset;
-        topBigY = baseTopBigY + yOffset;
+        //topBigY = baseTopBigY + yOffset;
     }
 
     @Override
@@ -101,7 +95,7 @@ public class ObjectView extends MapView {
             }*/
 
             //To play ALL hitobjects passed.
-            for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
+            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, (long) time, true).values())
             {
                 for (HitObject o : objects)
                 {
@@ -113,7 +107,7 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public void update(float exactPos, int msPos) {
+    public void update(double exactPos, long msPos) {
         super.update(exactPos, msPos);
         activeSnaps = map.getActiveSnaps(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
     }
@@ -126,14 +120,14 @@ public class ObjectView extends MapView {
         //Divisors.
         for (Snap s : activeSnaps.values())
         {
-            s.render(sb, sr, time, viewScale, SettingsMaster.getMiddle(), bottom);
+            s.render(sb, sr, time, viewScale, SettingsMaster.getMiddle(), bottom, HEIGHT);
         }
 
         //Replace Fat White Midpoint with something a little less obnoxious
         //Small triangle on top and bottom like my skin? It would look nice tessellated as well, I think.
-        sb.setColor(Color.WHITE);
+        /*sb.setColor(Color.WHITE);
         sb.draw(pix, midPos, bottom, 2, BIG_HEIGHT);
-        sb.draw(pix, midPos, topBigY, 2, BIG_HEIGHT);
+        sb.draw(pix, midPos, topBigY, 2, BIG_HEIGHT);*/
     }
 
     @Override
@@ -146,7 +140,7 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public NavigableMap<Integer, ? extends ArrayList<? extends PositionalObject>> prep(int pos) {
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
         return map.getEditObjects(pos - EditorLayer.viewTime, pos + EditorLayer.viewTime);
     }
 
@@ -164,8 +158,8 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public NavigableMap<Integer, ? extends ArrayList<? extends PositionalObject>> getVisisbleRange(int start, int end) {
-        NavigableMap<Integer, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects((int) time - EditorLayer.viewTime, (int) time + EditorLayer.viewTime);
 
         if (source.isEmpty())
             return null;
@@ -188,10 +182,10 @@ public class ObjectView extends MapView {
             int comboCount = 0;
             boolean foundStart = false;
 
-            NavigableMap<Integer, ArrayList<HitObject>> precedingObjects = map.objects.descendingSubMap(selectedObjects.firstKey(), true);
+            NavigableMap<Long, ArrayList<HitObject>> precedingObjects = map.objects.descendingSubMap(selectedObjects.firstKey(), true);
 
             //Find initial combo count
-            for (Map.Entry<Integer, ArrayList<HitObject>> entry : precedingObjects.entrySet())
+            for (Map.Entry<Long, ArrayList<HitObject>> entry : precedingObjects.entrySet())
             {
                 for (HitObject h : entry.getValue())
                 {
@@ -214,11 +208,11 @@ public class ObjectView extends MapView {
                 }
             }
 
-            Iterator<Map.Entry<Integer, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
-            Iterator<Map.Entry<Integer, ArrayList<PositionalObject>>> selectionObjects = selectedObjects.entrySet().iterator();
+            Iterator<Map.Entry<Long, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
+            Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> selectionObjects = selectedObjects.entrySet().iterator();
 
-            Map.Entry<Integer, ArrayList<HitObject>> currentList = null;
-            Map.Entry<Integer, ArrayList<PositionalObject>> selectedObjectList = null;
+            Map.Entry<Long, ArrayList<HitObject>> currentList = null;
+            Map.Entry<Long, ArrayList<PositionalObject>> selectedObjectList = null;
 
             if (allObjects.hasNext())
                 currentList = allObjects.next();
@@ -272,12 +266,12 @@ public class ObjectView extends MapView {
             return sb.toString();
         }
 
-        return new EditorTime(time).toString() + " - ";
+        return new EditorTime((int) time) + " - ";
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public void addSelectionRange(int startTime, int endTime)
+    public void addSelectionRange(long startTime, long endTime)
     {
         if (startTime == endTime)
             return;
@@ -299,7 +293,7 @@ public class ObjectView extends MapView {
         }
         else
         {
-            NavigableMap<Integer, ArrayList<HitObject>> newSelected;
+            NavigableMap<Long, ArrayList<HitObject>> newSelected;
 
             if (startTime > endTime)
                 newSelected = map.getSubMap(endTime, startTime);
@@ -316,14 +310,28 @@ public class ObjectView extends MapView {
 
     public PositionalObject clickObject(int x, int y)
     {
-        NavigableMap<Integer, ArrayList<HitObject>> selectable = map.getEditObjects();
-        if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > topY - MAX_SELECTION_OFFSET)
+        NavigableMap<Long, ArrayList<HitObject>> selectable = map.getEditObjects();
+        if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
             return null;
 
-        int time = getTimeFromPosition(x);
-        Map.Entry<Integer, ArrayList<HitObject>> lower = selectable.higherEntry(time); //These are reversed because editObjects is a descending map.
-        Map.Entry<Integer, ArrayList<HitObject>> higher = selectable.lowerEntry(time);
-        int higherDist = 0, lowerDist = 0;
+        double time = getTimeFromPosition(x);
+
+        if (selectable.containsKey((long) time)) {
+            ArrayList<HitObject> selectableObjects = selectable.get((long) time);
+            if (selectableObjects.isEmpty())
+            {
+                editorLogger.error("WTF? Empty arraylist of objects in object map.");
+            }
+            else
+            {
+                //Select the first object.
+                return selectableObjects.get(selectableObjects.size() - 1);
+            }
+        }
+
+        Map.Entry<Long, ArrayList<HitObject>> lower = selectable.higherEntry((long) time); //These are reversed because editObjects is a descending map.
+        Map.Entry<Long, ArrayList<HitObject>> higher = selectable.lowerEntry((long) time);
+        double higherDist, lowerDist;
         //boolean isLower = true;
 
         if (lower == null && higher == null)
@@ -331,12 +339,12 @@ public class ObjectView extends MapView {
         else if (lower == null)
         {
             higherDist = higher.getKey() - time;
-            lowerDist = Integer.MAX_VALUE;
+            lowerDist = Double.MAX_VALUE;
         }
         else if (higher == null)
         {
             lowerDist = time - lower.getKey();
-            higherDist = Integer.MAX_VALUE;
+            higherDist = Double.MAX_VALUE;
         }
         else
         {
@@ -355,13 +363,13 @@ public class ObjectView extends MapView {
             }
             else if (lowerDist > MAX_SELECTION_DIST)
             {
-                boolean needsFinish = y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET;
+                boolean needsFinish = y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET;
 
                 for (int i = selectableObjects.size() - 1; i >= 0; --i)
                 {
                     if (selectableObjects.get(i) instanceof ILongObject)
                     {
-                        boolean finish = selectableObjects.get(i).type == HitObject.HitType.SPINNER || selectableObjects.get(i).finish;
+                        boolean finish = selectableObjects.get(i).type == HitObject.HitObjectType.SPINNER || selectableObjects.get(i).finish;
                         if (finish || !needsFinish)
                         {
                             if (((ILongObject) selectableObjects.get(i)).getEndPos() > time - (finish ? MAX_SELECTION_DIST : SMALL_SELECTION_DIST))
@@ -372,7 +380,7 @@ public class ObjectView extends MapView {
                     }
                 }
             }
-            else if (lowerDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET)
+            else if (lowerDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET)
             {
                 //Can only select a finisher.
                 for (int i = selectableObjects.size() - 1; i >= 0; --i)
@@ -396,7 +404,7 @@ public class ObjectView extends MapView {
                 {
                     //Nothing to do here, just skip checking higher object.
                 }
-                else if (higherDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET)
+                else if (higherDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET)
                 {
                     //Can only select a finisher.
                     for (int i = selectableObjects.size() - 1; i >= 0; --i)
@@ -421,7 +429,7 @@ public class ObjectView extends MapView {
             {
                 //Nothing to do here, just skip checking higher object.
             }
-            else if (higherDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET)
+            else if (higherDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET)
             {
                 //Can only select a finisher.
                 for (int i = selectableObjects.size() - 1; i >= 0; --i)
@@ -447,13 +455,13 @@ public class ObjectView extends MapView {
                 }
                 else if (lowerDist > MAX_SELECTION_DIST)
                 {
-                    boolean needsFinish = y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET;
+                    boolean needsFinish = y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET;
 
                     for (int i = selectableObjects.size() - 1; i >= 0; --i)
                     {
                         if (selectableObjects.get(i) instanceof ILongObject)
                         {
-                            boolean finish = selectableObjects.get(i).type == HitObject.HitType.SPINNER || selectableObjects.get(i).finish;
+                            boolean finish = selectableObjects.get(i).type == HitObject.HitObjectType.SPINNER || selectableObjects.get(i).finish;
                             if (finish || !needsFinish)
                             {
                                 if (((ILongObject) selectableObjects.get(i)).getEndPos() > time - (finish ? MAX_SELECTION_DIST : SMALL_SELECTION_DIST))
@@ -464,7 +472,7 @@ public class ObjectView extends MapView {
                         }
                     }
                 }
-                else if (lowerDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > topY - SMALL_SELECTION_OFFSET)
+                else if (lowerDist > SMALL_SELECTION_DIST || y < bottom + SMALL_SELECTION_OFFSET || y > top - SMALL_SELECTION_OFFSET)
                 {
                     //Can only select a finisher.
                     for (int i = selectableObjects.size() - 1; i >= 0; --i)
@@ -486,33 +494,14 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public PositionalObject clickSelection(int x, int y) {
-        PositionalObject o = clickObject(x, y);
-
-        if (o != null)
-        {
-            if (o.selected)
-            {
-                deselect(o);
-            }
-            else
-            {
-                select(o);
-            }
-        }
-
-        return o;
-    }
-
-    @Override
     public boolean clickedEnd(PositionalObject o, int x) {
         if (o instanceof ILongObject)
         {
             ILongObject obj = (ILongObject) o;
 
-            int time = getTimeFromPosition(x);
+            double time = getTimeFromPosition(x);
 
-            int dist;
+            double dist;
             if (time > obj.getEndPos())
             {
                 dist = time - obj.getEndPos();
@@ -529,12 +518,12 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Map.Entry<Integer, Snap> next = map.getAllSnaps().higherEntry(EditorLayer.music.isPlaying() ? time + 250 : time);
+        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(EditorLayer.music.isPlaying() ? (long) time + 250 : (long) time);
         if (next == null)
             return null;
         if (next.getKey() - time < 2)
         {
-            next = map.getAllSnaps().higherEntry(next.getKey());
+            next = map.getCurrentSnaps().higherEntry(next.getKey());
             if (next == null)
                 return null;
         }
@@ -543,12 +532,12 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getPreviousSnap() {
-        Map.Entry<Integer, Snap> previous = map.getAllSnaps().lowerEntry(EditorLayer.music.isPlaying() ? time - 250 : time);
+        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(EditorLayer.music.isPlaying() ? (long) time - 250 : (long) time);
         if (previous == null)
             return null;
         if (time - previous.getKey() < 2)
         {
-            previous = map.getAllSnaps().lowerEntry(previous.getKey());
+            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
             if (previous == null)
                 return null;
         }
@@ -556,13 +545,13 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public Snap getClosestSnap(int time, int limit) {
-        if (map.getAllSnaps().containsKey(time))
-            return map.getAllSnaps().get(time);
+    public Snap getClosestSnap(double time, float limit) {
+        if (map.getCurrentSnaps().containsKey((long) time))
+            return map.getCurrentSnaps().get((long) time);
 
-        Map.Entry<Integer, Snap> lower, higher;
-        lower = map.getAllSnaps().lowerEntry(time);
-        higher = map.getAllSnaps().higherEntry(time);
+        Map.Entry<Long, Snap> lower, higher;
+        lower = map.getCurrentSnaps().lowerEntry((long) time);
+        higher = map.getCurrentSnaps().higherEntry((long) time);
 
         if (lower == null && higher == null)
         {
@@ -580,7 +569,7 @@ public class ObjectView extends MapView {
         }
         else
         {
-            int lowerDist = time - lower.getKey(), higherDist = higher.getKey() - time;
+            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
             if (lowerDist <= higherDist)
             {
                 if (lowerDist <= limit)
@@ -594,7 +583,7 @@ public class ObjectView extends MapView {
 
     @Override
     public boolean noSnaps() {
-        return map.getAllSnaps().isEmpty();
+        return map.getCurrentSnaps().isEmpty();
     }
 
     @Override
@@ -602,6 +591,11 @@ public class ObjectView extends MapView {
         super.dispose();
 
         activeSnaps = null;
+    }
+
+    @Override
+    public PositionalObjectTreeMap<?> getEditMap() {
+        return map.objects;
     }
 
     @Override
@@ -615,6 +609,44 @@ public class ObjectView extends MapView {
 
         //Make copies of the hitobjects (add a copy() method to the HitObject class) and shift their position appropriately
         //Find closest (1 ms before or after limit) snap (of any existing snap, not just the active one) and put objects at that position
+
+        long offset, targetPos;
+
+        Snap closest = getClosestSnap(time, 250);
+        offset = closest == null ? (int) time : (int) closest.pos;
+        offset -= copyObjects.firstKey();
+
+        PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
+        TreeMap<Long, Snap> snaps = map.getAllSnaps();
+
+        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : copyObjects.entrySet())
+        {
+            targetPos = entry.getKey() + offset;
+
+            closest = snaps.get(targetPos);
+            if (closest == null)
+                closest = snaps.get(targetPos + 1);
+            if (closest == null)
+                closest = snaps.get(targetPos - 1);
+            if (closest != null)
+                targetPos = (int) closest.pos;
+
+            for (PositionalObject o : entry.getValue())
+            {
+                placementCopy.add(o.shiftedCopy(targetPos));
+            }
+        }
+
+        this.map.paste(placementCopy);
+    }
+
+    @Override
+    public void reverse() {
+        if (!hasSelection())
+            return;
+
+        this.map.reverse(MapChange.ChangeType.OBJECTS, true, selectedObjects);
+        refreshSelection();
     }
 
     @Override
@@ -627,17 +659,17 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public void registerMove(int totalMovement) {
+    public void registerMove(long totalMovement) {
         if (selectedObjects != null)
         {
             PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerMovedObjects(movementCopy, totalMovement);
+            this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
         }
     }
 
     @Override
-    public int getTimeFromPosition(int x) {
+    public double getTimeFromPosition(int x) {
         return getTimeFromPosition(x, SettingsMaster.getMiddle());
     }
 

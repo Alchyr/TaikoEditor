@@ -1,8 +1,8 @@
 package alchyr.taikoedit.editor;
 
 import alchyr.taikoedit.core.layers.EditorLayer;
-import alchyr.taikoedit.maps.EditorBeatmap;
-import alchyr.taikoedit.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 
 import java.util.*;
 
@@ -17,10 +17,12 @@ public class BeatDivisors {
     private EditorBeatmap timingMap; //The map whose timing will be used to generate objects.
 
     private final HashMap<Integer, HashSet<Snap>> divisorSnappings;
-    private TreeMap<Integer, Snap> combinedSnaps;
+    private TreeMap<Long, Snap> combinedSnaps;
+    private TreeMap<Long, Snap> allSnaps;
+    private TreeMap<Long, Snap> barlineSnaps;
 
     private int lastStart, lastEnd;
-    private NavigableMap<Integer, Snap> activeSnaps;
+    private NavigableMap<Long, Snap> activeSnaps;
 
     //When initially generated, construct all standard divisors. If timing is changed or another custom divisor is desired, they will be generated on-demand.
 
@@ -34,6 +36,8 @@ public class BeatDivisors {
 
         divisorSnappings = new HashMap<>();
         combinedSnaps = new TreeMap<>();
+        allSnaps = new TreeMap<>();
+        barlineSnaps = new TreeMap<>();
 
         generateCommonSnappings();
     }
@@ -41,10 +45,11 @@ public class BeatDivisors {
     public void refresh()
     {
         combinedSnaps.clear();
+        allSnaps.clear();
         generateCombinedSnaps();
     }
 
-    public NavigableMap<Integer, Snap> getSnaps(int startPos, int endPos)
+    public NavigableMap<Long, Snap> getSnaps(double startPos, double endPos)
     {
         if (combinedSnaps.isEmpty())
         {
@@ -53,8 +58,8 @@ public class BeatDivisors {
 
         if (startPos != lastStart || endPos != lastEnd)
         {
-            Integer start = combinedSnaps.floorKey(startPos);
-            Integer end = combinedSnaps.ceilingKey(endPos);
+            Long start = combinedSnaps.floorKey((long) startPos);
+            Long end = combinedSnaps.ceilingKey((long) endPos);
 
             if (start != null && end != null)
             {
@@ -75,7 +80,7 @@ public class BeatDivisors {
         }
         return activeSnaps;
     }
-    public TreeMap<Integer, Snap> getSnaps()
+    public TreeMap<Long, Snap> getSnaps()
     {
         if (combinedSnaps.isEmpty())
         {
@@ -83,13 +88,25 @@ public class BeatDivisors {
         }
         return combinedSnaps;
     }
+    public TreeMap<Long, Snap> getAllSnaps()
+    {
+        return allSnaps;
+    }
+    public TreeMap<Long, Snap> getBarlines() {
+        return barlineSnaps;
+    }
 
 
     private void generateCombinedSnaps()
     {
         for (int divisor : divisorOptions.activeSnappings)
             for (Snap s : getSnappings(divisor))
-                combinedSnaps.put(s.pos, s);
+                combinedSnaps.put((long) s.pos, s);
+
+        for (int divisor : divisorOptions.snappingOptions)
+            for (Snap s : getSnappings(divisor)) {
+                allSnaps.put((long) s.pos, s);
+            }
     }
 
 
@@ -101,7 +118,7 @@ public class BeatDivisors {
         }
     }
 
-    private HashSet<Snap> getSnappings(int divisor)
+    public HashSet<Snap> getSnappings(int divisor)
     {
         if (!divisorSnappings.containsKey(divisor))
         {
@@ -119,33 +136,33 @@ public class BeatDivisors {
 
     private void generateSnappings(int divisor)
     {
-        HashSet<Snap> snappings = new HashSet<>(); //Sorted set as it must be iterated through in a reliable order.
+        HashSet<Snap> snappings = new HashSet<>();
 
-        if (divisor <= 0)
+        if (divisor <= 0) //0 = no snaps, negative = Why
         {
             divisorSnappings.put(divisor, snappings);
             return;
         }
 
-        HashSet<Integer> subSnaps = new HashSet<>(); //Contains all the points that shouldn't be repeated. HashSet as it is used entirely for contains() operations.
+        HashSet<Long> subSnaps = new HashSet<>(); //Contains all the points that shouldn't be repeated. HashSet as it is used entirely for contains() operations.
         for (Map.Entry<Integer, HashSet<Snap>> snaps : divisorSnappings.entrySet())
         {
-            if (divisor % snaps.getKey() == 0) //This snap is a sub-snap of the currently generating one
+            if (divisor % snaps.getKey() == 0) //This snap is a sub-snap of the currently generating one, skip them
             {
                 for (Snap snap : snaps.getValue())
-                    subSnaps.add(snap.pos);
+                    subSnaps.add((long) snap.pos); //rounded to avoid issues when comparing doubles
             }
         }
 
-        TimingPoint currentPoint = null, nextPoint = null;
+        TimingPoint currentPoint, nextPoint = null;
         for (ArrayList<TimingPoint> t : timingMap.timingPoints.values())
         {
             //There *shouldn't* be stacked timing points. But if there are, just use the last one.
             //TODO: Create a warning for stacked timing points.
             currentPoint = nextPoint;
             nextPoint = t.get(t.size() - 1);
-            int until = nextPoint.pos;
-            if (currentPoint == null)
+            long until = nextPoint.pos;
+            if (currentPoint == null) //first point, generate in reverse from the next point
             {
                 generateReverseSnappings(snappings, subSnaps, divisor, nextPoint.pos, nextPoint.value, nextPoint.meter);
                 continue;
@@ -162,9 +179,9 @@ public class BeatDivisors {
         divisorSnappings.put(divisor, snappings);
     }
 
-    private void subGenerateSnappings(HashSet<Snap> snapList, HashSet<Integer> ignoreSnaps, int divisor, double start, double rate, int meter, int endPoint, boolean skipLine)
+    private void subGenerateSnappings(HashSet<Snap> snapList, HashSet<Long> ignoreSnaps, int divisor, long start, double rate, int meter, double endPoint, boolean skipLine)
     {
-        int pos;
+        long pos;
         int beatSegment = divisor - 1, beat = -1;
 
         for (double t = start; t < endPoint; t += rate / divisor)
@@ -173,7 +190,7 @@ public class BeatDivisors {
             if (beatSegment == 0)
                 ++beat;
 
-            pos = (int) t;
+            pos = (long) t;
 
             beat = beat % meter;
 
@@ -184,19 +201,21 @@ public class BeatDivisors {
             {
                 if (!skipLine)
                 {
-                    snapList.add(new Snap(pos, 0));
+                    Snap barline = new Snap(t, 0);
+                    barlineSnaps.put((long) barline.pos, barline);
+                    snapList.add(barline);
                     continue;
                 }
 
                 skipLine = false;
             }
-            snapList.add(new Snap(pos, divisor));
+            snapList.add(new Snap(t, divisor));
         }
     }
 
-    private void generateReverseSnappings(HashSet<Snap> snapList, HashSet<Integer> ignoreSnaps, int divisor, double start, double rate, int meter)
+    private void generateReverseSnappings(HashSet<Snap> snapList, HashSet<Long> ignoreSnaps, int divisor, double start, double rate, int meter)
     {
-        int pos;
+        long pos;
         int beatSegment = divisor, beat = meter;
 
         for (double t = start - rate / divisor; t > 0; t -= rate / divisor)
@@ -211,12 +230,19 @@ public class BeatDivisors {
                 --beat;
             }
 
-            pos = (int) t;
+            pos = (long) t;
 
             if (ignoreSnaps.contains(pos) || ignoreSnaps.contains(pos + 1) || ignoreSnaps.contains(pos - 1))
                 continue;
 
-            snapList.add(new Snap(pos, beat == 0 ? 0 : divisor));
+            if (beat == 0) {
+                Snap barline = new Snap(t, 0);
+                barlineSnaps.put((long) barline.pos, barline);
+                snapList.add(barline);
+            }
+            else {
+                snapList.add(new Snap(t, divisor));
+            }
         }
     }
 
@@ -226,6 +252,7 @@ public class BeatDivisors {
         divisorOptions = null;
         divisorSnappings.clear();
         combinedSnaps = null;
+        allSnaps = null;
         activeSnaps = null;
     }
 }

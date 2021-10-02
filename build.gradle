@@ -19,7 +19,7 @@ allprojects {
     version = '1.0'
     ext {
         appName = "taikoedit"
-        gdxVersion = '1.9.11-SNAPSHOT'
+        gdxVersion = '1.9.11'
         ashleyVersion = '1.7.0'
     }
 
@@ -59,10 +59,10 @@ project(":core") {
 
     dependencies {
         implementation 'com.google.code.gson:gson:2.8.6'
+        implementation("com.google.guava:guava:30.1.1-jre")
         api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
-        api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.badlogicgames.ashley:ashley:$ashleyVersion"
         //local file

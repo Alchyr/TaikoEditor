@@ -4,12 +4,57 @@
       "name": "pixel",
       "file": "taikoedit/images/ui/pixel.png",
       "class": "Texture"
+    },
+    {
+      "name": "toggleoff",
+      "file": "taikoedit/images/ui/ToggleDisabled.png",
+      "class": "Texture"
+    },
+    {
+      "name": "toggleon",
+      "file": "taikoedit/images/ui/ToggleEnabled.png",
+      "class": "Texture"
+    },
+    {
+      "name": "togglehover",
+      "file": "taikoedit/images/ui/ToggleHover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "toggledisable",
+      "file": "taikoedit/images/ui/ToggleRelease.png",
+      "class": "Texture"
+    },
+    {
+      "name": "exit",
+      "file": "taikoedit/images/ui/exit.png",
+      "class": "Texture"
+    },
+    {
+      "name": "exith",
+      "file": "taikoedit/images/ui/exithover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "settings",
+      "file": "taikoedit/images/ui/settings.png",
+      "class": "Texture"
+    },
+    {
+      "name": "settingsh",
+      "file": "taikoedit/images/ui/settingshover.png",
+      "class": "Texture"
     }
   ],
   "menu": [
     {
       "name": "test",
       "file": "taikoedit/images/background/pink.png",
+      "class": "Texture"
+    },
+    {
+      "name": "background",
+      "file": "taikoedit/images/background/default.png",
       "class": "Texture"
     }
   ],
@@ -32,6 +77,12 @@
       "class": "Texture"
     },
     {
+      "name": "hitarea",
+      "file": "taikoedit/images/editor/objects/hitarea.png",
+      "class": "Texture",
+      "params": "Linear"
+    },
+    {
       "name": "exit",
       "file": "taikoedit/images/editor/ui/exit.png",
       "class": "Texture"
@@ -39,6 +90,16 @@
     {
       "name": "exith",
       "file": "taikoedit/images/editor/ui/exithover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "open",
+      "file": "taikoedit/images/editor/ui/open.png",
+      "class": "Texture"
+    },
+    {
+      "name": "openh",
+      "file": "taikoedit/images/editor/ui/openhover.png",
       "class": "Texture"
     },
     {

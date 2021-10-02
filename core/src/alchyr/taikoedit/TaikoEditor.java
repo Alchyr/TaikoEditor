@@ -2,20 +2,21 @@ package alchyr.taikoedit;
 
 import alchyr.taikoedit.audio.MusicWrapper;
 import alchyr.taikoedit.audio.PreloadedMp3;
-import alchyr.taikoedit.core.GameLayer;
+import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.core.layers.FastMenuLayer;
 import alchyr.taikoedit.core.layers.MenuLayer;
-import alchyr.taikoedit.management.AssetMaster;
-import alchyr.taikoedit.management.LocalizationMaster;
-import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.management.SoundMaster;
+import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
+import alchyr.taikoedit.core.ui.CursorHoverText;
+import alchyr.taikoedit.management.*;
 import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.TextRenderer;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.backends.lwjgl3.audio.OpenALAudio;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -27,23 +28,27 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 
 public class TaikoEditor extends ApplicationAdapter {
+    public static final boolean DIFFCALC = true; //ctrl+alt+d
+
     public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
 
     private SpriteBatch sb;
     private ShapeRenderer sr;
 
     public static AssetMaster assetMaster;
-    public static SoundMaster soundMaster;
+    public static AudioMaster audioMaster;
     public static TextRenderer textRenderer;
+
+    public static CursorHoverText hoverText;
 
     private static Cursor hiddenCursor;
     private static Cursor defaultCursor;
 
-    public final static ArrayList<GameLayer> layers = new ArrayList<>();
+    public final static ArrayList<ProgramLayer> layers = new ArrayList<>();
 
-    private static final ArrayList<GameLayer> addTopLayers = new ArrayList<>();
-    private static final ArrayList<GameLayer> addBottomLayers = new ArrayList<>();
-    private static final ArrayList<GameLayer> removeLayers = new ArrayList<>();
+    private static final ArrayList<ProgramLayer> addTopLayers = new ArrayList<>();
+    private static final ArrayList<ProgramLayer> addBottomLayers = new ArrayList<>();
+    private static final ArrayList<ProgramLayer> removeLayers = new ArrayList<>();
 
     private static InputMultiplexer input = new InputMultiplexer();
 
@@ -51,18 +56,28 @@ public class TaikoEditor extends ApplicationAdapter {
 
     //update/framerate control
     private boolean paused;
+    private final int launchWidth, launchHeight;
+    private final boolean borderless;
     private boolean vsync;
     private boolean unlimited;
     private boolean useSync;
-    private int fps;
+    private final int fps;
+
+    private boolean useFastMenu;
 
     private static final Sync sync = new Sync();
 
-    public TaikoEditor(boolean vsyncEnabled, boolean unlimited, int fps) {
+    public TaikoEditor(int width, int height, boolean borderless, boolean vsyncEnabled, boolean unlimited, int fps, boolean fastMenu) {
         vsync = vsyncEnabled;
         this.unlimited = unlimited;
         useSync = !vsync && !unlimited;
         this.fps = fps;
+
+        launchWidth = width;
+        launchHeight = height;
+        this.borderless = borderless;
+
+        this.useFastMenu = fastMenu;
     }
 
     @Override
@@ -72,53 +87,71 @@ public class TaikoEditor extends ApplicationAdapter {
 
         end = false;
 
-
-    	if (assetMaster != null) //shouldn't happen but I like being careful.
-		{
-			assetMaster.dispose();
-		}
+        if (assetMaster != null) //shouldn't happen...
+        {
+            assetMaster.dispose();
+        }
         assetMaster = new AssetMaster();
-    	soundMaster = new SoundMaster();
+        audioMaster = new AudioMaster();
 
-    	if (sb != null)
-    	    sb.dispose();
-    	if (sr != null)
-    	    sr.dispose();
-
-        sb = new SpriteBatch();
-        sr = new ShapeRenderer();
+        if (sb != null)
+            sb.dispose();
+        if (sr != null)
+            sr.dispose();
 
         layers.clear();
         addTopLayers.clear();
         addBottomLayers.clear();
         removeLayers.clear();
 
+        //set up input
+        input = new InputMultiplexer();
+        Gdx.input.setInputProcessor(input);
+
+        //A U D I O
+        ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
+        EditorLayer.music = new MusicWrapper();
+
+
+        hoverText = new CursorHoverText();
+    }
+
+    private void postCreate() {
+        if (launchWidth != -1 && launchHeight != -1) {
+            if (borderless)
+                Gdx.graphics.setUndecorated(true); //updating size directly in the create method results in issues
+            Gdx.graphics.setWindowedMode(launchWidth, launchHeight);
+            if (borderless) {
+                ((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition(0, 0);
+            }
+            else {
+                ((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition(
+                        ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionX() + 200 - (launchWidth / 2),
+                        ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionY() + 200 - (launchHeight / 2));
+            }
+        }
+
+        SettingsMaster.updateDimensions();
+
+        sb = new SpriteBatch();
+        sr = new ShapeRenderer();
+
         assetMaster.loadAssetLists();
         assetMaster.addSpecialLoaders();
         SettingsMaster.load();
         LocalizationMaster.loadDefaultFolder();
 
-        //For later: new LoadingLayer("loading", new LoadingLayer("menu", new MenuLayer(), true));
-        //Load loading screen assets first, which will be maintained for rest of game
+        BindingMaster.initialize();
 
-        addLayer(new MenuLayer().getLoader());
-
-        //set up input
-        input = new InputMultiplexer();
-        Gdx.input.setInputProcessor(input);
-
-        //create test game
-        /*currentGame = new GameData();
-        currentGame.NAME = "TEST";
-        currentGame.SEED = new Random().nextLong();
-
-        SystemMaster.generate(currentGame.SEED);*/
-
-        //A U D I O
-
-        ((OpenALAudio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
-        EditorLayer.music = new MusicWrapper();
+        if (useFastMenu) {
+            addLayer(new FastMenuLayer().getLoader());
+        }
+        else {
+            addLayer(new MenuLayer().getLoader());
+        }
     }
+
+    private boolean first = true;
 
     @Override
     public void render() {
@@ -126,6 +159,12 @@ public class TaikoEditor extends ApplicationAdapter {
         {
             //dispose();
             Gdx.app.exit(); //causes disposal
+            return;
+        }
+
+        if (first) {
+            first = false;
+            postCreate();
             return;
         }
 
@@ -145,7 +184,8 @@ public class TaikoEditor extends ApplicationAdapter {
     private int gameUpdate(float elapsed)
     {
         //Update misc
-        soundMaster.update(elapsed);
+        audioMaster.update(elapsed);
+        hoverText.update(elapsed);
 
         //Update layers
         boolean update = true;
@@ -195,31 +235,33 @@ public class TaikoEditor extends ApplicationAdapter {
                 layers.get(renderIndex).render(sb, sr); //, elapsed);
             }
 
+            hoverText.render(sb, sr);
+
             sb.end();
         }
     }
     private void updateLayers()
     {
         // Add and remove layers (and input)
-        for (GameLayer l : addBottomLayers)
+        for (ProgramLayer l : addBottomLayers)
         {
             layers.add(0, l);
             editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
-                input.addProcessor(0, ((InputLayer) l).getProcessor());
+                input.addProcessor(((InputLayer) l).getProcessor());
         }
         addBottomLayers.clear();
 
-        for (GameLayer l : addTopLayers)
+        for (ProgramLayer l : addTopLayers)
         {
             layers.add(l);
             editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
-                input.addProcessor(((InputLayer) l).getProcessor());
+                input.addProcessor(0, ((InputLayer) l).getProcessor());
         }
         addTopLayers.clear();
 
-        for (GameLayer l : removeLayers)
+        for (ProgramLayer l : removeLayers)
         {
             l.dispose();
             layers.remove(l);
@@ -234,7 +276,7 @@ public class TaikoEditor extends ApplicationAdapter {
     @Override
     public void dispose() {
         //dispose of layers
-        for (GameLayer layer : layers)
+        for (ProgramLayer layer : layers)
             layer.dispose();
 
         layers.clear();
@@ -242,6 +284,7 @@ public class TaikoEditor extends ApplicationAdapter {
         addTopLayers.clear();
         removeLayers.clear();
 
+        SvFunctionLayer.disposeFunctions();
         assetMaster.dispose();
         sb.dispose();
     }
@@ -252,15 +295,15 @@ public class TaikoEditor extends ApplicationAdapter {
     }
 
 
-    public static void addLayer(GameLayer layer)
+    public static void addLayer(ProgramLayer layer)
     {
         addTopLayers.add(layer);
     }
-    public static void addLayerToBottom(GameLayer layer)
+    public static void addLayerToBottom(ProgramLayer layer)
     {
         addBottomLayers.add(layer);
     }
-    public static void removeLayer(GameLayer layer)
+    public static void removeLayer(ProgramLayer layer)
     {
         removeLayers.add(layer);
     }
@@ -286,12 +329,13 @@ public class TaikoEditor extends ApplicationAdapter {
         Gdx.graphics.setCursor(defaultCursor);
     }
 
-    //Callback of MenuLayer. Todo: Allow TextReader to be instantiated sooner, and then initialized here to actually load fonts.
+    //Callback of MenuLayer. Todo: Allow TextRenderer to be instantiated sooner, and then initialized here to actually load fonts.
     public static void initialize()
     {
         try
         {
             textRenderer = new TextRenderer(assetMaster.getFont("default"));
+            hoverText.initialize(assetMaster.getFont("aller small"));
             showCursor();
         }
         catch (Exception e)

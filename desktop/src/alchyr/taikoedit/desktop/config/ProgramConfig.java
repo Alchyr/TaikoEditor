@@ -22,7 +22,7 @@ public class ProgramConfig {
         osuFolder = "";
 
         fpsMode = 1;
-        fps = 240;
+        fps = 120;
     }
 
     public ProgramConfig(String source)

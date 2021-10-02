@@ -1,14 +1,14 @@
 package alchyr.taikoedit.audio;
 
+import alchyr.taikoedit.TaikoEditor;
 import com.badlogic.gdx.audio.Music;
-import com.badlogic.gdx.backends.lwjgl3.audio.OpenALAudio;
+import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALMusic;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.GdxRuntimeException;
-import com.badlogic.gdx.utils.Queue;
 import javazoom.jl.decoder.OutputBuffer;
 import org.lwjgl.BufferUtils;
 
@@ -26,12 +26,17 @@ import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
 
 
 //TODO:
-//Preload entire mp3 to find length and speed up seek operations?
-//Change the setPosition method. Currently it goes to beginning then reads through ENTIRE song to desired point.
-//Not good for rapid seeking, which will occur if arrow keys are held.
-//Make a fancier ByteStream (used in read method) to support seek operations?
+//Preload entire mp3 to find length and speed up seek operations? done
+//Change the setPosition method. Currently it goes to beginning then reads through ENTIRE song to desired point. Done
+//Not good for rapid seeking, which will occur if arrow keys are held. Fixed
+//Make a fancier ByteStream (used in read method) to support seek operations? done
 
 public class PreloadedMp3 extends OpenALMusic {
+    public static float progress = 0;
+    public static float getProgress() {
+        return progress;
+    }
+
     static private final int bufferSize = 4096 * 4;
     static private final int bufferCount = 4;
     static private final int bytesPerSample = 2;
@@ -41,25 +46,21 @@ public class PreloadedMp3 extends OpenALMusic {
     private boolean update;
     private final int[] bufferIDs = new int[bufferCount];
 
-    //Breaking the rules. This is Bad!
+    //Breaking the rules :(
     private static Method obtainSource;
     private static Method freeSource;
     private static Field noDevice;
-    private static Field music;
 
     static {
         try {
-            obtainSource = OpenALAudio.class.getDeclaredMethod("obtainSource", boolean.class);
+            obtainSource = OpenALLwjgl3Audio.class.getDeclaredMethod("obtainSource", boolean.class);
             obtainSource.setAccessible(true);
 
-            freeSource = OpenALAudio.class.getDeclaredMethod("freeSource", int.class);
+            freeSource = OpenALLwjgl3Audio.class.getDeclaredMethod("freeSource", int.class);
             freeSource.setAccessible(true);
 
-            noDevice = OpenALAudio.class.getDeclaredField("noDevice");
+            noDevice = OpenALLwjgl3Audio.class.getDeclaredField("noDevice");
             noDevice.setAccessible(true);
-
-            music = OpenALAudio.class.getDeclaredField("music");
-            music.setAccessible(true);
 
         } catch (NoSuchMethodException | NoSuchFieldException e) {
             e.printStackTrace();
@@ -70,7 +71,7 @@ public class PreloadedMp3 extends OpenALMusic {
 
     private PreloadMp3Bitstream bitstream;
 
-    private OpenALAudio audio;
+    private OpenALLwjgl3Audio audio;
     private IntBuffer buffers;
     private int sourceID = -1;
     private int format, sampleRate;
@@ -79,7 +80,6 @@ public class PreloadedMp3 extends OpenALMusic {
     private float pan = 0;
     private float renderedSeconds, maxSecondsPerBuffer;
 
-    private final Array<OpenALMusic> audioMusic;
     private final boolean hasNoDevice;
 
     private boolean stoppedAtEnd = false;
@@ -91,8 +91,7 @@ public class PreloadedMp3 extends OpenALMusic {
 
     private Music.OnCompletionListener onCompletionListener;
 
-    @SuppressWarnings("unchecked")
-    public PreloadedMp3 (OpenALAudio audio, FileHandle file) {
+    public PreloadedMp3 (OpenALLwjgl3Audio audio, FileHandle file) {
         super(audio, file);
         this.audio = audio;
         update = false;
@@ -100,10 +99,9 @@ public class PreloadedMp3 extends OpenALMusic {
         try
         {
             hasNoDevice = (boolean) noDevice.get(audio);
-            audioMusic = (Array<OpenALMusic>) music.get(audio);
     
             if (hasNoDevice) return;
-            bitstream = new PreloadMp3Bitstream(file.read());
+            bitstream = new PreloadMp3Bitstream(file.read(), file.length());
 
             setup(bitstream.channels, bitstream.sampleRate);
         } catch (Exception e) {
@@ -168,8 +166,6 @@ public class PreloadedMp3 extends OpenALMusic {
                 sourceID = (int) obtainSource.invoke(audio, true);
                 if (sourceID == -1) return false;
 
-                audioMusic.add(this);
-
                 alSourcei(sourceID, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
                 alSourcei(sourceID, AL_LOOPING, AL_FALSE);
                 setPan(pan, volume);
@@ -194,6 +190,7 @@ public class PreloadedMp3 extends OpenALMusic {
             }
 
             //Successfully initialized
+            TaikoEditor.audioMaster.addMusic(this);
             snapOffset = -offset; //Ensure starting position is at 0 to compensate for offset
         }
         return true;
@@ -204,7 +201,7 @@ public class PreloadedMp3 extends OpenALMusic {
         if (sourceID == -1) return;
         try {
             freeSource.invoke(audio, sourceID);
-            audioMusic.removeValue(this, true);
+            TaikoEditor.audioMaster.removeMusic(this);
             reset();
             sourceID = -1;
             isPlaying = false;
@@ -252,7 +249,7 @@ public class PreloadedMp3 extends OpenALMusic {
     }
 
     public void setPosition (float position, boolean continuePlay) {
-        if (hasNoDevice) return;
+            if (hasNoDevice) return;
         if (sourceID == -1) return;
 
         boolean wasPlaying = isPlaying && continuePlay;
@@ -294,12 +291,11 @@ public class PreloadedMp3 extends OpenALMusic {
             filled = true;
             alSourceQueueBuffers(sourceID, bufferID); //Queue buffers as far as possible
         }
-        for (; i < bufferCount; i++) { //This is messy, but seems to generally result in the problem fixing itself.
+        for (; i < bufferCount; i++) {
             int bufferID = buffers.get(i);
             empty(bufferID);
             alSourceQueueBuffers(sourceID, bufferID);
         }
-        //ISSUE : Repeatedly seeking backwards while not queueing all buffers results in issues.
 
 
         if (!filled) { //if NO buffers were filled. This is fine.
@@ -333,6 +329,11 @@ public class PreloadedMp3 extends OpenALMusic {
         if (hasNoDevice) return 0;
         if (sourceID == -1) return 0;
         return (renderedSeconds + snapOffset + alGetSourcef(sourceID, AL11.AL_SEC_OFFSET) * tempo);
+    }
+    public double getPrecisePosition() {
+        if (hasNoDevice) return 0;
+        if (sourceID == -1) return 0;
+        return ((double) renderedSeconds + snapOffset + alGetSourcef(sourceID, AL11.AL_SEC_OFFSET) * tempo);
     }
 
     public float getLength() {

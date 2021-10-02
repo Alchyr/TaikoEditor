@@ -18,6 +18,15 @@ public class GeneralUtils {
         return map;
     }
 
+    public static int charCount(String s, char c) {
+        int count = 0;
+        for (int i = 0; i < s.length(); ++i) {
+            if (s.charAt(i) == c)
+                ++count;
+        }
+        return count;
+    }
+
     public static void readProperties(JsonValue properties, Map<String, Object> propertyMap)
     {
         for (JsonValue property = properties.child; property != null; property = property.next)

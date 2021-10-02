@@ -55,10 +55,12 @@ public class TextOverlay {
 
     public void render(SpriteBatch sb, ShapeRenderer sr)
     {
-        backColor.a = textColor.a * 0.7f;
-        sb.setColor(backColor);
-        sb.draw(pix, 0, bY, SettingsMaster.getWidth(), height);
+        if (textColor.a > 0) {
+            backColor.a = textColor.a * 0.7f;
+            sb.setColor(backColor);
+            sb.draw(pix, 0, bY, SettingsMaster.getWidth(), height);
 
-        TaikoEditor.textRenderer.setFont(font).renderTextCentered(sb, text, cX, cY, textColor);
+            TaikoEditor.textRenderer.setFont(font).renderTextCentered(sb, text, cX, cY, textColor);
+        }
     }
 }

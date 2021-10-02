@@ -150,6 +150,7 @@ public class PreloadMp3Bitstream {
     private int outputFrequency;
     private int outputChannels;
 
+    private final long approximateBytes;
     private boolean initialized;
 
     /**
@@ -157,7 +158,8 @@ public class PreloadMp3Bitstream {
      *
      * @param in The InputStream to read from.
      */
-    public PreloadMp3Bitstream (InputStream in) {
+    public PreloadMp3Bitstream (InputStream in, long bytes) {
+        approximateBytes = bytes;
         if (in == null) throw new NullPointerException("in");
         in = new BufferedInputStream(in);
         loadID3v2(in); //After loading ID3v2, position will be at first music frame
@@ -185,6 +187,9 @@ public class PreloadMp3Bitstream {
 
     private void preload()
     {
+        PreloadedMp3.progress = 0;
+
+
         int totalBytes = 0;
         int bufferSize = 1;
         try
@@ -216,6 +221,7 @@ public class PreloadMp3Bitstream {
 
                 int length = outputBuffer.reset();
                 totalBytes += length;
+                PreloadedMp3.progress = totalBytes / (approximateBytes * 7.5f);
                 byte[] buffer = new byte[bufferSize];
                 System.arraycopy(outputBuffer.getBuffer(), 0, buffer, 0, length);
 
@@ -644,7 +650,7 @@ public class PreloadMp3Bitstream {
         try {
             result = readNextFrame();
             // E.B, Parse VBR (if any) first frame.
-            if (firstframe == true) {
+            if (firstframe) {
                 result.parseVBR(frame_bytes);
                 firstframe = false;
             }

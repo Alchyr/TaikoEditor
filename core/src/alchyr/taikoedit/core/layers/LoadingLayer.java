@@ -1,7 +1,7 @@
 package alchyr.taikoedit.core.layers;
 
 import alchyr.taikoedit.TaikoEditor;
-import alchyr.taikoedit.core.GameLayer;
+import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.management.SettingsMaster;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -10,60 +10,63 @@ import com.badlogic.gdx.utils.Queue;
 
 import java.util.ArrayList;
 import java.util.concurrent.*;
+import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 //add on top of layer list when loading assets
-public class LoadingLayer extends GameLayer {
-    private static final float LOAD_SIZE = 420.0f;
+public class LoadingLayer extends ProgramLayer {
+    private float circleSize;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     private final Queue<ArrayList<Runnable>> tasks = new Queue<>();
+    private final Queue<ArrayList<Supplier<Float>>> trackers = new Queue<>();
     private final Queue<ArrayList<Runnable>> callbacks = new Queue<>();
     private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
+    private final ArrayList<Supplier<Float>> activeTrackers = new ArrayList<>();
     private boolean assetsLoaded;
     private int taskCount;
     private float taskProgress;
 
-    private GameLayer[] replacementLayers;
-    private boolean addToBottom;
-    private boolean initializedReplacements;
+    private final ProgramLayer[] replacementLayers;
+    private final boolean addToBottom;
 
 
     //If addToBottom, the last index in the array will end up on the bottom, first index on top (of the bottom)
     //If not addToBottom, the first index will be on the bottom of the top, and the last index will be on the very top.
-    public LoadingLayer(String[] assetLists, GameLayer[] replacementLayers, boolean addToBottom)
+    public LoadingLayer(String[] assetLists, ProgramLayer[] replacementLayers, boolean addToBottom)
     {
         for (String assetList : assetLists)
             assetMaster.loadList(assetList);
 
         this.replacementLayers = replacementLayers;
         this.addToBottom = addToBottom;
-        initializedReplacements = false;
 
         assetsLoaded = false;
         taskProgress = 0;
         taskCount = 0;
+
+        circleSize = Math.min(SettingsMaster.getHeight() / 6.0f, 80.0f);
     }
-    public LoadingLayer(String assetList, GameLayer[] replacementLayers, boolean addToBottom)
+    public LoadingLayer(String assetList, ProgramLayer[] replacementLayers, boolean addToBottom)
     {
         this (new String[] { assetList }, replacementLayers, addToBottom);
     }
-    public LoadingLayer(String[] assetLists, GameLayer replacementLayer, boolean addToBottom)
+    public LoadingLayer(String[] assetLists, ProgramLayer replacementLayer, boolean addToBottom)
     {
-        this(assetLists, new GameLayer[] { replacementLayer }, addToBottom);
+        this(assetLists, new ProgramLayer[] { replacementLayer }, addToBottom);
     }
-    public LoadingLayer(String assetList, GameLayer replacementLayer)
+    public LoadingLayer(String assetList, ProgramLayer replacementLayer)
     {
-        this(assetList, new GameLayer[] { replacementLayer }, false);
+        this(assetList, new ProgramLayer[] { replacementLayer }, false);
     }
-    public LoadingLayer(String assetList, GameLayer[] replacementLayers)
+    public LoadingLayer(String assetList, ProgramLayer[] replacementLayers)
     {
         this(assetList, replacementLayers, false);
     }
-    public LoadingLayer(String[] assetLists, GameLayer[] replacementLayers)
+    public LoadingLayer(String[] assetLists, ProgramLayer[] replacementLayers)
     {
         this(assetLists, replacementLayers, false);
     }
@@ -86,6 +89,7 @@ public class LoadingLayer extends GameLayer {
         if (tasks.isEmpty() || newSet)
         {
             tasks.addFirst(new ArrayList<>());
+            trackers.addFirst(new ArrayList<>());
         }
         tasks.first().add(runnable);
         return this;
@@ -94,6 +98,12 @@ public class LoadingLayer extends GameLayer {
     {
         return addTask(false, runnable);
     }
+    public LoadingLayer addTracker(Supplier<Float> tracker)
+    {
+        trackers.first().add(tracker);
+        return this;
+    }
+
     public LoadingLayer loadExtra(String key, String file, Class<?> type)
     {
         assetMaster.load(key, file, type);
@@ -107,6 +117,7 @@ public class LoadingLayer extends GameLayer {
         {
             //done with current tasks
             activeTasks.clear();
+            activeTrackers.clear();
 
             if (!tasks.isEmpty())
             {
@@ -115,6 +126,13 @@ public class LoadingLayer extends GameLayer {
                 editorLogger.info("Starting next loading task set. Tasks: " + taskCount);
                 for (Runnable task : taskSet)
                     activeTasks.add(executor.submit(task));
+
+                if (!trackers.isEmpty())
+                {
+                    ArrayList<Supplier<Float>> trackerSet = trackers.removeLast();
+                    editorLogger.info("Task set has trackers: " + trackerSet.size());
+                    activeTrackers.addAll(trackerSet);
+                }
                 return;
             }
 
@@ -131,9 +149,7 @@ public class LoadingLayer extends GameLayer {
             if (replacementLayers != null && replacementLayers.length != 0)
             {
                 editorLogger.info("Loading complete. Adding replacement layers: " + replacementLayers.length);
-                for (GameLayer l : replacementLayers) {
-                    l.initialize();
-
+                for (ProgramLayer l : replacementLayers) {
                     if (addToBottom)
                     {
                         TaikoEditor.addLayerToBottom(l);
@@ -142,6 +158,7 @@ public class LoadingLayer extends GameLayer {
                     {
                         TaikoEditor.addLayer(l);
                     }
+                    l.initialize();
                 }
                 //use a fancy effect instead later instead of sharp change
             }
@@ -157,7 +174,9 @@ public class LoadingLayer extends GameLayer {
     private boolean doneLoading()
     {
         if (!assetsLoaded)
+        {
             assetsLoaded = assetMaster.update();
+        }
 
         boolean tasksDone = true;
 
@@ -169,7 +188,15 @@ public class LoadingLayer extends GameLayer {
             else
                 ++completed;
 
-        if (taskCount > 0)
+        if (!activeTrackers.isEmpty())
+        {
+            taskProgress = 1;
+            for (Supplier<Float> tracker : activeTrackers)
+            {
+                taskProgress *= tracker.get();
+            }
+        }
+        else if (taskCount > 0)
             taskProgress = completed / taskCount;
         else
             taskProgress = 1;
@@ -180,22 +207,27 @@ public class LoadingLayer extends GameLayer {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         //progress float from 0 to 1 is assetMaster.getProgress() * taskProgress
-        float offset = assetMaster.getProgress() * taskProgress * LOAD_SIZE * SettingsMaster.SCALE;
+        float progress = assetMaster.getProgress() * taskProgress;
 
-        //render progress
-        //render a nice relaxing loading screen?
-        sb.end();
+        if (progress <= 1)
+        {
+            float offset = progress * circleSize * 2;
 
-        sr.begin(ShapeRenderer.ShapeType.Line);
+            //render progress
+            //render a nice relaxing loading screen?
+            sb.end();
 
-        sr.setColor(Color.WHITE);
-        sr.circle(SettingsMaster.getWidth() / 2.0f, SettingsMaster.getHeight() - ((LOAD_SIZE + 150.0f) * SettingsMaster.SCALE), LOAD_SIZE * SettingsMaster.SCALE);
-        sr.setColor(Color.BLACK.cpy());
-        sr.circle(SettingsMaster.getWidth() / 2.0f - offset, SettingsMaster.getHeight() - ((LOAD_SIZE + 150.0f) * SettingsMaster.SCALE), LOAD_SIZE * SettingsMaster.SCALE);
+            sr.begin(ShapeRenderer.ShapeType.Filled);
 
-        sr.end();
+            sr.setColor(Color.WHITE);
+            sr.circle(SettingsMaster.getWidth() / 2.0f, SettingsMaster.getHeight() / 2.0f, circleSize);
+            sr.setColor(Color.BLACK.cpy());
+            sr.circle(SettingsMaster.getWidth() / 2.0f + offset - circleSize * 2, SettingsMaster.getHeight() / 2.0f, circleSize);
 
-        sb.begin();
+            sr.end();
+
+            sb.begin();
+        }
     }
 
     @Override

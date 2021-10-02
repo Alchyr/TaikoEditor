@@ -1,40 +1,40 @@
 package alchyr.taikoedit.util;
 
 public class EditorTime implements Comparable<EditorTime> {
-    private int minutes;
-    private int seconds;
-    private int milliseconds;
+    private long minutes;
+    private long seconds;
+    private long milliseconds;
 
-    public int getMinutes() {
+    public long getMinutes() {
         return minutes;
     }
 
-    public void setMinutes(int minutes) {
+    public void setMinutes(long minutes) {
         //int hours = minutes / 60;
         this.minutes = minutes;
     }
 
-    public int getSeconds() {
+    public long getSeconds() {
         return seconds;
     }
 
-    public void setSeconds(int seconds) {
-        int minutes = seconds / 60;
+    public void setSeconds(long seconds) {
+        long minutes = seconds / 60;
         this.seconds = seconds % 60;
         setMinutes(minutes);
     }
 
-    public int getMilliseconds() {
+    public long getMilliseconds() {
         return milliseconds;
     }
 
-    public void setMilliseconds(int milliseconds) {
-        int seconds = milliseconds / 1000;
+    public void setMilliseconds(long milliseconds) {
+        long seconds = milliseconds / 1000;
         this.milliseconds = milliseconds % 1000;
         setSeconds(seconds);
     }
 
-    public int getTotalMs() {
+    public long getTotalMs() {
         return (minutes * 60 + seconds) * 1000 + milliseconds;
     }
 
@@ -45,17 +45,17 @@ public class EditorTime implements Comparable<EditorTime> {
         minutes = 0;
     }
 
-    public EditorTime(int milliseconds)
+    public EditorTime(long milliseconds)
     {
         setMilliseconds(milliseconds);
     }
 
-    public EditorTime(int seconds, int milliseconds)
+    public EditorTime(long seconds, long milliseconds)
     {
-        this(seconds);
-        setMinutes(minutes);
+        this(milliseconds);
+        setSeconds(seconds);
     }
-    public EditorTime(int minutes, int seconds, int milliseconds)
+    public EditorTime(long minutes, long seconds, long milliseconds)
     {
         this(seconds, milliseconds);
         setMinutes(minutes);
@@ -77,7 +77,7 @@ public class EditorTime implements Comparable<EditorTime> {
 
     @Override
     public int compareTo(EditorTime o) {
-        return getTotalMs() - o.getTotalMs();
+        return Long.compare(getTotalMs(), o.getTotalMs());
     }
 
     @Override

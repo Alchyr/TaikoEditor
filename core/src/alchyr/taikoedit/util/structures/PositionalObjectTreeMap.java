@@ -32,10 +32,10 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-//Modified version of java.util.TreeMap
+//Modified version of java.util.TreeMap. See header.
 public class PositionalObjectTreeMap<V extends PositionalObject>
-        extends AbstractMap<Integer, ArrayList<V>>
-        implements NavigableMap<Integer, ArrayList<V>>, Cloneable, java.io.Serializable
+        extends AbstractMap<Long, ArrayList<V>>
+        implements NavigableMap<Long, ArrayList<V>>, Cloneable, java.io.Serializable
 {
     transient Collection<ArrayList<V>> values; //Cannot reference values within AbstractMap
 
@@ -45,7 +45,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *
      * @serial
      */
-    private final Comparator<? super Integer> comparator;
+    private final Comparator<? super Long> comparator;
 
     private transient Entry<V> root;
 
@@ -94,7 +94,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *        If {@code null}, the {@linkplain Comparable natural
      *        ordering} of the keys will be used.
      */
-    public PositionalObjectTreeMap(Comparator<? super Integer> comparator) {
+    public PositionalObjectTreeMap(Comparator<? super Long> comparator) {
         this.comparator = comparator;
     }
 
@@ -112,7 +112,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         or are not mutually comparable
      * @throws NullPointerException if the specified map is null
      */
-    public PositionalObjectTreeMap(Map<? extends Integer, ? extends ArrayList<V>> m) {
+    public PositionalObjectTreeMap(Map<? extends Long, ? extends ArrayList<V>> m) {
         comparator = null;
         putAll(m);
     }
@@ -126,7 +126,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         and whose comparator is to be used to sort this map
      * @throws NullPointerException if the specified map is null
      */
-    public PositionalObjectTreeMap(SortedMap<Integer, ArrayList<? extends V>> m) {
+    public PositionalObjectTreeMap(SortedMap<Long, ArrayList<? extends V>> m) {
         comparator = m.comparator();
         try {
             buildFromSorted(m.size(), m.entrySet().iterator(), null, null);
@@ -227,21 +227,21 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return (p==null ? null : p.value);
     }
 
-    public Comparator<? super Integer> comparator() {
+    public Comparator<? super Long> comparator() {
         return comparator;
     }
 
     /**
      * @throws NoSuchElementException {@inheritDoc}
      */
-    public Integer firstKey() {
+    public Long firstKey() {
         return key(getFirstEntry());
     }
 
     /**
      * @throws NoSuchElementException {@inheritDoc}
      */
-    public Integer lastKey() {
+    public Long lastKey() {
         return key(getLastEntry());
     }
 
@@ -257,7 +257,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         the specified map contains a null key and this map does not
      *         permit null keys
      */
-    public void putAll(Map<? extends Integer, ? extends ArrayList<V>> map) {
+    public void putAll(Map<? extends Long, ? extends ArrayList<V>> map) {
         int mapSize = map.size();
         if (size==0 && mapSize!=0 && map instanceof SortedMap) {
             Comparator<?> c = ((SortedMap<?,?>)map).comparator();
@@ -274,8 +274,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         super.putAll(map);
     }
 
-    public void addAll(Map<? extends Integer, ? extends ArrayList<? extends PositionalObject>> map) {
-        for (Map.Entry<Integer, ArrayList<V>> e : ((Map<Integer, ArrayList<V>>)map).entrySet())
+    public void addAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
+        for (Map.Entry<Long, ArrayList<V>> e : ((Map<Long, ArrayList<V>>)map).entrySet())
         {
             for (V val : e.getValue())
             {
@@ -303,7 +303,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         if (key == null)
             throw new NullPointerException();
         @SuppressWarnings("unchecked")
-        Comparable<? super Integer> k = (Comparable<? super Integer>) key;
+        Comparable<? super Long> k = (Comparable<? super Long>) key;
         Entry<V> p = root;
         while (p != null) {
             int cmp = k.compareTo(p.key);
@@ -324,8 +324,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * worthwhile here.)
      */
     final Entry<V> getEntryUsingComparator(Object key) {
-        Integer k = (Integer) key;
-        Comparator<? super Integer> cpr = comparator;
+        Long k = (Long) key;
+        Comparator<? super Long> cpr = comparator;
         if (cpr != null) {
             Entry<V> p = root;
             while (p != null) {
@@ -347,7 +347,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * key; if no such entry exists (i.e., the greatest key in the Tree is less
      * than the specified key), returns {@code null}.
      */
-    final Entry<V> getCeilingEntry(Integer key) {
+    final Entry<V> getCeilingEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -374,7 +374,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return null;
     }
 
-    final Entry<V> getSafeCeilingEntry(Integer key) {
+    final Entry<V> getSafeCeilingEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -406,7 +406,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * exists, returns the entry for the greatest key less than the specified
      * key; if no such entry exists, returns {@code null}.
      */
-    final Entry<V> getFloorEntry(Integer key) {
+    final Entry<V> getFloorEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -435,7 +435,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     //If there is no floor entry, returns the ceiling entry instead.
-    final Entry<V> getSafeFloorEntry(Integer key) {
+    final Entry<V> getSafeFloorEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -469,7 +469,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * key greater than the specified key; if no such entry exists
      * returns {@code null}.
      */
-    final Entry<V> getHigherEntry(Integer key) {
+    final Entry<V> getHigherEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -505,7 +505,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return higher;
     }
 
-    final Entry<V> getHigherThanHigherEntry(Integer key) {
+    final Entry<V> getHigherThanHigherEntry(Long key) {
         Entry<V> p = getHigherEntry(key);
         if (p != null)
             p = getHigherEntry(p.key);
@@ -517,7 +517,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * no such entry exists (i.e., the least key in the Tree is greater than
      * the specified key), returns {@code null}.
      */
-    final Entry<V> getLowerEntry(Integer key) {
+    final Entry<V> getLowerEntry(Long key) {
         Entry<V> p = root;
         while (p != null) {
             int cmp = compare(key, p.key);
@@ -553,7 +553,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return lower;
     }
 
-    final Entry<V> getLowerThanLowerEntry(Integer key) {
+    final Entry<V> getLowerThanLowerEntry(Long key) {
         Entry<V> p = getLowerEntry(key);
         if (p != null)
             p = getLowerEntry(p.key);
@@ -578,7 +578,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         and this map uses natural ordering, or its comparator
      *         does not permit null keys
      */
-    public ArrayList<V> put(Integer key, ArrayList<V> value) {
+    public ArrayList<V> put(Long key, ArrayList<V> value) {
         Entry<V> t = root;
         if (t == null) {
             compare(key, key); // type (and possibly null) check
@@ -592,7 +592,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         int cmp;
         Entry<V> parent;
         // split comparator and comparable paths
-        Comparator<? super Integer> cpr = comparator;
+        Comparator<? super Long> cpr = comparator;
         if (cpr != null) {
             do {
                 parent = t;
@@ -612,7 +612,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         else {
             do {
                 parent = t;
-                cmp = Integer.compare(key, t.key);
+                cmp = Long.compare(key, t.key);
                 if (cmp < 0)
                     t = t.left;
                 else if (cmp > 0)
@@ -638,7 +638,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     public void add(V value) {
-        int key = value.pos;
+        long key = value.pos;
 
         Entry<V> t = root;
         if (t == null) {
@@ -653,7 +653,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         int cmp;
         Entry<V> parent;
         // split comparator and comparable paths
-        Comparator<? super Integer> cpr = comparator;
+        Comparator<? super Long> cpr = comparator;
         if (cpr != null) {
             do {
                 parent = t;
@@ -673,7 +673,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         else {
             do {
                 parent = t;
-                cmp = Integer.compare(key, t.key);
+                cmp = Long.compare(key, t.key);
                 if (cmp < 0)
                     t = t.left;
                 else if (cmp > 0)
@@ -736,9 +736,9 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return p;
     }
 
-    public boolean removeAll(Map<? extends Integer, ? extends ArrayList<? extends PositionalObject>> map) {
+    public boolean removeAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
         boolean changed = false;
-        for (Map.Entry<? extends Integer, ? extends ArrayList<? extends PositionalObject>> deleting : map.entrySet())
+        for (Map.Entry<? extends Long, ? extends ArrayList<? extends PositionalObject>> deleting : map.entrySet())
         {
             Entry<V> e = getEntry(deleting.getKey());
             if (e == null) //There is nothing to delete at this position.
@@ -805,23 +805,23 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> firstEntry() {
+    public Map.Entry<Long, ArrayList<V>> firstEntry() {
         return exportEntry(getFirstEntry());
     }
 
     /**
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> lastEntry() {
+    public Map.Entry<Long, ArrayList<V>> lastEntry() {
         return exportEntry(getLastEntry());
     }
 
     /**
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> pollFirstEntry() {
+    public Map.Entry<Long, ArrayList<V>> pollFirstEntry() {
         Entry<V> p = getFirstEntry();
-        Map.Entry<Integer, ArrayList<V>> result = exportEntry(p);
+        Map.Entry<Long, ArrayList<V>> result = exportEntry(p);
         if (p != null)
             deleteEntry(p);
         return result;
@@ -830,9 +830,9 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> pollLastEntry() {
+    public Map.Entry<Long, ArrayList<V>> pollLastEntry() {
         Entry<V> p = getLastEntry();
-        Map.Entry<Integer, ArrayList<V>> result = exportEntry(p);
+        Map.Entry<Long, ArrayList<V>> result = exportEntry(p);
         if (p != null)
             deleteEntry(p);
         return result;
@@ -845,7 +845,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> lowerEntry(Integer key) {
+    public Map.Entry<Long, ArrayList<V>> lowerEntry(Long key) {
         return exportEntry(getLowerEntry(key));
     }
 
@@ -856,12 +856,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Integer lowerKey(Integer key) {
+    public Long lowerKey(Long key) {
         return keyOrNull(getLowerEntry(key));
     }
-    public Integer safeLowerKey(Integer key) {
+    public Long safeLowerKey(Long key) {
         Entry<V> k;
-        return (k = getLowerEntry(key)) == null ? firstKey() : k.key;
+        return (k = getLowerEntry(key)) == null ? key : k.key;
     }
 
     /**
@@ -871,7 +871,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> floorEntry(Integer key) {
+    public Map.Entry<Long, ArrayList<V>> floorEntry(Long key) {
         return exportEntry(getFloorEntry(key));
     }
 
@@ -882,7 +882,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Integer floorKey(Integer key) {
+    public Long floorKey(Long key) {
         return keyOrNull(getFloorEntry(key));
     }
 
@@ -893,7 +893,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> ceilingEntry(Integer key) {
+    public Map.Entry<Long, ArrayList<V>> ceilingEntry(Long key) {
         return exportEntry(getCeilingEntry(key));
     }
 
@@ -904,7 +904,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Integer ceilingKey(Integer key) {
+    public Long ceilingKey(Long key) {
         return keyOrNull(getCeilingEntry(key));
     }
 
@@ -915,7 +915,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Map.Entry<Integer, ArrayList<V>> higherEntry(Integer key) {
+    public Map.Entry<Long, ArrayList<V>> higherEntry(Long key) {
         return exportEntry(getHigherEntry(key));
     }
 
@@ -926,12 +926,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @since 1.6
      */
-    public Integer higherKey(Integer key) {
+    public Long higherKey(Long key) {
         return keyOrNull(getHigherEntry(key));
     }
-    public Integer safeHigherKey(Integer key) {
+    public Long safeHigherKey(Long key) {
         Entry<V> k;
-        return (k = getHigherEntry(key)) == null ? lastKey() : k.key;
+        return (k = getHigherEntry(key)) == null ? key : k.key;
     }
 
     // Views
@@ -943,7 +943,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      */
     private transient EntrySet entrySet;
     private transient KeySet navigableKeySet;
-    private transient NavigableMap<Integer, ArrayList<V>> descendingMap;
+    private transient NavigableMap<Long, ArrayList<V>> descendingMap;
 
     /**
      * Returns a {@link Set} view of the keys contained in this map.
@@ -970,14 +970,14 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * operations.  It does not support the {@code add} or {@code addAll}
      * operations.
      */
-    public Set<Integer> keySet() {
+    public Set<Long> keySet() {
         return navigableKeySet();
     }
 
     /**
      * @since 1.6
      */
-    public NavigableSet<Integer> navigableKeySet() {
+    public NavigableSet<Long> navigableKeySet() {
         KeySet nks = navigableKeySet;
         return (nks != null) ? nks : (navigableKeySet = new KeySet(this));
     }
@@ -985,7 +985,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @since 1.6
      */
-    public NavigableSet<Integer> descendingKeySet() {
+    public NavigableSet<Long> descendingKeySet() {
         return descendingMap().navigableKeySet();
     }
 
@@ -1041,7 +1041,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * {@code clear} operations.  It does not support the
      * {@code add} or {@code addAll} operations.
      */
-    public Set<Map.Entry<Integer, ArrayList<V>>> entrySet() {
+    public Set<Map.Entry<Long, ArrayList<V>>> entrySet() {
         EntrySet es = entrySet;
         return (es != null) ? es : (entrySet = new EntrySet());
     }
@@ -1049,26 +1049,26 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @since 1.6
      */
-    public NavigableMap<Integer, ArrayList<V>> descendingMap() {
-        NavigableMap<Integer, ArrayList<V>> km = descendingMap;
+    public NavigableMap<Long, ArrayList<V>> descendingMap() {
+        NavigableMap<Long, ArrayList<V>> km = descendingMap;
         return (km != null) ? km :
                 (descendingMap = new DescendingSubMap<>(this,
                         true, null, true,
                         true, null, true));
     }
 
-    public NavigableMap<Integer, ArrayList<V>> descendingSubMap(Integer fromKey, boolean fromInclusive, Integer toKey, boolean toInclusive) {
+    public NavigableMap<Long, ArrayList<V>> descendingSubMap(Long fromKey, boolean fromInclusive, Long toKey, boolean toInclusive) {
         return new DescendingSubMap<>(this,
                         false, fromKey, fromInclusive,
                         false, toKey, toInclusive);
     }
-    public NavigableMap<Integer, ArrayList<V>> descendingSubMap(Integer toKey, boolean toInclusive) {
+    public NavigableMap<Long, ArrayList<V>> descendingSubMap(Long toKey, boolean toInclusive) {
         return new DescendingSubMap<>(this,
                 true, null, true,
                 false, toKey, toInclusive);
     }
 
-    public NavigableMap<Integer, ArrayList<V>> extendedDescendingSubMap(Integer fromKey, Integer toKey) {
+    public NavigableMap<Long, ArrayList<V>> extendedDescendingSubMap(Long fromKey, Long toKey) {
         return new DescendingSubMap<>(this,
                 false, fromKey,
                 false, toKey, true);
@@ -1082,8 +1082,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * @throws IllegalArgumentException {@inheritDoc}
      * @since 1.6
      */
-    public NavigableMap<Integer,ArrayList<V>> subMap(Integer fromKey, boolean fromInclusive,
-                                    Integer toKey,   boolean toInclusive) {
+    public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
+                                    Long toKey,   boolean toInclusive) {
         return new AscendingSubMap<>(this,
                 false, fromKey, fromInclusive,
                 false, toKey,   toInclusive);
@@ -1097,7 +1097,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * @throws IllegalArgumentException {@inheritDoc}
      * @since 1.6
      */
-    public NavigableMap<Integer,ArrayList<V>> headMap(Integer toKey, boolean inclusive) {
+    public NavigableMap<Long,ArrayList<V>> headMap(Long toKey, boolean inclusive) {
         return new AscendingSubMap<>(this,
                 true,  null,  true,
                 false, toKey, inclusive);
@@ -1111,7 +1111,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * @throws IllegalArgumentException {@inheritDoc}
      * @since 1.6
      */
-    public NavigableMap<Integer,ArrayList<V>> tailMap(Integer fromKey, boolean inclusive) {
+    public NavigableMap<Long,ArrayList<V>> tailMap(Long fromKey, boolean inclusive) {
         return new AscendingSubMap<>(this,
                 false, fromKey, inclusive,
                 true,  null,    true);
@@ -1124,7 +1124,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @throws IllegalArgumentException {@inheritDoc}
      */
-    public SortedMap<Integer,ArrayList<V>> subMap(Integer fromKey, Integer toKey) {
+    public SortedMap<Long,ArrayList<V>> subMap(Long fromKey, Long toKey) {
         return subMap(fromKey, true, toKey, false);
     }
 
@@ -1135,7 +1135,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @throws IllegalArgumentException {@inheritDoc}
      */
-    public SortedMap<Integer,ArrayList<V>> headMap(Integer toKey) {
+    public SortedMap<Long,ArrayList<V>> headMap(Long toKey) {
         return headMap(toKey, false);
     }
 
@@ -1146,12 +1146,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         does not permit null keys
      * @throws IllegalArgumentException {@inheritDoc}
      */
-    public SortedMap<Integer,ArrayList<V>> tailMap(Integer fromKey) {
+    public SortedMap<Long,ArrayList<V>> tailMap(Long fromKey) {
         return tailMap(fromKey, true);
     }
 
     @Override
-    public boolean replace(Integer key, ArrayList<V> oldValue, ArrayList<V> newValue) {
+    public boolean replace(Long key, ArrayList<V> oldValue, ArrayList<V> newValue) {
         Entry<V> p = getEntry(key);
         if (p!=null && Objects.equals(oldValue, p.value)) {
             p.value = newValue;
@@ -1161,7 +1161,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     @Override
-    public ArrayList<V> replace(Integer key, ArrayList<V> value) {
+    public ArrayList<V> replace(Long key, ArrayList<V> value) {
         Entry<V> p = getEntry(key);
         if (p!=null) {
             ArrayList<V> oldValue = p.value;
@@ -1172,7 +1172,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     @Override
-    public void forEach(BiConsumer<? super Integer, ? super ArrayList<V>> action) {
+    public void forEach(BiConsumer<? super Long, ? super ArrayList<V>> action) {
         Objects.requireNonNull(action);
         int expectedModCount = modCount;
         for (Entry<V> e = getFirstEntry(); e != null; e = successor(e)) {
@@ -1185,7 +1185,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     @Override
-    public void replaceAll(BiFunction<? super Integer, ? super ArrayList<V>, ? extends ArrayList<V>> function) {
+    public void replaceAll(BiFunction<? super Long, ? super ArrayList<V>, ? extends ArrayList<V>> function) {
         Objects.requireNonNull(function);
         int expectedModCount = modCount;
 
@@ -1232,8 +1232,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    class EntrySet extends AbstractSet<Map.Entry<Integer, ArrayList<V>>> {
-        public Iterator<Map.Entry<Integer, ArrayList<V>>> iterator() {
+    class EntrySet extends AbstractSet<Map.Entry<Long, ArrayList<V>>> {
+        public Iterator<Map.Entry<Long, ArrayList<V>>> iterator() {
             return new EntryIterator(getFirstEntry());
         }
 
@@ -1267,7 +1267,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             PositionalObjectTreeMap.this.clear();
         }
 
-        public Spliterator<Map.Entry<Integer, ArrayList<V>>> spliterator() {
+        public Spliterator<Map.Entry<Long, ArrayList<V>>> spliterator() {
             return new EntrySpliterator<>(PositionalObjectTreeMap.this, null, null, 0, -1, 0);
         }
     }
@@ -1280,26 +1280,26 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * submap classes.
      */
 
-    Iterator<Integer> keyIterator() {
+    Iterator<Long> keyIterator() {
         return new KeyIterator(getFirstEntry());
     }
 
-    Iterator<Integer> descendingKeyIterator() {
+    Iterator<Long> descendingKeyIterator() {
         return new DescendingKeyIterator(getLastEntry());
     }
 
-    static final class KeySet extends AbstractSet<Integer> implements NavigableSet<Integer> {
-        private final NavigableMap<Integer, ?> m;
-        KeySet(NavigableMap<Integer,?> map) { m = map; }
+    static final class KeySet extends AbstractSet<Long> implements NavigableSet<Long> {
+        private final NavigableMap<Long, ?> m;
+        KeySet(NavigableMap<Long,?> map) { m = map; }
 
-        public Iterator<Integer> iterator() {
+        public Iterator<Long> iterator() {
             if (m instanceof PositionalObjectTreeMap)
                 return ((PositionalObjectTreeMap<?>)m).keyIterator();
             else
                 return ((NavigableSubMap<?>)m).keyIterator();
         }
 
-        public Iterator<Integer> descendingIterator() {
+        public Iterator<Long> descendingIterator() {
             if (m instanceof PositionalObjectTreeMap)
                 return ((PositionalObjectTreeMap<?>)m).descendingKeyIterator();
             else
@@ -1310,19 +1310,19 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         public boolean isEmpty() { return m.isEmpty(); }
         public boolean contains(Object o) { return m.containsKey(o); }
         public void clear() { m.clear(); }
-        public Integer lower(Integer e) { return m.lowerKey(e); }
-        public Integer floor(Integer e) { return m.floorKey(e); }
-        public Integer ceiling(Integer e) { return m.ceilingKey(e); }
-        public Integer higher(Integer e) { return m.higherKey(e); }
-        public Integer first() { return m.firstKey(); }
-        public Integer last() { return m.lastKey(); }
-        public Comparator<? super Integer> comparator() { return m.comparator(); }
-        public Integer pollFirst() {
-            Map.Entry<Integer,?> e = m.pollFirstEntry();
+        public Long lower(Long e) { return m.lowerKey(e); }
+        public Long floor(Long e) { return m.floorKey(e); }
+        public Long ceiling(Long e) { return m.ceilingKey(e); }
+        public Long higher(Long e) { return m.higherKey(e); }
+        public Long first() { return m.firstKey(); }
+        public Long last() { return m.lastKey(); }
+        public Comparator<? super Long> comparator() { return m.comparator(); }
+        public Long pollFirst() {
+            Map.Entry<Long,?> e = m.pollFirstEntry();
             return (e == null) ? null : e.getKey();
         }
-        public Integer pollLast() {
-            Map.Entry<Integer,?> e = m.pollLastEntry();
+        public Long pollLast() {
+            Map.Entry<Long,?> e = m.pollLastEntry();
             return (e == null) ? null : e.getKey();
         }
         public boolean remove(Object o) {
@@ -1330,31 +1330,31 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             m.remove(o);
             return size() != oldSize;
         }
-        public NavigableSet<Integer> subSet(Integer fromElement, boolean fromInclusive,
-                                      Integer toElement,   boolean toInclusive) {
+        public NavigableSet<Long> subSet(Long fromElement, boolean fromInclusive,
+                                      Long toElement,   boolean toInclusive) {
             return new KeySet(m.subMap(fromElement, fromInclusive,
                     toElement,   toInclusive));
         }
-        public NavigableSet<Integer> headSet(Integer toIntegerlement, boolean inclusive) {
-            return new KeySet(m.headMap(toIntegerlement, inclusive));
+        public NavigableSet<Long> headSet(Long toLonglement, boolean inclusive) {
+            return new KeySet(m.headMap(toLonglement, inclusive));
         }
-        public NavigableSet<Integer> tailSet(Integer fromIntegerlement, boolean inclusive) {
-            return new KeySet(m.tailMap(fromIntegerlement, inclusive));
+        public NavigableSet<Long> tailSet(Long fromLonglement, boolean inclusive) {
+            return new KeySet(m.tailMap(fromLonglement, inclusive));
         }
-        public SortedSet<Integer> subSet(Integer fromIntegerlement, Integer toIntegerlement) {
-            return subSet(fromIntegerlement, true, toIntegerlement, false);
+        public SortedSet<Long> subSet(Long fromLonglement, Long toLonglement) {
+            return subSet(fromLonglement, true, toLonglement, false);
         }
-        public SortedSet<Integer> headSet(Integer toIntegerlement) {
-            return headSet(toIntegerlement, false);
+        public SortedSet<Long> headSet(Long toLonglement) {
+            return headSet(toLonglement, false);
         }
-        public SortedSet<Integer> tailSet(Integer fromIntegerlement) {
-            return tailSet(fromIntegerlement, true);
+        public SortedSet<Long> tailSet(Long fromLonglement) {
+            return tailSet(fromLonglement, true);
         }
-        public NavigableSet<Integer> descendingSet() {
+        public NavigableSet<Long> descendingSet() {
             return new KeySet(m.descendingMap());
         }
 
-        public Spliterator<Integer> spliterator() {
+        public Spliterator<Long> spliterator() {
             return keySpliteratorFor(m);
         }
     }
@@ -1413,11 +1413,11 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    final class EntryIterator extends PrivateEntryIterator<Map.Entry<Integer, ArrayList<V>>> {
+    final class EntryIterator extends PrivateEntryIterator<Map.Entry<Long, ArrayList<V>>> {
         EntryIterator(Entry<V> first) {
             super(first);
         }
-        public Map.Entry<Integer, ArrayList<V>> next() {
+        public Map.Entry<Long, ArrayList<V>> next() {
             return nextEntry();
         }
     }
@@ -1431,20 +1431,20 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    final class KeyIterator extends PrivateEntryIterator<Integer> {
+    final class KeyIterator extends PrivateEntryIterator<Long> {
         KeyIterator(Entry<V> first) {
             super(first);
         }
-        public Integer next() {
+        public Long next() {
             return nextEntry().key;
         }
     }
 
-    final class DescendingKeyIterator extends PrivateEntryIterator<Integer> {
+    final class DescendingKeyIterator extends PrivateEntryIterator<Long> {
         DescendingKeyIterator(Entry<V> first) {
             super(first);
         }
-        public Integer next() {
+        public Long next() {
             return prevEntry().key;
         }
         public void remove() {
@@ -1465,8 +1465,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      */
     @SuppressWarnings("unchecked")
     final int compare(Object k1, Object k2) {
-        return comparator==null ? ((Comparable<? super Integer>)k1).compareTo((Integer)k2)
-                : comparator.compare((Integer)k1, (Integer)k2);
+        return comparator==null ? ((Comparable<? super Long>)k1).compareTo((Long)k2)
+                : comparator.compare((Long)k1, (Long)k2);
     }
 
     /**
@@ -1480,7 +1480,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * Return SimpleImmutableEntry for entry, or null if null
      */
-    static <V> Map.Entry<Integer, ArrayList<V>> exportEntry(Entry<V> e) {
+    static <V> Map.Entry<Long, ArrayList<V>> exportEntry(Entry<V> e) {
         return (e == null) ? null :
                 new AbstractMap.SimpleImmutableEntry<>(e);
     }
@@ -1488,7 +1488,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * Return key for entry, or null if null
      */
-    static Integer keyOrNull(Entry<?> e) {
+    static Long keyOrNull(Entry<?> e) {
         return (e == null) ? null : e.key;
     }
 
@@ -1496,9 +1496,9 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * Returns the key corresponding to the specified Entry.
      * @throws NoSuchElementException if the Entry is null
      */
-    static Integer key(Entry<?> e) {
+    static Long key(Entry<?> e) {
         if (e==null)
-            throw new NoSuchElementException();
+            return null;
         return e.key;
     }
 
@@ -1514,8 +1514,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @serial include
      */
-    abstract static class NavigableSubMap<V extends PositionalObject> extends AbstractMap<Integer, ArrayList<V>>
-            implements NavigableMap<Integer, ArrayList<V>>, java.io.Serializable {
+    abstract static class NavigableSubMap<V extends PositionalObject> extends AbstractMap<Long, ArrayList<V>>
+            implements NavigableMap<Long, ArrayList<V>>, java.io.Serializable {
         private static final long serialVersionUID = -2102997345730753016L;
         /**
          * The backing map.
@@ -1530,14 +1530,14 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          * if loInclusive is true, lo is the inclusive bound, else lo
          * is the exclusive bound. Similarly for the upper bound.
          */
-        final Integer lo, hi;
+        final Long lo, hi;
         final boolean fromStart, toEnd;
         final boolean loInclusive, hiInclusive;
         final boolean extended;
 
         NavigableSubMap(PositionalObjectTreeMap<V> m,
-                        boolean fromStart, Integer lo, boolean loInclusive,
-                        boolean toEnd, Integer hi, boolean hiInclusive, boolean extended) {
+                        boolean fromStart, Long lo, boolean loInclusive,
+                        boolean toEnd, Long hi, boolean hiInclusive, boolean extended) {
             if (!fromStart && !toEnd) {
                 if (m.compare(lo, hi) > 0)
                     throw new IllegalArgumentException("fromKey > toKey");
@@ -1631,28 +1631,28 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absCeiling(Integer key) {
+        final PositionalObjectTreeMap.Entry<V> absCeiling(Long key) {
             if (tooLow(key))
                 return absLowest();
             PositionalObjectTreeMap.Entry<V> e = m.getCeilingEntry(key);
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absHigher(Integer key) {
+        final PositionalObjectTreeMap.Entry<V> absHigher(Long key) {
             if (tooLow(key))
                 return absLowest();
             PositionalObjectTreeMap.Entry<V> e = m.getHigherEntry(key);
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absFloor(Integer key) {
+        final PositionalObjectTreeMap.Entry<V> absFloor(Long key) {
             if (tooHigh(key))
                 return absHighest();
             PositionalObjectTreeMap.Entry<V> e = m.getFloorEntry(key);
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absLower(Integer key) {
+        final PositionalObjectTreeMap.Entry<V> absLower(Long key) {
             if (tooHigh(key))
                 return absHighest();
             PositionalObjectTreeMap.Entry<V> e = m.getLowerEntry(key);
@@ -1678,18 +1678,18 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
         abstract PositionalObjectTreeMap.Entry<V> subLowest();
         abstract PositionalObjectTreeMap.Entry<V> subHighest();
-        abstract PositionalObjectTreeMap.Entry<V> subCeiling(Integer key);
-        abstract PositionalObjectTreeMap.Entry<V> subHigher(Integer key);
-        abstract PositionalObjectTreeMap.Entry<V> subFloor(Integer key);
-        abstract PositionalObjectTreeMap.Entry<V> subLower(Integer key);
+        abstract PositionalObjectTreeMap.Entry<V> subCeiling(Long key);
+        abstract PositionalObjectTreeMap.Entry<V> subHigher(Long key);
+        abstract PositionalObjectTreeMap.Entry<V> subFloor(Long key);
+        abstract PositionalObjectTreeMap.Entry<V> subLower(Long key);
 
         /** Returns ascending iterator from the perspective of this submap */
-        abstract Iterator<Integer> keyIterator();
+        abstract Iterator<Long> keyIterator();
 
-        abstract Spliterator<Integer> keySpliterator();
+        abstract Spliterator<Long> keySpliterator();
 
         /** Returns descending iterator from the perspective of this submap */
-        abstract Iterator<Integer> descendingKeyIterator();
+        abstract Iterator<Long> descendingKeyIterator();
 
         // public methods
 
@@ -1705,7 +1705,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return inRange(key) && m.containsKey(key);
         }
 
-        public final ArrayList<V> put(Integer key, ArrayList<V> value) {
+        public final ArrayList<V> put(Long key, ArrayList<V> value) {
             if (!inRange(key))
                 throw new IllegalArgumentException("key out of range");
             return m.put(key, value);
@@ -1719,104 +1719,104 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return !inRange(key) ? null : m.remove(key);
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> ceilingEntry(Integer key) {
+        public final Map.Entry<Long, ArrayList<V>> ceilingEntry(Long key) {
             return exportEntry(subCeiling(key));
         }
 
-        public final Integer ceilingKey(Integer key) {
+        public final Long ceilingKey(Long key) {
             return keyOrNull(subCeiling(key));
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> higherEntry(Integer key) {
+        public final Map.Entry<Long, ArrayList<V>> higherEntry(Long key) {
             return exportEntry(subHigher(key));
         }
 
-        public final Integer higherKey(Integer key) {
+        public final Long higherKey(Long key) {
             return keyOrNull(subHigher(key));
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> floorEntry(Integer key) {
+        public final Map.Entry<Long, ArrayList<V>> floorEntry(Long key) {
             return exportEntry(subFloor(key));
         }
 
-        public final Integer floorKey(Integer key) {
+        public final Long floorKey(Long key) {
             return keyOrNull(subFloor(key));
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> lowerEntry(Integer key) {
+        public final Map.Entry<Long, ArrayList<V>> lowerEntry(Long key) {
             return exportEntry(subLower(key));
         }
 
-        public final Integer lowerKey(Integer key) {
+        public final Long lowerKey(Long key) {
             return keyOrNull(subLower(key));
         }
 
-        public final Integer firstKey() {
+        public final Long firstKey() {
             return key(subLowest());
         }
 
-        public final Integer lastKey() {
+        public final Long lastKey() {
             return key(subHighest());
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> firstEntry() {
+        public final Map.Entry<Long, ArrayList<V>> firstEntry() {
             return exportEntry(subLowest());
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> lastEntry() {
+        public final Map.Entry<Long, ArrayList<V>> lastEntry() {
             return exportEntry(subHighest());
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> pollFirstEntry() {
+        public final Map.Entry<Long, ArrayList<V>> pollFirstEntry() {
             PositionalObjectTreeMap.Entry<V> e = subLowest();
-            Map.Entry<Integer, ArrayList<V>> result = exportEntry(e);
+            Map.Entry<Long, ArrayList<V>> result = exportEntry(e);
             if (e != null)
                 m.deleteEntry(e);
             return result;
         }
 
-        public final Map.Entry<Integer, ArrayList<V>> pollLastEntry() {
+        public final Map.Entry<Long, ArrayList<V>> pollLastEntry() {
             PositionalObjectTreeMap.Entry<V> e = subHighest();
-            Map.Entry<Integer, ArrayList<V>> result = exportEntry(e);
+            Map.Entry<Long, ArrayList<V>> result = exportEntry(e);
             if (e != null)
                 m.deleteEntry(e);
             return result;
         }
 
         // Views
-        transient NavigableMap<Integer,ArrayList<V>> descendingMapView;
+        transient NavigableMap<Long,ArrayList<V>> descendingMapView;
         transient NavigableSubMap<V>.EntrySetView entrySetView;
         transient KeySet navigableKeySetView;
 
-        public final NavigableSet<Integer> navigableKeySet() {
+        public final NavigableSet<Long> navigableKeySet() {
             KeySet nksv = navigableKeySetView;
             return (nksv != null) ? nksv :
                     (navigableKeySetView = new KeySet(this));
         }
 
-        public final Set<Integer> keySet() {
+        public final Set<Long> keySet() {
             return navigableKeySet();
         }
 
-        public NavigableSet<Integer> descendingKeySet() {
+        public NavigableSet<Long> descendingKeySet() {
             return descendingMap().navigableKeySet();
         }
 
-        public final SortedMap<Integer, ArrayList<V>> subMap(Integer fromKey, Integer toKey) {
+        public final SortedMap<Long, ArrayList<V>> subMap(Long fromKey, Long toKey) {
             return subMap(fromKey, true, toKey, false);
         }
 
-        public final SortedMap<Integer, ArrayList<V>> headMap(Integer toKey) {
+        public final SortedMap<Long, ArrayList<V>> headMap(Long toKey) {
             return headMap(toKey, false);
         }
 
-        public final SortedMap<Integer, ArrayList<V>> tailMap(Integer fromKey) {
+        public final SortedMap<Long, ArrayList<V>> tailMap(Long fromKey) {
             return tailMap(fromKey, true);
         }
 
         // View classes
 
-        abstract class EntrySetView extends AbstractSet<Map.Entry<Integer, ArrayList<V>>> {
+        abstract class EntrySetView extends AbstractSet<Map.Entry<Long, ArrayList<V>>> {
             private transient int size = -1, sizeModCount;
 
             public int size() {
@@ -1825,7 +1825,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 if (size == -1 || sizeModCount != m.modCount) {
                     sizeModCount = m.modCount;
                     size = 0;
-                    for (Entry<Integer, ArrayList<V>> ignored : this) {
+                    for (Entry<Long, ArrayList<V>> ignored : this) {
                         size++;
                     }
                 }
@@ -1934,12 +1934,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
         }
 
-        final class SubMapEntryIterator extends SubMapIterator<Map.Entry<Integer, ArrayList<V>>> {
+        final class SubMapEntryIterator extends SubMapIterator<Map.Entry<Long, ArrayList<V>>> {
             SubMapEntryIterator(PositionalObjectTreeMap.Entry<V> first,
                                 PositionalObjectTreeMap.Entry<V> fence) {
                 super(first, fence);
             }
-            public Map.Entry<Integer, ArrayList<V>> next() {
+            public Map.Entry<Long, ArrayList<V>> next() {
                 return nextEntry();
             }
             public void remove() {
@@ -1947,13 +1947,13 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             }
         }
 
-        final class DescendingSubMapEntryIterator extends SubMapIterator<Map.Entry<Integer, ArrayList<V>>> {
+        final class DescendingSubMapEntryIterator extends SubMapIterator<Map.Entry<Long, ArrayList<V>>> {
             DescendingSubMapEntryIterator(PositionalObjectTreeMap.Entry<V> last,
                                           PositionalObjectTreeMap.Entry<V> fence) {
                 super(last, fence);
             }
 
-            public Map.Entry<Integer, ArrayList<V>> next() {
+            public Map.Entry<Long, ArrayList<V>> next() {
                 return prevEntry();
             }
             public void remove() {
@@ -1962,26 +1962,26 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         // Implement minimal Spliterator as KeySpliterator backup
-        final class SubMapKeyIterator extends SubMapIterator<Integer>
-                implements Spliterator<Integer> {
+        final class SubMapKeyIterator extends SubMapIterator<Long>
+                implements Spliterator<Long> {
             SubMapKeyIterator(PositionalObjectTreeMap.Entry<V> first,
                               PositionalObjectTreeMap.Entry<V> fence) {
                 super(first, fence);
             }
-            public Integer next() {
+            public Long next() {
                 return nextEntry().key;
             }
             public void remove() {
                 removeAscending();
             }
-            public Spliterator<Integer> trySplit() {
+            public Spliterator<Long> trySplit() {
                 return null;
             }
-            public void forEachRemaining(Consumer<? super Integer> action) {
+            public void forEachRemaining(Consumer<? super Long> action) {
                 while (hasNext())
                     action.accept(next());
             }
-            public boolean tryAdvance(Consumer<? super Integer> action) {
+            public boolean tryAdvance(Consumer<? super Long> action) {
                 if (hasNext()) {
                     action.accept(next());
                     return true;
@@ -1995,31 +1995,31 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 return Spliterator.DISTINCT | Spliterator.ORDERED |
                         Spliterator.SORTED;
             }
-            public final Comparator<? super Integer>  getComparator() {
+            public final Comparator<? super Long>  getComparator() {
                 return NavigableSubMap.this.comparator();
             }
         }
 
-        final class DescendingSubMapKeyIterator extends SubMapIterator<Integer>
-                implements Spliterator<Integer> {
+        final class DescendingSubMapKeyIterator extends SubMapIterator<Long>
+                implements Spliterator<Long> {
             DescendingSubMapKeyIterator(PositionalObjectTreeMap.Entry<V> last,
                                         PositionalObjectTreeMap.Entry<V> fence) {
                 super(last, fence);
             }
-            public Integer next() {
+            public Long next() {
                 return prevEntry().key;
             }
             public void remove() {
                 removeDescending();
             }
-            public Spliterator<Integer> trySplit() {
+            public Spliterator<Long> trySplit() {
                 return null;
             }
-            public void forEachRemaining(Consumer<? super Integer> action) {
+            public void forEachRemaining(Consumer<? super Long> action) {
                 while (hasNext())
                     action.accept(next());
             }
-            public boolean tryAdvance(Consumer<? super Integer> action) {
+            public boolean tryAdvance(Consumer<? super Long> action) {
                 if (hasNext()) {
                     action.accept(next());
                     return true;
@@ -2042,17 +2042,17 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         private static final long serialVersionUID = 912986545866124060L;
 
         AscendingSubMap(PositionalObjectTreeMap<V> m,
-                        boolean fromStart, Integer lo, boolean loInclusive,
-                        boolean toEnd, Integer hi, boolean hiInclusive) {
+                        boolean fromStart, Long lo, boolean loInclusive,
+                        boolean toEnd, Long hi, boolean hiInclusive) {
             super(m, fromStart, lo, loInclusive, toEnd, hi, hiInclusive, false);
         }
 
-        public Comparator<? super Integer> comparator() {
+        public Comparator<? super Long> comparator() {
             return m.comparator();
         }
 
-        public NavigableMap<Integer,ArrayList<V>> subMap(Integer fromKey, boolean fromInclusive,
-                                        Integer toKey,   boolean toInclusive) {
+        public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
+                                        Long toKey,   boolean toInclusive) {
             if (!inRange(fromKey, fromInclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             if (!inRange(toKey, toInclusive))
@@ -2062,7 +2062,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     false, toKey,   toInclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> headMap(Integer toKey, boolean inclusive) {
+        public NavigableMap<Long,ArrayList<V>> headMap(Long toKey, boolean inclusive) {
             if (!inRange(toKey, inclusive))
                 throw new IllegalArgumentException("toKey out of range");
             return new AscendingSubMap<>(m,
@@ -2070,7 +2070,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     false,     toKey, inclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> tailMap(Integer fromKey, boolean inclusive) {
+        public NavigableMap<Long,ArrayList<V>> tailMap(Long fromKey, boolean inclusive) {
             if (!inRange(fromKey, inclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             return new AscendingSubMap<>(m,
@@ -2078,8 +2078,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     toEnd, hi,      hiInclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> descendingMap() {
-            NavigableMap<Integer,ArrayList<V>> mv = descendingMapView;
+        public NavigableMap<Long,ArrayList<V>> descendingMap() {
+            NavigableMap<Long,ArrayList<V>> mv = descendingMapView;
             return (mv != null) ? mv :
                     (descendingMapView =
                             new DescendingSubMap<>(m,
@@ -2087,35 +2087,35 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                                     toEnd,     hi, hiInclusive));
         }
 
-        Iterator<Integer> keyIterator() {
+        Iterator<Long> keyIterator() {
             return new SubMapKeyIterator(absLowest(), absHighFence());
         }
 
-        Spliterator<Integer> keySpliterator() {
+        Spliterator<Long> keySpliterator() {
             return new SubMapKeyIterator(absLowest(), absHighFence());
         }
 
-        Iterator<Integer> descendingKeyIterator() {
+        Iterator<Long> descendingKeyIterator() {
             return new DescendingSubMapKeyIterator(absHighest(), absLowFence());
         }
 
         final class AscendingEntrySetView extends EntrySetView {
-            public Iterator<Map.Entry<Integer, ArrayList<V>>> iterator() {
+            public Iterator<Map.Entry<Long, ArrayList<V>>> iterator() {
                 return new SubMapEntryIterator(absLowest(), absHighFence());
             }
         }
 
-        public Set<Map.Entry<Integer, ArrayList<V>>> entrySet() {
+        public Set<Map.Entry<Long, ArrayList<V>>> entrySet() {
             EntrySetView es = entrySetView;
             return (es != null) ? es : (entrySetView = new AscendingSubMap<V>.AscendingEntrySetView());
         }
 
         PositionalObjectTreeMap.Entry<V> subLowest()       { return absLowest(); }
         PositionalObjectTreeMap.Entry<V> subHighest()      { return absHighest(); }
-        PositionalObjectTreeMap.Entry<V> subCeiling(Integer key) { return absCeiling(key); }
-        PositionalObjectTreeMap.Entry<V> subHigher(Integer key)  { return absHigher(key); }
-        PositionalObjectTreeMap.Entry<V> subFloor(Integer key)   { return absFloor(key); }
-        PositionalObjectTreeMap.Entry<V> subLower(Integer key)   { return absLower(key); }
+        PositionalObjectTreeMap.Entry<V> subCeiling(Long key) { return absCeiling(key); }
+        PositionalObjectTreeMap.Entry<V> subHigher(Long key)  { return absHigher(key); }
+        PositionalObjectTreeMap.Entry<V> subFloor(Long key)   { return absFloor(key); }
+        PositionalObjectTreeMap.Entry<V> subLower(Long key)   { return absLower(key); }
     }
 
     /**
@@ -2124,25 +2124,25 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     static final class DescendingSubMap<V extends PositionalObject> extends NavigableSubMap<V> {
         private static final long serialVersionUID = 912986545866120460L;
         DescendingSubMap(PositionalObjectTreeMap<V> m,
-                         boolean fromStart, Integer lo, boolean loInclusive,
-                         boolean toEnd, Integer hi, boolean hiInclusive) {
+                         boolean fromStart, Long lo, boolean loInclusive,
+                         boolean toEnd, Long hi, boolean hiInclusive) {
             super(m, fromStart, lo, loInclusive, toEnd, hi, hiInclusive, false);
         }
         DescendingSubMap(PositionalObjectTreeMap<V> m,
-                         boolean fromStart, Integer lo,
-                         boolean toEnd, Integer hi, boolean extended) {
+                         boolean fromStart, Long lo,
+                         boolean toEnd, Long hi, boolean extended) {
             super(m, fromStart, lo, true, toEnd, hi, true, extended);
         }
 
-        private final Comparator<? super Integer> reverseComparator =
+        private final Comparator<? super Long> reverseComparator =
                 Collections.reverseOrder(m.comparator);
 
-        public Comparator<? super Integer> comparator() {
+        public Comparator<? super Long> comparator() {
             return reverseComparator;
         }
 
-        public NavigableMap<Integer,ArrayList<V>> subMap(Integer fromKey, boolean fromInclusive,
-                                        Integer toKey,   boolean toInclusive) {
+        public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
+                                        Long toKey,   boolean toInclusive) {
             if (!inRange(fromKey, fromInclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             if (!inRange(toKey, toInclusive))
@@ -2152,7 +2152,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     false, fromKey, fromInclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> headMap(Integer toKey, boolean inclusive) {
+        public NavigableMap<Long,ArrayList<V>> headMap(Long toKey, boolean inclusive) {
             if (!inRange(toKey, inclusive))
                 throw new IllegalArgumentException("toKey out of range");
             return new DescendingSubMap<>(m,
@@ -2160,7 +2160,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     toEnd, hi,    hiInclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> tailMap(Integer fromKey, boolean inclusive) {
+        public NavigableMap<Long,ArrayList<V>> tailMap(Long fromKey, boolean inclusive) {
             if (!inRange(fromKey, inclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             return new DescendingSubMap<>(m,
@@ -2168,8 +2168,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     false, fromKey, inclusive);
         }
 
-        public NavigableMap<Integer,ArrayList<V>> descendingMap() {
-            NavigableMap<Integer,ArrayList<V>> mv = descendingMapView;
+        public NavigableMap<Long,ArrayList<V>> descendingMap() {
+            NavigableMap<Long,ArrayList<V>> mv = descendingMapView;
             return (mv != null) ? mv :
                     (descendingMapView =
                             new AscendingSubMap<>(m,
@@ -2177,35 +2177,35 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                                     toEnd,     hi, hiInclusive));
         }
 
-        Iterator<Integer> keyIterator() {
+        Iterator<Long> keyIterator() {
             return new DescendingSubMapKeyIterator(absHighest(), absLowFence());
         }
 
-        Spliterator<Integer> keySpliterator() {
+        Spliterator<Long> keySpliterator() {
             return new DescendingSubMapKeyIterator(absHighest(), absLowFence());
         }
 
-        Iterator<Integer> descendingKeyIterator() {
+        Iterator<Long> descendingKeyIterator() {
             return new SubMapKeyIterator(absLowest(), absHighFence());
         }
 
         final class DescendingEntrySetView extends EntrySetView {
-            public Iterator<Map.Entry<Integer, ArrayList<V>>> iterator() {
+            public Iterator<Map.Entry<Long, ArrayList<V>>> iterator() {
                 return new DescendingSubMapEntryIterator(absHighest(), absLowFence());
             }
         }
 
-        public Set<Map.Entry<Integer, ArrayList<V>>> entrySet() {
+        public Set<Map.Entry<Long, ArrayList<V>>> entrySet() {
             EntrySetView es = entrySetView;
             return (es != null) ? es : (entrySetView = new DescendingSubMap<V>.DescendingEntrySetView());
         }
 
         PositionalObjectTreeMap.Entry<V> subLowest()       { return absHighest(); }
         PositionalObjectTreeMap.Entry<V> subHighest()      { return absLowest(); }
-        PositionalObjectTreeMap.Entry<V> subCeiling(Integer key) { return absFloor(key); }
-        PositionalObjectTreeMap.Entry<V> subHigher(Integer key)  { return absLower(key); }
-        PositionalObjectTreeMap.Entry<V> subFloor(Integer key)   { return absCeiling(key); }
-        PositionalObjectTreeMap.Entry<V> subLower(Integer key)   { return absHigher(key); }
+        PositionalObjectTreeMap.Entry<V> subCeiling(Long key) { return absFloor(key); }
+        PositionalObjectTreeMap.Entry<V> subHigher(Long key)  { return absLower(key); }
+        PositionalObjectTreeMap.Entry<V> subFloor(Long key)   { return absCeiling(key); }
+        PositionalObjectTreeMap.Entry<V> subLower(Long key)   { return absHigher(key); }
     }
 
     /**
@@ -2217,23 +2217,23 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *
      * @serial include
      */
-    private class SubMap extends AbstractMap<Integer, ArrayList<V>>
-            implements SortedMap<Integer, ArrayList<V>>, java.io.Serializable {
+    private class SubMap extends AbstractMap<Long, ArrayList<V>>
+            implements SortedMap<Long, ArrayList<V>>, java.io.Serializable {
         private static final long serialVersionUID = -6520786458950516097L;
         private boolean fromStart = false, toEnd = false;
-        private Integer fromKey, toKey;
+        private Long fromKey, toKey;
         private Object readResolve() {
             return new AscendingSubMap<>(PositionalObjectTreeMap.this,
                     fromStart, fromKey, true,
                     toEnd, toKey, false);
         }
-        public Set<Map.Entry<Integer, ArrayList<V>>> entrySet() { throw new InternalError(); }
-        public Integer lastKey() { throw new InternalError(); }
-        public Integer firstKey() { throw new InternalError(); }
-        public SortedMap<Integer,ArrayList<V>> subMap(Integer fromKey, Integer toKey) { throw new InternalError(); }
-        public SortedMap<Integer,ArrayList<V>> headMap(Integer toKey) { throw new InternalError(); }
-        public SortedMap<Integer,ArrayList<V>> tailMap(Integer fromKey) { throw new InternalError(); }
-        public Comparator<? super Integer> comparator() { throw new InternalError(); }
+        public Set<Map.Entry<Long, ArrayList<V>>> entrySet() { throw new InternalError(); }
+        public Long lastKey() { throw new InternalError(); }
+        public Long firstKey() { throw new InternalError(); }
+        public SortedMap<Long,ArrayList<V>> subMap(Long fromKey, Long toKey) { throw new InternalError(); }
+        public SortedMap<Long,ArrayList<V>> headMap(Long toKey) { throw new InternalError(); }
+        public SortedMap<Long,ArrayList<V>> tailMap(Long fromKey) { throw new InternalError(); }
+        public Comparator<? super Long> comparator() { throw new InternalError(); }
     }
 
 
@@ -2247,8 +2247,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * user (see Map.Entry).
      */
 
-    static final class Entry<V> implements Map.Entry<Integer, ArrayList<V>> {
-        Integer key;
+    static final class Entry<V> implements Map.Entry<Long, ArrayList<V>> {
+        Long key;
         ArrayList<V> value;
         Entry<V> left;
         Entry<V> right;
@@ -2259,7 +2259,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          * Make a new cell with given key, value, and parent, and with
          * {@code null} child links, and BLACK color.
          */
-        Entry(Integer key, ArrayList<V> value, Entry<V> parent) {
+        Entry(Long key, ArrayList<V> value, Entry<V> parent) {
             this.key = key;
             this.value = value;
             this.parent = parent;
@@ -2269,9 +2269,9 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          * Make a new cell with given key, value within values, and parent, and with
          * {@code null} child links, and BLACK color.
          */
-        Entry(Integer key, V value, Entry<V> parent) {
+        Entry(Long key, V value, Entry<V> parent) {
             this.key = key;
-            this.value = new ArrayList<>();
+            this.value = new ArrayList<>(1);
             this.value.add(value);
             this.parent = parent;
         }
@@ -2281,7 +2281,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          *
          * @return the key
          */
-        public Integer getKey() {
+        public Long getKey() {
             return key;
         }
 
@@ -2646,7 +2646,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         s.writeInt(size);
 
         // Write out keys and values (alternating)
-        for (Map.Entry<Integer, ArrayList<V>> e : entrySet()) {
+        for (Map.Entry<Long, ArrayList<V>> e : entrySet()) {
             s.writeObject(e.getKey());
             s.writeObject(e.getValue());
         }
@@ -2674,7 +2674,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     /** Intended to be called only from TreeSet.addAll */
-    void addAllForTreeSet(SortedSet<? extends Integer> set, ArrayList<V> defaultVal) {
+    void addAllForTreeSet(SortedSet<? extends Long> set, ArrayList<V> defaultVal) {
         try {
             buildFromSorted(set.size(), set.iterator(), null, defaultVal);
         } catch (IOException | ClassNotFoundException cannotHappen) {
@@ -2764,19 +2764,19 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     it, str, defaultVal);
 
         // extract key and/or value from iterator or stream
-        Integer key;
+        Long key;
         ArrayList<V> value;
         if (it != null) {
             if (defaultVal==null) {
                 Map.Entry<?,?> entry = (Map.Entry<?,?>)it.next();
-                key = (Integer)entry.getKey();
+                key = (Long)entry.getKey();
                 value = (ArrayList<V>)entry.getValue();
             } else {
-                key = (Integer)it.next();
+                key = (Long)it.next();
                 value = defaultVal;
             }
         } else { // use stream
-            key = (Integer) str.readObject();
+            key = (Long) str.readObject();
             value = (defaultVal != null ? defaultVal : (ArrayList<V>) str.readObject());
         }
 
@@ -2828,7 +2828,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * structures. Callers must use plain default spliterators if this
      * returns null.
      */
-    static Spliterator<Integer> keySpliteratorFor(NavigableMap<Integer, ?> m) {
+    static Spliterator<Long> keySpliteratorFor(NavigableMap<Long, ?> m) {
         if (m instanceof PositionalObjectTreeMap) {
             @SuppressWarnings("unchecked") PositionalObjectTreeMap<PositionalObject> t =
                     (PositionalObjectTreeMap<PositionalObject>) m;
@@ -2845,11 +2845,11 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return ((NavigableSubMap<?>) m).keySpliterator();
     }
 
-    final Spliterator<Integer> keySpliterator() {
+    final Spliterator<Long> keySpliterator() {
         return new KeySpliterator<>(this, null, null, 0, -1, 0);
     }
 
-    final Spliterator<Integer> descendingKeySpliterator() {
+    final Spliterator<Long> descendingKeySpliterator() {
         return new DescendingKeySpliterator<>(this, null, null, 0, -2, 0);
     }
 
@@ -2918,7 +2918,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
     static final class KeySpliterator<V extends PositionalObject>
             extends TreeMapSpliterator<V>
-            implements Spliterator<Integer> {
+            implements Spliterator<Long> {
         KeySpliterator(PositionalObjectTreeMap<V> tree,
                        Entry<V> origin, Entry<V> fence,
                        int side, int est, int expectedModCount) {
@@ -2944,7 +2944,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return null;
         }
 
-        public void forEachRemaining(Consumer<? super Integer> action) {
+        public void forEachRemaining(Consumer<? super Long> action) {
             if (action == null)
                 throw new NullPointerException();
             if (est < 0)
@@ -2968,7 +2968,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             }
         }
 
-        public boolean tryAdvance(Consumer<? super Integer> action) {
+        public boolean tryAdvance(Consumer<? super Long> action) {
             Entry<V> e;
             if (action == null)
                 throw new NullPointerException();
@@ -2988,7 +2988,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     Spliterator.DISTINCT | Spliterator.SORTED | Spliterator.ORDERED;
         }
 
-        public final Comparator<? super Integer>  getComparator() {
+        public final Comparator<? super Long>  getComparator() {
             return tree.comparator;
         }
 
@@ -2996,7 +2996,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
     static final class DescendingKeySpliterator<V extends PositionalObject>
             extends TreeMapSpliterator<V>
-            implements Spliterator<Integer> {
+            implements Spliterator<Long> {
         DescendingKeySpliterator(PositionalObjectTreeMap<V> tree,
                                  Entry<V> origin, Entry<V> fence,
                                  int side, int est, int expectedModCount) {
@@ -3022,7 +3022,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return null;
         }
 
-        public void forEachRemaining(Consumer<? super Integer> action) {
+        public void forEachRemaining(Consumer<? super Long> action) {
             if (action == null)
                 throw new NullPointerException();
             if (est < 0)
@@ -3046,7 +3046,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             }
         }
 
-        public boolean tryAdvance(Consumer<? super Integer> action) {
+        public boolean tryAdvance(Consumer<? super Long> action) {
             Entry<V> e;
             if (action == null)
                 throw new NullPointerException();
@@ -3141,7 +3141,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
     static final class EntrySpliterator<V extends PositionalObject>
             extends TreeMapSpliterator<V>
-            implements Spliterator<Map.Entry<Integer, ArrayList<V>>> {
+            implements Spliterator<Map.Entry<Long, ArrayList<V>>> {
         EntrySpliterator(PositionalObjectTreeMap<V> tree,
                          Entry<V> origin, Entry<V> fence,
                          int side, int est, int expectedModCount) {
@@ -3167,7 +3167,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return null;
         }
 
-        public void forEachRemaining(Consumer<? super Map.Entry<Integer, ArrayList<V>>> action) {
+        public void forEachRemaining(Consumer<? super Map.Entry<Long, ArrayList<V>>> action) {
             if (action == null)
                 throw new NullPointerException();
             if (est < 0)
@@ -3191,7 +3191,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             }
         }
 
-        public boolean tryAdvance(Consumer<? super Map.Entry<Integer, ArrayList<V>>> action) {
+        public boolean tryAdvance(Consumer<? super Map.Entry<Long, ArrayList<V>>> action) {
             Entry<V> e;
             if (action == null)
                 throw new NullPointerException();
@@ -3212,14 +3212,14 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         @Override
-        public Comparator<Map.Entry<Integer, ArrayList<V>>> getComparator() {
+        public Comparator<Map.Entry<Long, ArrayList<V>>> getComparator() {
             // Adapt or create a key-based comparator
             if (tree.comparator != null) {
                 return Map.Entry.comparingByKey(tree.comparator);
             }
             else {
-                return (Comparator<Map.Entry<Integer, ArrayList<V>>> & Serializable) (e1, e2) -> {
-                    Comparable<? super Integer> k1 = (Comparable<? super Integer>) e1.getKey();
+                return (Comparator<Map.Entry<Long, ArrayList<V>>> & Serializable) (e1, e2) -> {
+                    Comparable<? super Long> k1 = e1.getKey();
                     return k1.compareTo(e2.getKey());
                 };
             }

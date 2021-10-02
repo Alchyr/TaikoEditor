@@ -1,10 +1,11 @@
 package alchyr.taikoedit.editor.changes;
 
-import alchyr.taikoedit.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
 
 //For undo support
 public abstract class MapChange {
     protected EditorBeatmap map;
+    public boolean invalidateSelection = false; //Should be true for changes that would cause the PositionalObjectMap for selected objects to have incorrect positions
 
     public MapChange(EditorBeatmap map)
     {
@@ -17,7 +18,6 @@ public abstract class MapChange {
 
     public enum ChangeType {
         OBJECTS,
-        TIMING,
         EFFECT
     }
 }

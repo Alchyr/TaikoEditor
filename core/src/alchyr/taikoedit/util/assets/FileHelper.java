@@ -121,7 +121,7 @@ public class FileHelper {
                         {
                             String lineText = line.toString();
                             lines.add(lineText);
-                            line = new StringBuilder();
+                            line.delete(0, lineText.length());
 
                             if (lineText.equals(stopLine))
                                 break;

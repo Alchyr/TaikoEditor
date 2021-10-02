@@ -62,6 +62,9 @@ public class CharacterTreeMap<T> {
 
     public void put(String key, T value)
     {
+        if (key.length() > 64) { //heck off
+            key = key.substring(0, 64);
+        }
         if (key.isEmpty())
         {
             values.add(value);
