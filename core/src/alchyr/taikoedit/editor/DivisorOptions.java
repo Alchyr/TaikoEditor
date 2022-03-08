@@ -120,7 +120,7 @@ public class DivisorOptions {
         }
     }
 
-    public void adjust(int adjustment)
+    public void adjust(float adjustment)
     {
         if (adjustment > 0)
         {

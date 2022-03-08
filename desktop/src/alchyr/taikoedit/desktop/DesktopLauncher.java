@@ -12,10 +12,13 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
+import java.io.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /*
  * Display modes:
@@ -25,7 +28,6 @@ import java.io.File;
  * If the taskbar is shown, totally fucked. Reports window size of 1061, while the maximum value input is 1041, effectively cutting off 20 pixels.
  *
  * Fix: Initialize window at a smaller size, then resize to windowed fullscreen after. Works as expected whether taskbar is shown or hidden.
- * TODO: Implement this properly, passing the necessary information to the program.
  */
 
 public class DesktopLauncher {
@@ -35,39 +37,70 @@ public class DesktopLauncher {
 
 	private static int width = -1, height = -1;
 	private static boolean borderless = false;
-	private static int fpsMode = 0; //0 = vsync, 1 = sync, 2 = unlimited
-	private static int fps;
 
 	private static boolean fast = false;
+	private static String directOpen = null;
 
 	public static void main(String[] args) {
-		/*logging test
-		logger.trace("trace");
-		logger.info("info");
-		logger.error("error");*/
-
 		SystemUtils.log(logger);
 
-		for (String arg : args) {
-			logger.info(arg);
-
-			switch (arg) {
-				case "-fast":
-					logger.info("Loading fast menu.");
-					fast = true;
-					break;
-				default:
-					logger.info("Unknown launch parameter.");
-					break;
-			}
-		}
+		initCommandlineArgs(args);
+		processCommandlineArgs(args);
 
 		initialize();
 	}
 
+	private static void initCommandlineArgs(String [] args) {
+		if (boolify(System.getProperty("l5j.encargs"))) {
+			final String enc = StandardCharsets.UTF_8.name();
+			for (int i = 0; i < args.length; ++i) {
+				try {
+					//JOptionPane.showMessageDialog(null, "Encoded: " + args[i]);
+					args[i] = URLDecoder.decode(args[i], enc);
+					//JOptionPane.showMessageDialog(null, "Decoded: " + args[i]);
+				} catch (Exception ignored) { }
+			}
+		}
+	}
+
+	private static boolean boolify(String s) {
+		if (s == null)
+			return false;
+		return s.equals("1") || s.equals("true");
+	}
+
+	private static void processCommandlineArgs(String[] args) {
+		for (String arg : args) {
+			switch (arg) {
+				case "-fast":
+					//logger.info("Loading fast menu.");
+					fast = true;
+					break;
+				default:
+					if (arg.endsWith(".osu")) {
+						logger.info("Maybe beatmap file: " + arg);
+						directOpen = arg;
+					}
+					else {
+						logger.info("Unknown argument: " + arg);
+					}
+					break;
+			}
+		}
+	}
+
 	public static void launch(Lwjgl3ApplicationConfiguration config)
 	{
-		new Lwjgl3Application(new TaikoEditor(width, height, borderless, fpsMode == 0, fpsMode == 2, fps, fast), config);
+		//MAYBE:
+		//Add this if people run into pixelformat exceptions.
+		//Catch that exception and set this before attempting launch again.
+		//System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true");
+		logger.info("Launching.");
+		logger.info(" - Resolution: " + (width == -1 && height == -1 ? "Fullscreen" : width + "x" + height));
+		logger.info(" - Borderless: " + (borderless ? "Yes" : "No"));
+		//logger.info(" - FPS Setting: " + (fpsMode == 0 ? "VSync" : (fpsMode == 2 ? "Unlimited" : fps)));
+		logger.info(" - Menu: " + (fast ? "Fast" : "Normal"));
+		new Lwjgl3Application(new TaikoEditor(width, height, borderless, fast, directOpen), config);
 	}
 
 	private static void initialize()
@@ -75,6 +108,7 @@ public class DesktopLauncher {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 
 		config.setAudioConfig(16, 2048, 6);
+		config.useVsync(true);
 
 		try {
 			boolean success = true;
@@ -97,18 +131,13 @@ public class DesktopLauncher {
 						borderless = false;
 					}
 					else {
-						/*if (programConfig.height == primaryDesktopMode.height)
-							++programConfig.height;*/
-
-						/*config.setWindowedMode(programConfig.width, programConfig.height);
-						config.setWindowSizeLimits(programConfig.width, programConfig.height, programConfig.width, programConfig.height);
-						config.setResizable(false);
-						config.setAutoIconify(false);
-						config.setDecorated(false);*/
 						width = Math.min(programConfig.width, primaryDesktopMode.width);
 						height = Math.min(programConfig.height, primaryDesktopMode.height);
 
 						borderless = (width >= primaryDesktopMode.width) && (height >= primaryDesktopMode.height);
+						/*if (borderless) {
+							--height;
+						}*/
 
 						config.setWindowedMode(400, 400);
 						config.setResizable(false);
@@ -116,8 +145,6 @@ public class DesktopLauncher {
 					}
 
 					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
-					config.useVsync((fpsMode = programConfig.fpsMode) == 0);
-					fps = programConfig.fps;
 				}
 				catch (Exception e)
 				{
@@ -140,6 +167,26 @@ public class DesktopLauncher {
 		{
 			logger.error(e);
 			e.printStackTrace();
+
+			try {
+				File f = new File("error.txt");
+				PrintWriter pWriter = null;
+
+				try {
+					pWriter = new PrintWriter(f);
+					e.printStackTrace(pWriter);
+				}
+				catch (Exception ex) {
+					logger.error("Failed to write error file.");
+					Thread.sleep(3000);
+				}
+				finally {
+					StreamUtils.closeQuietly(pWriter);
+				}
+			}
+			catch (Exception ignored) {
+
+			}
 		}
 	}
 
@@ -177,6 +224,9 @@ public class DesktopLauncher {
 				height = Math.min(programConfig.height, displayMode.height);
 
 				borderless = (width >= displayMode.width) && (height >= displayMode.height);
+				if (borderless) {
+					--height;
+				}
 
 				config.setWindowedMode(400, 400);
 				config.setResizable(false);
@@ -184,8 +234,6 @@ public class DesktopLauncher {
 			}
 
 			SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
-			config.useVsync((fpsMode = programConfig.fpsMode) == 0);
-			fps = programConfig.fps;
 
 			return true;
 		}

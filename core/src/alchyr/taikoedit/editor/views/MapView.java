@@ -4,11 +4,14 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -38,7 +41,7 @@ public abstract class MapView {
     public EditorBeatmap map;
     public final ViewType type; //Views of the same time should use the same set of objects in the same order
 
-    public boolean isPrimary;
+    protected boolean isPrimary;
 
     //Position within song.
     protected double time = 0;
@@ -94,8 +97,8 @@ public abstract class MapView {
     {
         return time;
     }
-    public abstract double getTimeFromPosition(int x); //milliseconds
-    protected double getTimeFromPosition(int x, int offset)
+    public abstract double getTimeFromPosition(float x); //milliseconds
+    protected double getTimeFromPosition(float x, int offset)
     {
         return (time + (x - offset) / EditorLayer.viewScale);
     }
@@ -115,30 +118,35 @@ public abstract class MapView {
     }
 
     //If this method returns true, make it the primary view
-    public boolean justClicked;
-    public boolean click(int x, int y, int pointer, int button)
+    public boolean select()
     {
-        justClicked = true;
         if (!isPrimary)
         {
-            isPrimary = true;
+            primary();
             return true;
         }
         return false;
     }
-    public boolean clickOverlay(int x, int y, int button)
+    public MouseHoldObject clickOverlay(float x, float y, int button)
     {
-        if (x <= overlayWidth && y >= overlayY)
+        if (button == Input.Buttons.LEFT && x <= overlayWidth && y >= bottom + overlayY)
         {
             for (ImageButton b : overlayButtons)
             {
                 if (b.click(x, y, button))
                 {
-                    return true;
+                    return MouseHoldObject.nothing;
                 }
             }
         }
-        return false;
+        return null;
+    }
+    public MouseHoldObject click(float x, float y, int button)
+    {
+        return null;
+    }
+    public void primary() {
+        isPrimary = true;
     }
     public void notPrimary() {
         isPrimary = false;
@@ -155,11 +163,11 @@ public abstract class MapView {
         this.bottom = this.y + offset;
         this.top = this.bottom + height;
     }
-    public void update(double exactPos, long msPos)
+    public void update(double exactPos, long msPos, float elapsed)
     {
         time = exactPos * 1000.0f;
         for (ImageButton b : overlayButtons) {
-            b.update();
+            b.update(elapsed);
             if (b.hovered) {
                 TaikoEditor.hoverText.setText(b.action);
             }
@@ -228,7 +236,7 @@ public abstract class MapView {
             }
         }
     }
-    public void deletePrecise(int x, int y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
+    public boolean deletePrecise(float x, float y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
         PositionalObject close = clickObject(x, y);
 
         if (close != null) {
@@ -239,12 +247,14 @@ public abstract class MapView {
                 deleteObject(close);
             }
             clearSelection();
+            return true;
         }
+        return false;
     }
     public abstract void deleteObject(PositionalObject o);
     public abstract void deleteSelection();
     public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support
-    public void registerValueChange(double totalMovement) { //Registers a modification of selected objects with underlying map for undo/redo support
+    public void registerValueChange() { //Registers a modification of currently selected objects with underlying map for undo/redo support
 
     }
     public abstract void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects);
@@ -294,8 +304,8 @@ public abstract class MapView {
     }
     public void clickRelease() { //method called when mouse released without entering a dragging mode
     }
-    public abstract PositionalObject clickObject(int x, int y);
-    public abstract boolean clickedEnd(PositionalObject o, int x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
+    public abstract PositionalObject clickObject(float x, float y);
+    public abstract boolean clickedEnd(PositionalObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
     public void select(PositionalObject p) //Add a single object to selection.
     {
         p.selected = true;
@@ -319,6 +329,7 @@ public abstract class MapView {
 
         PositionalObjectTreeMap<HitObject> resnapped = new PositionalObjectTreeMap<>();
         TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
+        int changed = 0;
 
         for (Map.Entry<Long, ArrayList<HitObject>> objs : map.objects.entrySet())
         {
@@ -329,21 +340,41 @@ public abstract class MapView {
             }
 
             long newSnap = objs.getKey();
-            if (allSnaps.containsKey(objs.getKey() + 1))
+            if (allSnaps.containsKey(newSnap + 1))
             {
                 newSnap += 1;
             }
-            else if (allSnaps.containsKey(objs.getKey() - 1))
+            else if (allSnaps.containsKey(newSnap - 1))
             {
                 newSnap -= 1;
+            }
+            else {
+                Long higherSnap = allSnaps.higherKey(newSnap),
+                        lowerSnap = allSnaps.lowerKey(newSnap);
+
+                if (higherSnap != null && lowerSnap != null) {
+                    if (newSnap - lowerSnap < higherSnap - newSnap) {
+                        newSnap = lowerSnap;
+                    }
+                    else {
+                        newSnap = higherSnap;
+                    }
+                }
+                else if (higherSnap != null) {
+                    newSnap = higherSnap;
+                }
+                else if (lowerSnap != null) {
+                    newSnap = lowerSnap;
+                }
             }
 
             if (newSnap != objs.getKey())
             {
                 for (HitObject h : objs.getValue())
                 {
-                    h.setPosition(newSnap);
+                    h.setPos(newSnap);
                 }
+                changed += objs.getValue().size();
             }
 
             resnapped.put(newSnap, objs.getValue());
@@ -351,8 +382,10 @@ public abstract class MapView {
 
         map.objects.clear();
         map.objects.addAll(resnapped);
+        parent.showText("Resnapped " + changed + " objects.");
     }
 
+    public abstract Toolset getToolset();
 
     public void dispose()
     {

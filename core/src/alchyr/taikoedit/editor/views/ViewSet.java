@@ -5,16 +5,20 @@ import alchyr.diffcalc.taiko.difficulty.TaikoDifficultyAttributes;
 import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.core.layers.sub.DifficultySettingsLayer;
+import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
@@ -30,7 +34,7 @@ public class ViewSet {
     private final HashMap<HitObject, TaikoDifficultyHitObject> difficultyInfo = new HashMap<>();
 
     private final BitmapFont difficultyFont;
-    private final float difficultyX;
+    private float difficultyX;
     private int yOffset;
 
     public ViewSet(EditorLayer owner, EditorBeatmap map)
@@ -45,13 +49,16 @@ public class ViewSet {
         organizedViews = new TreeMap<>();
         viewObjects = new HashMap<>();
     }
+    public void updateDiffNamePosition() {
+        difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
+    }
 
-    public void update(double exactPos, long pos, boolean isPlaying)
+    public void update(double exactPos, long pos, float elapsed, boolean isPlaying)
     {
         prep(pos);
         for (MapView view : views)
         {
-            view.update(exactPos, pos);
+            view.update(exactPos, pos, elapsed);
             view.primaryUpdate(isPlaying);
         }
     }
@@ -64,11 +71,11 @@ public class ViewSet {
 
         for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet()) {
             ArrayList<MapView> views = viewSet.getValue();
-            int index;
+            int index; //ensure same types of views are rendered together
             for (ArrayList<? extends PositionalObject> objects : viewObjects.get(viewSet.getKey()).values()) {
                 for (PositionalObject o : objects) {
                     for (index = 0; index < views.size(); ++index) {
-                        views.get(0).renderObject(o, sb, sr);
+                        views.get(index).renderObject(o, sb, sr);
                     }
                 }
             }
@@ -88,6 +95,11 @@ public class ViewSet {
         }
     }
 
+    private void properties() {
+        owner.clean();
+        TaikoEditor.addLayer(new DifficultySettingsLayer(owner, map));
+    }
+
     public void setOffset(int offset)
     {
         yOffset = offset;
@@ -97,7 +109,7 @@ public class ViewSet {
         }
     }
 
-    public boolean containsY(int y)
+    public boolean containsY(float y)
     {
         if (views.isEmpty())
             return false;
@@ -109,7 +121,7 @@ public class ViewSet {
         return views;
     }
 
-    public MapView getView(int y)
+    public MapView getView(float y)
     {
         for (MapView view : views) {
             if (y >= view.bottom) //Since views are positioned by their index in this array, there's no need to check that y < view.topY
@@ -119,27 +131,36 @@ public class ViewSet {
         }
         return null;
     }
-    public MouseHoldObject click(int x, int y, int pointer, int button, int modifiers)
+    public MouseHoldObject click(float x, float y, int button, int modifiers)
     {
         for (MapView view : views) {
             if (y >= view.bottom) //Since views are positioned by their index in this array, there's no need to check that y < view.topY
             {
-                if (view.clickOverlay(x, y, button))
-                {
-                    return null;
-                }
-                MouseHoldObject returnVal = null;
-                if (owner.tools.changeToolset(view)) //If the current tool is valid for the new toolset, use it immediately
-                {
-                    returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
+                MouseHoldObject returnVal = view.clickOverlay(x, y, button);
+
+                if (returnVal == null) { //Clicking an overlay button cancels pretty much everything else
+                    if (view.select()) {
+                        owner.setPrimaryView(view);
+                    }
+
+                    if (button == Input.Buttons.RIGHT && (owner.tools.getCurrentTool() == null || !owner.tools.getCurrentTool().consumesRightClick())) {
+                        if (view.deletePrecise(x, y)) {
+                            returnVal = MouseHoldObject.nothing;
+                        }
+                    }
+
+                    if (returnVal == null) {
+                        returnVal = view.click(x, y, button);
+                    }
+
+                    if (owner.tools.changeToolset(view) && returnVal == null)
+                    {
+                        //If the current tool is valid for the new toolset, use it immediately
+                        returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
+                    }
                 }
 
-                if (view.click(x, y, pointer, button))
-                {
-                    owner.setPrimaryView(view);
-                }
-
-                return returnVal;
+                return returnVal == MouseHoldObject.nothing ? null : returnVal;
             }
         }
         return null;
@@ -170,10 +191,14 @@ public class ViewSet {
         return y;
     }
 
+    private ImageButton propertiesButton = new ImageButton(assetMaster.get("editor:properties"), assetMaster.get("editor:propertiesh")).setClick(this::properties).setAction("Properties");
     public void addView(MapView toAdd)
     {
         if (toAdd.map.equals(map))
         {
+            if (views.isEmpty()) { //When adding the first view, and then also when removing the first view, the properties button must be added, which can be a single instance based in this class.
+                toAdd.addOverlayButton(propertiesButton);
+            }
             views.add(toAdd);
             if (!organizedViews.containsKey(toAdd.type))
                 organizedViews.put(toAdd.type, new ArrayList<>());
@@ -183,7 +208,7 @@ public class ViewSet {
             switch (toAdd.type) //Bind to certain hooks
             {
                 case EFFECT_VIEW:
-                    map.bindEffectView((SvView) toAdd);
+                    map.bindEffectView((EffectView) toAdd);
                     break;
             }
         }
@@ -194,6 +219,10 @@ public class ViewSet {
     }
     public void removeView(MapView toRemove)
     {
+        if (views.indexOf(toRemove) == 0 && views.size() > 1) {
+            views.get(1).addOverlayButton(propertiesButton);
+        }
+        toRemove.clearSelection();
         views.remove(toRemove);
         if (organizedViews.containsKey(toRemove.type))
         {
@@ -203,13 +232,13 @@ public class ViewSet {
                 organizedViews.remove(toRemove.type);
                 viewObjects.remove(toRemove.type);
             }
+        }
 
-            switch (toRemove.type)
-            {
-                case EFFECT_VIEW:
-                    map.removeEffectView((SvView) toRemove);
-                    break;
-            }
+        switch (toRemove.type)
+        {
+            case EFFECT_VIEW:
+                map.removeEffectView((EffectView) toRemove);
+                break;
         }
     }
 

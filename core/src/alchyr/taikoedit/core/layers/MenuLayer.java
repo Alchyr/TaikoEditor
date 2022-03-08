@@ -1,53 +1,52 @@
 package alchyr.taikoedit.core.layers;
 
+import alchyr.networking.p2p.ConnectionHost;
+import alchyr.networking.p2p.ConnectionSub;
 import alchyr.taikoedit.TaikoEditor;
-import alchyr.taikoedit.core.input.AdjustedInputProcessor;
 import alchyr.taikoedit.core.InputLayer;
+import alchyr.taikoedit.core.input.BoundInputProcessor;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.input.sub.TextInput;
 import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
+import alchyr.taikoedit.core.layers.sub.UpdatingLayer;
 import alchyr.taikoedit.core.layers.tests.BindingTestLayer;
-import alchyr.taikoedit.core.ui.Button;
 import alchyr.taikoedit.core.ui.ImageButton;
+import alchyr.taikoedit.core.ui.MapSelect;
+import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 
-import javax.swing.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.net.URL;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class MenuLayer extends LoadedLayer implements InputLayer {
-    public static LoadedLayer menu;
-
-    private static int OPTION_WIDTH, OPTION_HEIGHT;
-
-    private static int PER_ROW;
-    private static int PER_COLUMN;
-    private static int PER_SCREEN;
-
-
     private boolean initialized;
 
-    private MenuProcessor processor;
+    private final MenuProcessor processor;
 
-    //public ArrayList<Button> buttons;
-
-    private ArrayList<Button> mapOptions;
-    private HashMap<String, Button> hashedMapOptions;
+    private MapSelect mapSelect;
+    private boolean updateMaps = false;
 
     private Texture background;
     private int bgWidth, bgHeight;
 
+    private BitmapFont font;
     private Texture pixel;
     private int searchHeight, searchY;
     private float searchTextOffsetX, searchTextOffsetY;
@@ -56,14 +55,12 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     private ImageButton exitButton;
     private ImageButton settingsButton;
-
-    private int displayIndex = 0;
-    private int scrollPos = 0;
-
-    private int[] mapOptionX, mapOptionY;
+    //private ImageButton connectButton;
+    private ImageButton updateButton;
 
     private static final Color bgColor = new Color(0.3f, 0.3f, 0.25f, 1.0f);
 
+    private String updateID = null;
 
     public MenuLayer()
     {
@@ -71,8 +68,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         this.type = LAYER_TYPE.FULL_STOP;
 
         //buttons = new ArrayList<>();
-        mapOptions = new ArrayList<>();
-        hashedMapOptions = new HashMap<>();
+        //mapOptions = new ArrayList<>();
+        //hashedMapOptions = new HashMap<>();
 
         initialized = false;
     }
@@ -81,14 +78,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     public void initialize() {
         if (!initialized)
         {
-            PER_ROW = SettingsMaster.getWidth() / 300; //number of 300 pixel wide tiles that fit.
-            PER_COLUMN = SettingsMaster.getHeight() / 200;
-            PER_SCREEN = PER_ROW * (PER_COLUMN + 1); //add an extra row for those that poke off the edges of the screen
-
-            OPTION_WIDTH = SettingsMaster.getWidth() / PER_ROW;
-            OPTION_HEIGHT = SettingsMaster.getHeight() / PER_COLUMN;
-
-
             if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
             {
                 background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
@@ -102,55 +91,111 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
             bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
 
+            font = assetMaster.getFont("default");
             pixel = assetMaster.get("ui:pixel");
             searchHeight = 40;
             searchY = SettingsMaster.getHeight() - searchHeight;
             searchTextOffsetX = 10;
             searchTextOffsetY = 35;
 
-            for (String setFile : MapMaster.mapDatabase.keys)
+            /*for (Map.Entry<String, Mapset> setEntry : MapMaster.mapDatabase.mapsets.entrySet())
             {
-                Mapset set = MapMaster.mapDatabase.mapsets.get(setFile);
+                Mapset set = setEntry.getValue();
 
                 Button setButton = new Button(0, 0, OPTION_WIDTH, OPTION_HEIGHT, set.getShortArtist(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")) + '\n' + set.getShortTitle(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")) + '\n' + set.getShortCreator(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")), null);
-                setButton.setAction(setFile);
+                setButton.setAction(setEntry.getKey());
 
                 mapOptions.add(setButton);
-                hashedMapOptions.put(setFile, setButton);
-            }
+                hashedMapOptions.put(setEntry.getKey(), setButton);
+            }*/
 
-            mapOptionX = new int[PER_ROW];
-            for (int i = 0; i < PER_ROW; ++i)
-            {
-                mapOptionX[i] = OPTION_WIDTH * i;
-            }
+            mapSelect = new MapSelect(searchY + 1);
 
-            mapOptionY = new int[PER_COLUMN + 1];
-            for (int i = 0; i < PER_COLUMN + 1; ++i)
-            {
-                mapOptionY[i] = OPTION_HEIGHT * (PER_COLUMN - 1 - i) - searchHeight;
-            }
+            searchInput = new TextInput(128, font);
 
-            searchInput = new TextInput(128, assetMaster.getFont("default"));
-
-            exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"), this::quit);
-            settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh"), this::settings);
+            exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::quit);
+            settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
+            //connectButton = new ImageButton(SettingsMaster.getWidth() - 120, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth")).setClick(this::openConnect);
 
             initialized = true;
+
+            Thread updateCheck = new Thread(() -> {
+                try {
+                    URL url = new URL("https://docs.google.com/document/d/e/2PACX-1vRgkoP65WMrsJGqaiKlO6cGnqeZbBlmhEXhMqjRr4QH-IIArQR1QaLbe_ffSQXHXAl-hOf9Yye7nMei/pub");
+                    //HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                    //connection.setRequestProperty("mimeType", "text/plain");
+
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
+
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line).append('\n');
+                    }
+
+                    reader.close();
+
+                    int dataIndex = sb.indexOf("|DATA_START|") + 12;
+                    int dataEnd = sb.indexOf("|DATA_END|", dataIndex);
+                    if (dataIndex < 0 || dataEnd < 0) {
+                        editorLogger.error("Failed to find update data.");
+                        return;
+                    }
+                    String[] result = sb.substring(dataIndex, dataEnd).split(":");
+
+                    int latestID = Integer.parseInt(result[0]);
+
+                    if (latestID > VERSION) {
+                        editorLogger.info("Newer version detected.");
+                        updateID = result[1];
+                        updateButton = new ImageButton(SettingsMaster.getWidth() - 160, SettingsMaster.getHeight() - 40, assetMaster.get("ui:update"), (Texture) assetMaster.get("ui:updateh")).setClick(this::versionUpdate);
+                    }
+                    else {
+                        editorLogger.info("Up to date.");
+                    }
+                }
+                catch (Exception e) {
+                    editorLogger.error("Failed to process update data.");
+                    e.printStackTrace();
+                }
+            });
+            updateCheck.setName("Update Check");
+            updateCheck.setDaemon(true);
+            updateCheck.start();
         }
+        processor.bind();
     }
 
     @Override
     public void update(float elapsed) {
-        super.update(elapsed);
+        processor.update(elapsed);
 
-        for (int i = displayIndex; i < displayIndex + PER_SCREEN && i < mapOptions.size(); ++i)
-        {
-            mapOptions.get(i).update();
+        if (updateMaps) {
+            updateMaps = false;
+            if (searchInput.text.isEmpty()) {
+                mapSelect.refreshMaps();
+            }
+            else if (!searchInput.text.trim().isEmpty()) {
+                mapSelect.setMaps(MapMaster.search(searchInput.text));
+            }
         }
 
-        exitButton.update();
-        settingsButton.update();
+        mapSelect.update(elapsed);
+
+        exitButton.update(elapsed);
+        settingsButton.update(elapsed);
+        //connectButton.update(elapsed);
+        if (updateButton != null) {
+            updateButton.update(elapsed);
+            if (updateButton.hovered) {
+                hoverText.setText("Update Available");
+            }
+        }
+        if (settingsButton.hovered) {
+            hoverText.setText("Settings");
+        }
     }
 
     @Override
@@ -158,32 +203,28 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         sb.setColor(bgColor);
         sb.draw(background, 0, 0, bgWidth, bgHeight);
 
-        //for (Button b : buttons)
-            //b.render(sb, sr);
+        mapSelect.render(sb, sr);
 
-        int x = 0, y = 0;
-
-        for (int i = displayIndex; i < displayIndex + PER_SCREEN && i < mapOptions.size(); ++i)
-        {
-            mapOptions.get(i).render(sb, sr, mapOptionX[x], mapOptionY[y] + scrollPos);
-            ++x;
-            if (x >= mapOptionX.length)
-            {
-                x -= mapOptionX.length;
-                ++y;
-                if (y >= mapOptionY.length)
-                    break;
-            }
-        }
-
+        //top bar
         sb.setColor(Color.BLACK);
-        sb.draw(pixel, 0, searchY, SettingsMaster.getWidth(), searchHeight);
+        sb.draw(pixel, 0, searchY, SettingsMaster.getWidth(), searchHeight + 5);
 
         sb.setColor(Color.WHITE);
-        searchInput.render(sb, searchTextOffsetX, searchY + searchTextOffsetY);
+        if (searchInput.text.isEmpty()) {
+            textRenderer.setFont(font).renderText(sb, "Type to search.", searchTextOffsetX, searchY + searchTextOffsetY);
+        }
+        else {
+            searchInput.render(sb, searchTextOffsetX, searchY + searchTextOffsetY);
+        }
 
         settingsButton.render(sb, sr);
         exitButton.render(sb, sr);
+        //connectButton.render(sb, sr);
+
+        if (updateButton != null)
+            updateButton.render(sb, sr);
+
+        sb.draw(pixel, 0, searchY - 1, SettingsMaster.getWidth(), 2);
     }
 
     @Override
@@ -191,9 +232,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         return processor;
     }
 
-    private void chooseMap(String key)
+    private void chooseMap(MapSelect.MapOpenInfo info)
     {
-        EditorLayer edit = new EditorLayer(MapMaster.mapDatabase.mapsets.get(key));
+        EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulty());
 
         TaikoEditor.removeLayer(this);
         TaikoEditor.addLayer(edit.getLoader());
@@ -207,25 +248,32 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     private void settings(int button)
     {
-        editorLogger.trace("Settings!");
-
         TaikoEditor.addLayer(new SettingsLayer());
     }
-    private void quit(int button)
+
+    private void openConnect() {
+
+    }
+
+    private boolean checkUpdate(int x, int y, int b) {
+        return updateButton != null && updateButton.contains(x, y);
+    }
+    private MouseHoldObject doUpdate(Vector2 pos, int button) {
+        updateButton.effect(button);
+        return null;
+    }
+    private void versionUpdate() {
+        TaikoEditor.addLayer(new ConfirmationLayer("Exit and update?", "Yes", "No", false).onConfirm(
+                ()->TaikoEditor.addLayer(new UpdatingLayer(updateID, new File("lib").getAbsolutePath()))));
+    }
+
+    private void quit()
     {
-        TaikoEditor.addLayer(new ConfirmationLayer("Exit?", "Yes", "No").onConfirm(TaikoEditor::end).onCancel(TaikoEditor::end));
-        //editorLogger.trace("Goodbye!");
-        /*int result = JOptionPane.showConfirmDialog(null, "Exit?", "Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-
-        if (result == 0) {
-
-        }*/
-        //TaikoEditor.end();
+        TaikoEditor.addLayer(new ConfirmationLayer("Exit?", "Yes", "No", false).onConfirm(TaikoEditor::end).onCancel(TaikoEditor::end));
     }
 
     @Override
     public LoadingLayer getLoader() {
-        menu = this;
         return new LoadingLayer(new String[] {
                 "ui",
                 "font",
@@ -237,112 +285,115 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                 .addCallback(TaikoEditor::initialize);
     }
 
-    public static LoadingLayer getReturnLoader() {
+    @Override
+    public LoadingLayer getReturnLoader() {
         return new LoadingLayer(new String[] {
-        }, menu, true);
+        }, this, true);
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        if (test != null)
+            test.dispose();
+        if (sub != null)
+            sub.dispose();
+    }
 
-    private static class MenuProcessor extends AdjustedInputProcessor {
+    private ConnectionHost test = null;
+    private ConnectionSub sub = null;
+    private static class MenuProcessor extends BoundInputProcessor {
         private final MenuLayer sourceLayer;
 
         public MenuProcessor(MenuLayer source)
         {
+            super(BindingMaster.getBindingGroup("Basic"), true);
             this.sourceLayer = source;
         }
 
         @Override
-        public boolean keyDown(int keycode) {
-            switch (keycode)
-            {
-                case Input.Keys.ESCAPE:
-                    sourceLayer.quit(0);
-                    return true;
-            }
-            //sourceLayer.test();
-            return false;
-        }
+        public void bind() {
+            bindings.bind("Exit", ()->{
+                if (!sourceLayer.searchInput.text.isEmpty()) {
+                    sourceLayer.searchInput.clear();
+                    sourceLayer.mapSelect.refreshMaps();
+                    return;
+                }
+                sourceLayer.quit();
+            });
 
-        @Override
-        public boolean keyUp(int keycode) {
-            return false;
+            /*bindings.bind("1", ()->{
+                sourceLayer.test = new ConnectionHost();
+                sourceLayer.test.prepConnection();
+            });
+
+            bindings.bind("2", ()->{
+                try {
+                    Transferable data = Toolkit.getDefaultToolkit()
+                            .getSystemClipboard()
+                            .getContents(this);
+                    if (data != null) {
+                        if (data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                            String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
+                            sourceLayer.sub = new ConnectionSub(clipboardData);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            bindings.bind("3", ()->{
+                try {
+                    if (sourceLayer.test != null) {
+                        Transferable data = Toolkit.getDefaultToolkit()
+                                .getSystemClipboard()
+                                .getContents(this);
+                        if (data != null) {
+                            if (data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                                String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
+                                sourceLayer.test.finishConnection(clipboardData);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });*/
+
+            bindings.addMouseBind(sourceLayer.settingsButton::contains, sourceLayer.settingsButton::effect);
+            bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);
+            //bindings.addMouseBind(sourceLayer.connectButton::contains, sourceLayer.connectButton::effect);
+            bindings.addMouseBind(sourceLayer::checkUpdate, sourceLayer::doUpdate);
+            bindings.addMouseBind((x, y, b)->true,
+                    (p, b)->{
+                        MapSelect.MapOpenInfo info = sourceLayer.mapSelect.click(p.x, p.y);
+                        if (info != null && info.getSet() != null) {
+                            sourceLayer.chooseMap(info);
+                        }
+                        return null;
+                    });
         }
 
         @Override
         public boolean keyTyped(char character) {
             if (sourceLayer.searchInput.keyTyped(character)) {
-                sourceLayer.displayIndex = 0;
-                sourceLayer.scrollPos = 0;
-
-                sourceLayer.mapOptions.clear();
-
-                if (sourceLayer.searchInput.text.isEmpty()) {
-                    for (String key : MapMaster.mapDatabase.keys) {
-                        sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(key));
-                    }
-                }
-                else {
-                    MapMaster.search(sourceLayer.searchInput.text).forEach((m)-> sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(m.key)));
-                }
+                sourceLayer.updateMaps = true;
                 return true;
             }
 
-            return false;
+            return super.keyTyped(character);
         }
 
         @Override
         public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            editorLogger.trace("Game coordinates: " + gameX + ", " + gameY);
-            /*for (Button b : sourceLayer.buttons)
-            {
-                if (b.click(gameX, gameY, button))
-                    return true;
-            }*/
-
-            if (sourceLayer.settingsButton.click(gameX, gameY, button))
-                return true;
-
-            if (sourceLayer.exitButton.click(gameX, gameY, button))
-                return true;
-
-            for (int i = sourceLayer.displayIndex; i < sourceLayer.displayIndex + PER_SCREEN && i < sourceLayer.mapOptions.size(); ++i)
-            {
-                if (sourceLayer.mapOptions.get(i).click(gameX, gameY, button))
-                {
-                    sourceLayer.chooseMap(sourceLayer.mapOptions.get(i).action);
-                    return true;
-                }
-            }
-            return false;
+            //editorLogger.trace("Game coordinates: " + gameX + ", " + gameY);
+            return super.onTouchDown(gameX, gameY, pointer, button);
         }
 
         @Override
-        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
-            return false;
-        }
-
-        @Override
-        public boolean onMouseMoved(int gameX, int gameY) {
-            return false;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            sourceLayer.scrollPos += amount * 30;
-
-            if (sourceLayer.displayIndex == 0 && sourceLayer.scrollPos < 0)
-                sourceLayer.scrollPos = 0;
-
-            while (sourceLayer.scrollPos > OPTION_HEIGHT)
-            {
-                sourceLayer.scrollPos -= OPTION_HEIGHT;
-                sourceLayer.displayIndex += PER_ROW;
-            }
-            while (sourceLayer.scrollPos < 0)
-            {
-                sourceLayer.scrollPos += OPTION_HEIGHT;
-                sourceLayer.displayIndex -= PER_ROW;
-            }
+        public boolean scrolled(float amountX, float amountY) {
+            sourceLayer.mapSelect.scrolled(amountY);
 
             return true;
         }

@@ -8,8 +8,11 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import static alchyr.taikoedit.TaikoEditor.osuSafe;
 
 public class Slider extends HitObject implements ILongObject {
     private static final Color slider = Color.GOLDENROD.cpy();
@@ -18,6 +21,7 @@ public class Slider extends HitObject implements ILongObject {
 
     private SliderProperties sliderProperties;
     private long duration;
+    private double preciseDuration;
     private long endPos;
     private String[] edgeSounds, edgeSets;
 
@@ -25,9 +29,9 @@ public class Slider extends HitObject implements ILongObject {
     {
         this.type = HitObjectType.SLIDER;
 
-        this.pos = start;
-        this.duration = duration;
-        this.endPos = this.pos + this.duration;
+        super.setPos(start);
+        this.preciseDuration = this.duration = duration;
+        this.endPos = start + this.duration;
         this.x = 0;
         this.y = 384;
         this.newCombo = true;
@@ -49,7 +53,7 @@ public class Slider extends HitObject implements ILongObject {
     public Slider(Slider base)
     {
         this.type = HitObjectType.SLIDER;
-        this.pos = base.pos;
+        setPos(base.getPrecisePos());
         this.x = base.x;
         this.y = base.y;
         this.newCombo = base.newCombo;
@@ -59,6 +63,7 @@ public class Slider extends HitObject implements ILongObject {
         this.finish = base.finish;
         this.clap = base.clap;
         this.duration = base.duration;
+        this.preciseDuration = base.preciseDuration;
         this.endPos = base.endPos;
 
         if (base.edgeSounds != null)
@@ -108,7 +113,7 @@ public class Slider extends HitObject implements ILongObject {
                     y = Integer.parseInt(params[i]);
                     break;
                 case 2:
-                    pos = Long.parseLong(params[i]);
+                    setPos(Double.parseDouble(params[i]));
                     break;
                 case 3:
                     int objectType = Integer.parseInt(params[i]);
@@ -159,9 +164,9 @@ public class Slider extends HitObject implements ILongObject {
     }
 
     @Override
-    public void setPosition(long newPos) {
-        super.setPosition(newPos);
-        endPos = pos + duration;
+    public void setPos(long newPos) {
+        super.setPos(newPos);
+        endPos = getPos() + duration;
         //ALSO: Update sv based on sv at new position to recalculate duration
         //EDIT: ALSO, DON'T do this. Duration will be fixed. Having to mess with sv to keep sliders the right duration is a pain.
     }
@@ -177,28 +182,31 @@ public class Slider extends HitObject implements ILongObject {
     @Override
     public void setDuration(long duration) {
         this.duration = duration;
-        this.endPos = this.pos + this.duration;
+        this.endPos = this.getPos() + this.duration;
+        this.preciseDuration = this.endPos - this.getPrecisePos();
     }
     @Override
     public void setEndPos(long endPos) {
         this.endPos = endPos;
-        this.duration = this.endPos - this.pos;
+        this.duration = this.endPos - this.getPos();
+        this.preciseDuration = this.endPos - this.getPrecisePos();
     }
 
     public void calculateDuration(double beatLength, double sliderMultiplier) //Should only be used when reading a map from file.
     {
-        this.duration = (long) (sliderProperties.length / (sliderMultiplier * 100.0) * beatLength * sliderProperties.repeatCount);
-        this.endPos = this.pos + duration;
+        this.preciseDuration = (sliderProperties.length / (sliderMultiplier * 100.0) * beatLength * sliderProperties.repeatCount);
+        this.duration = Math.round(preciseDuration);
+        this.endPos = this.getPos() + duration;
     }
     private double calculateLength(double beatLength, double sliderMultiplier) //Should only be used when reading a map from file.
     {
-        return (this.duration * sliderMultiplier * 100.0) / (sliderProperties.repeatCount * beatLength);
+        return (this.preciseDuration * sliderMultiplier * 100.0) / (sliderProperties.repeatCount * beatLength);
     }
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
         slider.a = alpha;
-        float startX = x + (float) (this.pos - pos) * viewScale;
+        float startX = x + (float) (this.getPos() - pos) * viewScale;
         float endX = x + (float) (this.endPos - pos) * viewScale;
         sb.setColor(slider);
         float scale = finish ? LARGE_SCALE : 1.0f;
@@ -219,23 +227,48 @@ public class Slider extends HitObject implements ILongObject {
     }
 
     @Override
+    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
+        x += baseX;
+
+        slider.a = alpha;
+        float startX = x;
+        float endX = x + (float) (this.endPos - getPos()) * sv;
+        sb.setColor(slider);
+        float scale = finish ? LARGE_SCALE : 1.0f;
+
+        if (duration > 0)
+        {
+            sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
+        }
+        sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+
+        if (selected)
+        {
+            renderSelection(sb, sr, getPos(), sv, x, y);
+        }
+    }
+
+    @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
         sb.setColor(Color.WHITE);
         float scale = finish ? LARGE_SCALE : 1.0f;
 
         sb.draw(selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        sb.draw(selection, (x + (float) (this.pos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        sb.draw(selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
     }
 
     @Override
     public String toString() {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + sliderProperties.toString() + (edgeSounds == null || edgeSounds.length == 0 ? "" : (
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + sliderProperties.toString() + (edgeSounds == null || edgeSounds.length == 0 ? "" : (
                edgeSamples() + "," + getHitSamples()));
     }
     public String toString(double beatLength, double sliderMultiplier) {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + sliderProperties.toString(calculateLength(beatLength, sliderMultiplier)) + (edgeSounds == null || edgeSounds.length == 0 ? "" : (
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + sliderProperties.toString(calculateLength(beatLength, sliderMultiplier)) + (edgeSounds == null || edgeSounds.length == 0 ? "" : (
                 edgeSamples() + "," + getHitSamples()));
     }
 
@@ -309,16 +342,18 @@ public class Slider extends HitObject implements ILongObject {
             this.length = length;
         }
 
+        //Cuts off like one decimal places from doubles, as due to the method of storage for sliders they are innately imprecise
+        private static final DecimalFormat limitedDecimals = new DecimalFormat("##0.############", osuSafe);
         @Override
         public String toString()
         {
-            return curveType + "|" + curvePoints() + "," + repeatCount + "," + length;
+            return curveType + "|" + curvePoints() + "," + repeatCount + "," + limitedDecimals.format(length);
         }
 
         public String toString(double actualLength)
         {
 
-            return curveType + "|" + curvePoints() + "," + repeatCount + "," + actualLength;
+            return curveType + "|" + curvePoints() + "," + repeatCount + "," + limitedDecimals.format(actualLength);
         }
 
         private String curvePoints()
@@ -339,7 +374,7 @@ public class Slider extends HitObject implements ILongObject {
     @Override
     public PositionalObject shiftedCopy(long newPos) {
         Slider copy = new Slider(this);
-        copy.setPosition(newPos);
+        copy.setPos(newPos);
         return copy;
     }
 }

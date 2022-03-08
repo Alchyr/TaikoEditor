@@ -5,7 +5,9 @@ import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.util.assets.FileHelper;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -32,15 +34,21 @@ public class MapMaster {
         return BeatmapDatabase.progress;
     }
 
-    public static Set<Mapset> search(String searchText)
+    //TODO: Good search. Progress - partial?
+    //Add tag searching?
+    //Would mean adding tags to set information.
+    //For search, use multiple search fields?
+    //Would add precision, but I don't think it's really necessary, since someone searching should know what they're looking for already.
+    //So, just one search field is fine.
+    public static List<Mapset> search(String searchText)
     {
         if (mapDatabase != null)
         {
-            String[] terms = searchText.split(" ");
+            String[] terms = searchText.toLowerCase().split(" ");
 
             return mapDatabase.search(terms);
         }
 
-        return new HashSet<>();
+        return Collections.emptyList();
     }
 }

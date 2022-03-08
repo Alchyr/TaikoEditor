@@ -20,7 +20,7 @@ import java.util.List;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
-public class Tools {
+public class Tools  {
     public static final int HEIGHT = 50;
 
     private static final int BUTTON_Y = 0;
@@ -31,13 +31,6 @@ public class Tools {
     private static final Color windowColor = new Color(0.0f, 0.0f, 0.0f, 0.85f);
 
     private static final Toolset defaultTools = new Toolset(SelectionTool.get());
-    private static final HashMap<MapView.ViewType, Toolset> toolsets;
-    static {
-        toolsets = new HashMap<>();
-        toolsets.put(MapView.ViewType.OBJECT_VIEW, ObjectView.getToolset());
-        toolsets.put(MapView.ViewType.EFFECT_VIEW, SvView.getToolset());
-        toolsets.put(MapView.ViewType.GAMEPLAY_VIEW, GameplayView.getToolset());
-    }
 
     private EditorLayer owner;
 
@@ -71,7 +64,7 @@ public class Tools {
 
         for (int i = 0; i < visibleButtons; ++i)
         {
-            toolButtons.get(i).update();
+            toolButtons.get(i).update(elapsed);
         }
     }
 
@@ -100,7 +93,7 @@ public class Tools {
         }*/
     }
 
-    public boolean click(int gameX, int gameY, int button) {
+    public boolean click(float gameX, float gameY, int button) {
         for (int i = 0; i < visibleButtons; ++i)
         {
             if (toolButtons.get(i).click(gameX, gameY, button))
@@ -162,7 +155,7 @@ public class Tools {
 
     public boolean changeToolset(MapView view)
     {
-        return setToolset(toolsets.getOrDefault(view.type, defaultTools));
+        return setToolset(view.getToolset());
     }
 
     private boolean setToolset(Toolset set)
@@ -180,7 +173,7 @@ public class Tools {
                         BUTTON_WIDTH, BUTTON_HEIGHT, (i + 1) + ": " + currentToolset.getTool(i).name, font, null).useBorderRendering());*/
                 toolButtons.add(new Button(BUTTON_X + (i * BUTTON_WIDTH),
                         BUTTON_Y,
-                        BUTTON_WIDTH, BUTTON_HEIGHT, (i + 1) + ": " + currentToolset.getTool(i).name, font, null).useBorderRendering());
+                        BUTTON_WIDTH, BUTTON_HEIGHT, (i + 1) + ": " + currentToolset.getTool(i).name, font).useBorderRendering());
             }
             else
             {

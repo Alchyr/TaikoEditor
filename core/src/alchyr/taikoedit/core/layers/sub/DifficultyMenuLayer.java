@@ -4,15 +4,21 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.input.AdjustedInputProcessor;
+import alchyr.taikoedit.core.input.BoundInputProcessor;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.Button;
+import alchyr.taikoedit.core.ui.TextField;
+import alchyr.taikoedit.editor.maps.FullMapInfo;
 import alchyr.taikoedit.editor.views.GameplayView;
-import alchyr.taikoedit.editor.views.SvView;
+import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
+import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
@@ -55,6 +61,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
 
     //Other data
     private final EditorLayer sourceLayer;
+    private final Mapset set;
     private final List<MapInfo> maps;
 
     public DifficultyMenuLayer(EditorLayer editor, Mapset set)
@@ -64,53 +71,71 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         sourceLayer = editor;
 
         processor = new DifficultyMenuProcessor(this);
+
         pix = assetMaster.get("ui:pixel");
 
         int difficultyOptionX = SettingsMaster.getWidth() / 4;
         int viewOptionX = SettingsMaster.getWidth() / 2;
         int openButtonX = difficultyOptionX * 3;
 
+        FullMapInfo focus = null;
+        if (editor.primaryView != null) {
+            focus = editor.primaryView.map.getFullMapInfo();
+        }
+
         difficultyOptions = new ArrayList<>();
+        this.set = set;
         maps = set.getMaps();
+        int i = 0;
         for (MapInfo info : maps)
         {
-            difficultyOptions.add(new Button(difficultyOptionX, middleY, info.difficultyName, assetMaster.getFont("aller medium"), null));
+            if (focus != null && focus.is(info)) {
+                difficultyIndex = i;
+            }
+            difficultyOptions.add(new Button(difficultyOptionX, middleY, info.getDifficultyName(), assetMaster.getFont("aller medium")));
+            ++i;
         }
 
         viewOptions = new ArrayList<>();
-        viewOptions.add(new Button(viewOptionX, middleY, "Object Editor", assetMaster.getFont("aller medium"), null).setAction("objects"));
-        viewOptions.add(new Button(viewOptionX, middleY, "SV Editor", assetMaster.getFont("aller medium"), null).setAction("sv"));
-        viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium"), null).setAction("gameplay"));
-        viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium"), null).setAction("NEW"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Object Editor", assetMaster.getFont("aller medium")).setAction("objects"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Effect Editor", assetMaster.getFont("aller medium")).setAction("sv"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium")).setAction("gameplay"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
 
-        openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium"), this::open);
+        openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium")).setClick(this::open);
 
         startLinePos = SettingsMaster.getMiddle() / 3.0f;
         calculateFirstLine();
         calculateSecondLine();
         calculateDifficulties();
         calculateViews();
+
+        processor.bind();
     }
 
-    private void open(int button)
+    private void open()
     {
         EditorBeatmap b = sourceLayer.getEditorBeatmap(maps.get(difficultyIndex));
-        switch (viewOptions.get(viewIndex).action)
-        {
-            case "objects":
-                sourceLayer.addView(new ObjectView(sourceLayer, b), true);
-                break;
-            case "sv":
-                sourceLayer.addView(new SvView(sourceLayer, b), true);
-                break;
-            case "gameplay":
-                sourceLayer.addView(new GameplayView(sourceLayer, b), true);
-                break;
-            case "NEW":
-
-                break;
+        if (b != null) {
+            switch (viewOptions.get(viewIndex).action)
+            {
+                case "objects":
+                    sourceLayer.addView(new ObjectView(sourceLayer, b), true);
+                    break;
+                case "sv":
+                    sourceLayer.addView(new EffectView(sourceLayer, b), true);
+                    break;
+                case "gameplay":
+                    sourceLayer.addView(new GameplayView(sourceLayer, b), true);
+                    break;
+                case "NEW":
+                    TaikoEditor.addLayer(new CreateDifficultyLayer(sourceLayer, set, b));
+                    break;
+            }
         }
-
+        else {
+            sourceLayer.textOverlay.setText("Failed to open difficulty.", 2.0f);
+        }
 
         TaikoEditor.removeLayer(this);
     }
@@ -196,15 +221,17 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
 
     @Override
     public void update(float elapsed) {
+        processor.update(elapsed);
+
         for (Button b : difficultyOptions)
         {
-            b.update();
+            b.update(elapsed);
         }
         for (Button b : viewOptions)
         {
-            b.update();
+            b.update(elapsed);
         }
-        openButton.update();
+        openButton.update(elapsed);
 
         updateLines(elapsed);
         updateButtons(elapsed);
@@ -270,96 +297,41 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         return processor;
     }
 
-    private static class DifficultyMenuProcessor extends AdjustedInputProcessor {
+    private static class DifficultyMenuProcessor extends BoundInputProcessor {
         private final DifficultyMenuLayer sourceLayer;
 
         public DifficultyMenuProcessor(DifficultyMenuLayer source)
         {
+            super(BindingMaster.getBindingGroup("Basic"), true);
+
             this.sourceLayer = source;
         }
 
         @Override
-        public boolean keyDown(int keycode) {
-            switch (keycode) //Process input using the current primary view? TODO: Add keybindings? SettingsMaster has some keybind code.
-            {
-                case Input.Keys.ESCAPE:
-                    sourceLayer.close();
-                    return true;
-                case Input.Keys.RIGHT:
-                    break;
-            }
-            return true;
-        }
+        public void bind() {
+            bindings.bind("Exit", sourceLayer::close);
 
-        @Override
-        public boolean keyUp(int keycode) {
-            return true;
-        }
-
-        @Override
-        public boolean keyTyped(char character) {
-            /*if (sourceLayer.searchInput.keyTyped(character)) {
-                sourceLayer.mapOptions.clear();
-
-                if (sourceLayer.searchInput.text.isEmpty()) {
-                    for (String key : MapMaster.mapDatabase.keys) {
-                        sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(key));
-                    }
-                }
-                else {
-                    MapMaster.search(sourceLayer.searchInput.text).forEach((m)->{
-                        sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(m.key));
+            bindings.addMouseBind((x, y, b)->(b == 0) || (b == 1),
+                    (p, b) -> {
+                        for (int i = 0; i < sourceLayer.difficultyOptions.size(); ++i)
+                        {
+                            if (sourceLayer.difficultyOptions.get(i).click(p.x, p.y, b))
+                            {
+                                sourceLayer.chooseDifficulty(i);
+                                return null;
+                            }
+                        }
+                        for (int i = 0; i < sourceLayer.viewOptions.size(); ++i)
+                        {
+                            if (sourceLayer.viewOptions.get(i).click(p.x, p.y, b))
+                            {
+                                sourceLayer.chooseType(i);
+                                return null;
+                            }
+                        }
+                        sourceLayer.openButton.click(p.x, p.y, b);
+                        return null;
                     });
-                }
-                return true;
-            }*/
-
-            return true;
-        }
-
-        @Override
-        public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            if (button != 0 && button != 1)
-                return true; //i only care about left and right click.
-
-            for (int i = 0; i < sourceLayer.difficultyOptions.size(); ++i)
-            {
-                if (sourceLayer.difficultyOptions.get(i).click(gameX, gameY, button))
-                {
-                    sourceLayer.chooseDifficulty(i);
-                    return true;
-                }
-            }
-            for (int i = 0; i < sourceLayer.viewOptions.size(); ++i)
-            {
-                if (sourceLayer.viewOptions.get(i).click(gameX, gameY, button))
-                {
-                    sourceLayer.chooseType(i);
-                    return true;
-                }
-            }
-            sourceLayer.openButton.click(gameX, gameY, button);
-            return true;
-        }
-
-        @Override
-        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
-            return true;
-        }
-
-        @Override
-        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
-            return true;
-        }
-
-        @Override
-        public boolean onMouseMoved(int gameX, int gameY) {
-            return true;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            return true;
         }
     }
 }

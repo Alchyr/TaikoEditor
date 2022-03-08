@@ -2,7 +2,6 @@ package alchyr.taikoedit.core.input;
 
 import alchyr.taikoedit.core.input.sub.TextInput;
 import alchyr.taikoedit.core.input.sub.TextInputReceiver;
-import alchyr.taikoedit.management.bindings.BindingGroup;
 
 public abstract class TextInputProcessor extends BoundInputProcessor {
     private final TextInput inputReader;
@@ -10,8 +9,8 @@ public abstract class TextInputProcessor extends BoundInputProcessor {
     private TextInputReceiver activeReceiver;
     private boolean hasReceiver;
 
-    public TextInputProcessor(BindingGroup bindings) {
-        super(bindings);
+    public TextInputProcessor(BindingGroup bindings, boolean defaultReturn) {
+        super(bindings, defaultReturn);
 
         inputReader = new TextInput(0, null);
         hasReceiver = false;
@@ -29,7 +28,7 @@ public abstract class TextInputProcessor extends BoundInputProcessor {
             }
             return true;
         }
-        return false;
+        return super.keyTyped(character);
     }
 
     @Override

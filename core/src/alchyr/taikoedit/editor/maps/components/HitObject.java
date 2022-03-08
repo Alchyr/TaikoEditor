@@ -41,7 +41,8 @@ public abstract class HitObject extends PositionalObject {
 
     public int x = 0, y = 0;
     public HitObjectType type;
-    public boolean newCombo, normal, whistle, finish, clap;
+    public boolean newCombo;
+    protected boolean normal, whistle, finish, clap;
     public int colorSkip;
 
     public int[] hitSample; //Colon (:) separated list
@@ -78,7 +79,17 @@ public abstract class HitObject extends PositionalObject {
     }
 
     public long getEndPos() {
-        return pos;
+        return getPos();
+    }
+    public long getGameplayEndPos() {
+        return getEndPos() + 1;
+    }
+
+    public boolean isFinish() {
+        return finish;
+    }
+    public void setIsFinish(boolean finish) {
+        this.finish = finish;
     }
 
     public static void loadTextures()
@@ -142,14 +153,13 @@ public abstract class HitObject extends PositionalObject {
             return "0:0:0:0:" + sampleFile;
         }
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < hitSample.length; ++i)
-            sb.append(hitSample[i]).append(":");
+        for (int j : hitSample) sb.append(j).append(":");
         sb.append(sampleFile);
         return sb.toString();
     }
 
-    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float viewScale, float baseX, float x, int y, float alpha) {
-        render(sb, sr, pos, viewScale, baseX + x, y, alpha);
+    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
+        render(sb, sr, getPos(), sv, baseX + x, y, alpha);
     }
 
     public enum HitObjectType {

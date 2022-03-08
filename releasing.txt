@@ -1,0 +1,5 @@
+do not Forget How
+
+run dist
+desktop/build/libs has the jar
+move it to releases stuff, do the things

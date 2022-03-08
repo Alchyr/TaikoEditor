@@ -2,6 +2,7 @@ package alchyr.taikoedit.core.ui;
 
 import alchyr.taikoedit.core.UIElement;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -32,14 +33,38 @@ public class Button implements UIElement {
 
     private boolean hovered;
 
-    private Consumer<Integer> onClick;
+    private Consumer<Integer> onClick = null;
 
     public String action = "";
 
     private boolean useBorderRendering;
     public boolean renderBorder;
 
-    public Button(float x, float y, float width, float height, Consumer<Integer> onClick)
+    public Button(float x, float y, float width, float height, Texture image)
+    {
+        this(x, y, width, height, image, null);
+    }
+    public Button(float x, float y, float width, float height, String text)
+    {
+        this(x, y, width, height, null, text);
+    }
+    public Button(float x, float y, float width, float height, Texture image, String text)
+    {
+        this(x, y, width, height, image, text, assetMaster.getFont("default"));
+    }
+    public Button(float x, float y, float width, float height, String text, BitmapFont font)
+    {
+        this(x, y, width, height, null, text, font);
+    }
+    public Button(float x, float y, float width, float height, Texture image, String text, BitmapFont font)
+    {
+        this(x, y, width, height);
+        this.back = image;
+        this.text = text;
+        this.font = font;
+    }
+
+    public Button(float x, float y, float width, float height)
     {
         this.x = x;
         this.y = y;
@@ -58,35 +83,9 @@ public class Button implements UIElement {
 
         hovered = false;
         renderBorder = false;
-
-        this.onClick = onClick;
     }
 
-    public Button(float x, float y, float width, float height, Texture image, Consumer<Integer> onClick)
-    {
-        this(x, y, width, height, image, null, onClick);
-    }
-    public Button(float x, float y, float width, float height, String text, Consumer<Integer> onClick)
-    {
-        this(x, y, width, height, null, text, onClick);
-    }
-    public Button(float x, float y, float width, float height, Texture image, String text, Consumer<Integer> onClick)
-    {
-        this(x, y, width, height, image, text, assetMaster.getFont("default"), onClick);
-    }
-    public Button(float x, float y, float width, float height, String text, BitmapFont font, Consumer<Integer> onClick)
-    {
-        this(x, y, width, height, null, text, font, onClick);
-    }
-    public Button(float x, float y, float width, float height, Texture image, String text, BitmapFont font, Consumer<Integer> onClick)
-    {
-        this(x, y, width, height, onClick);
-        this.back = image;
-        this.text = text;
-        this.font = font;
-    }
-
-    public Button(float centerX, float centerY, String text, BitmapFont font, Consumer<Integer> onClick)
+    public Button(float centerX, float centerY, String text, BitmapFont font)
     {
         width = textRenderer.setFont(font).getWidth(text);
         height = textRenderer.getHeight(text);
@@ -109,8 +108,16 @@ public class Button implements UIElement {
         this.back = null;
         this.text = text;
         this.font = font;
+    }
 
+    public Button setClick(Consumer<Integer> onClick) {
         this.onClick = onClick;
+        return this;
+    }
+
+    public Button setClick(VoidMethod onClick) {
+        this.onClick = (i)->onClick.run();
+        return this;
     }
 
     public Button setAction(String action)
@@ -125,23 +132,33 @@ public class Button implements UIElement {
         return this;
     }
 
-    public boolean click(int mouseX, int mouseY, int key)
+    public boolean contains(int mouseX, int mouseY) {
+        return x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy;
+    }
+    public void effect(int button) {
+        if (onClick != null)
+            onClick.accept(button);
+    }
+    public boolean click(int gameX, int gameY, int button) {
+        return click((float)gameX, (float)gameY, button);
+    }
+    public boolean click(float gameX, float gameY, int button)
     {
-        if (x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy)
+        if (x + dx < gameX && y + dy < gameY && gameX < x2 + dx && gameY < y2 + dy)
         {
             hovered = true;
 
             if (onClick != null)
-                onClick.accept(key);
+                onClick.accept(button);
             return true;
         }
         return false;
     }
 
     @Override
-    public void update()
+    public void update(float elapsed)
     {
-        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.getHeight() - Gdx.input.getY() && Gdx.input.getX() < x2 + dx && SettingsMaster.getHeight() - Gdx.input.getY() < y2 + dy;
+        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.gameY() && Gdx.input.getX() < x2 + dx && SettingsMaster.gameY() < y2 + dy;
     }
 
     @Override

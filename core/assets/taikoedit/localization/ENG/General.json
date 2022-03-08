@@ -1,12 +1,7 @@
 {
   "general" : {
-    "colors" : {
-      "white": [ "white" ],
-      "black": [ "black" ],
-      "red": [ "red" ],
-      "green": [ "green" ],
-      "blue": [ "blue" ],
-      "purple": [ "purple" ]
+    "If I ever bothered making this translatable, text would go here." : {
+      "a": [ "a" ]
     },
   }
 }

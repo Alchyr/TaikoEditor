@@ -87,11 +87,11 @@ public class TaikoDifficultyCalculator {
         double sectionLength = SectionLength * EditorLayer.music.getTempo(); //ensures the actual section length is unchanged (map with dt judged same as a map whose objects have been squished)
 
         // The first object doesn't generate a strain, so we begin with an incremented section end
-        double currentSectionEnd = Math.ceil(difficultyHitObjects.get(0).baseObject.pos / sectionLength) * sectionLength;
+        double currentSectionEnd = Math.ceil(difficultyHitObjects.get(0).baseObject.getPos() / sectionLength) * sectionLength;
 
         for (TaikoDifficultyHitObject h : difficultyHitObjects)
         {
-            while (h.baseObject.pos > currentSectionEnd)
+            while (h.baseObject.getPos() > currentSectionEnd)
             {
                 for (Skill s : skills)
                 {

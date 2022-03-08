@@ -7,12 +7,14 @@ import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.ui.*;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.VoidMethod;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+
+import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
@@ -24,15 +26,14 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
     public boolean result = false;
 
     //Rendering
-    private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.75f);
+    private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.85f);
 
     //Textures
     private final Texture pix;
 
     //Positions
-    private static final int LEFT_POS = (int) (SettingsMaster.getWidth() * 0.35f);
-    private static final int RIGHT_POS = (int) (SettingsMaster.getWidth() * 0.65f);
-    private static final int BUTTON_OFFSET = 120;
+    private static final int BUTTON_Y = 80;
+    private static final int BUTTON_SPACING = 160;
     private final int middleY = SettingsMaster.getHeight() / 2;
 
     //Parts
@@ -40,22 +41,32 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
     private final Button confirmButton;
     private final Button denyButton;
+    private final Button cancelButton;
 
     private VoidMethod onConfirm, onDeny, onCancel;
 
-    public ConfirmationLayer(String text, String confirm, String deny)
+    public ConfirmationLayer(String text, String confirm, String deny, boolean cancel)
     {
         this.type = LAYER_TYPE.UPDATE_STOP;
 
         pix = assetMaster.get("ui:pixel");
 
         processor = new ConfirmationLayerProcessor(this);
-        processor.bind();
 
         this.text = text;
 
-        denyButton = new Button(LEFT_POS, middleY - BUTTON_OFFSET, deny, assetMaster.getFont("default"), this::no);
-        confirmButton = new Button(RIGHT_POS, middleY - BUTTON_OFFSET, confirm, assetMaster.getFont("default"), this::yes);
+        if (cancel) {
+            cancelButton = new Button(SettingsMaster.getMiddle() - BUTTON_SPACING, middleY - BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
+            denyButton = new Button(SettingsMaster.getMiddle(), middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
+            confirmButton = new Button(SettingsMaster.getMiddle() + BUTTON_SPACING, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+        }
+        else {
+            denyButton = new Button(SettingsMaster.getMiddle() - BUTTON_SPACING / 2, middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
+            confirmButton = new Button(SettingsMaster.getMiddle() + BUTTON_SPACING / 2, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            cancelButton = null;
+        }
+
+        processor.bind();
     }
 
     public ConfirmationLayer onConfirm(VoidMethod m) {
@@ -73,8 +84,12 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
     @Override
     public void update(float elapsed) {
-        confirmButton.update();
-        denyButton.update();
+        processor.update(elapsed);
+
+        confirmButton.update(elapsed);
+        denyButton.update(elapsed);
+        if (cancelButton != null)
+            cancelButton.update(elapsed);
     }
 
     @Override
@@ -86,6 +101,8 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
         denyButton.render(sb, sr);
         confirmButton.render(sb, sr);
+        if (cancelButton != null)
+            cancelButton.render(sb, sr);
     }
 
     private void cancel()
@@ -99,13 +116,13 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
         TaikoEditor.removeLayer(this);
     }
-    private void no(int button) {
+    private void no() {
         result = false;
         if (onDeny != null)
             onDeny.run();
         close();
     }
-    private void yes(int button)
+    private void yes()
     {
         result = true;
         if (onConfirm != null)
@@ -123,48 +140,19 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
         public ConfirmationLayerProcessor(ConfirmationLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"));
+            super(BindingMaster.getBindingGroup("Basic"), true);
             this.sourceLayer = source;
         }
 
         @Override
         public void bind() {
-            bindings.bind("Exit", ()->{
-                sourceLayer.cancel();
-                return true;
-            });
-        }
+            bindings.bind("Exit", sourceLayer::cancel);
 
-        @Override
-        public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            if (button != 0 && button != 1)
-                return false; //left or right click only
-
-            if (sourceLayer.denyButton.click(gameX, gameY, button))
-                return true;
-            if (sourceLayer.confirmButton.click(gameX, gameY, button))
-                return true;
-            return true;
-        }
-
-        @Override
-        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
-            return true;
-        }
-
-        @Override
-        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
-            return true;
-        }
-
-        @Override
-        public boolean onMouseMoved(int gameX, int gameY) {
-            return true;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            return true;
+            bindings.addMouseBind(sourceLayer.denyButton::contains, sourceLayer.denyButton::effect);
+            bindings.addMouseBind(sourceLayer.confirmButton::contains, sourceLayer.confirmButton::effect);
+            if (sourceLayer.cancelButton != null) {
+                bindings.addMouseBind((x, y, b)->sourceLayer.cancelButton.contains(x, y), sourceLayer.cancelButton::effect);
+            }
         }
     }
 }

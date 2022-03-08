@@ -6,7 +6,7 @@ import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Spinner;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -53,18 +53,18 @@ public class SpinnerTool extends EditorTool {
             double time = currentlyPlacing.getTimeFromPosition(Gdx.input.getX());
             Snap closest = currentlyPlacing.getClosestSnap(time, MAX_PLACEMENT_OFFSET);
 
-            if (closest != null && closest.pos > placementObject.pos)
+            if (closest != null && closest.pos > placementObject.getPos())
             {
-                placementObject.setDuration((int) closest.pos - placementObject.pos);
+                placementObject.setDuration((int) closest.pos - placementObject.getPos());
             }
-            else if (time > placementObject.pos)
+            else if (time > placementObject.getPos())
             {
-                placementObject.setDuration((int) time - placementObject.pos);
+                placementObject.setDuration((int) time - placementObject.getPos());
             }
         }
         else
         {
-            int y = SettingsMaster.getHeight() - Gdx.input.getY();
+            float y = SettingsMaster.gameY();
 
             renderPreview = false;
             placementObject.setDuration(0);
@@ -86,7 +86,7 @@ public class SpinnerTool extends EditorTool {
                         if (closest != null) {
                             previewView = hovered;
                             renderPreview = true;
-                            placementObject.setPosition((int) closest.pos);
+                            placementObject.setPos((int) closest.pos);
                         }
                     }
                     return;
@@ -120,7 +120,7 @@ public class SpinnerTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
+    public MouseHoldObject click(MapView view, float x, float y, int button, int modifiers) {
         //Place an object at current previewed placement position
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (isPlacing)
@@ -138,12 +138,14 @@ public class SpinnerTool extends EditorTool {
             {
                 cancel();
             }
+            return MouseHoldObject.nothing;
         }
         else if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
         {
             currentlyPlacing = view;
             isPlacing = true;
             placementObject.setDuration(BASE_PLACEMENT_DURATION);
+            return MouseHoldObject.nothing;
         }
 
         return null;

@@ -1,16 +1,30 @@
 package alchyr.taikoedit.util;
 
 import alchyr.taikoedit.util.structures.Pair;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.JsonValue;
+import org.apache.logging.log4j.Logger;
 
-import java.awt.*;
-import java.awt.event.KeyEvent;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
+import static alchyr.taikoedit.TaikoEditor.osuSafe;
+
 public class GeneralUtils {
+    public static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuSafe);
+    private static final char[] charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789".toCharArray();
+
+    public static String generateCode(int len) {
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < len; ++i) {
+            code.append(charset[MathUtils.random(charset.length - 1)]);
+        }
+        return code.toString();
+    }
+
     public static Map<String, Object> readProperties(JsonValue properties)
     {
         HashMap<String, Object> map = new HashMap<>();
@@ -190,5 +204,67 @@ public class GeneralUtils {
         }
 
         return pairList;
+    }
+
+    public static <T> T listLast(List<T> next) {
+        return next.get(next.size() - 1);
+    }
+
+    public static void logStackTrace(Logger l, Throwable e) {
+        StringBuilder sb = new StringBuilder();
+        logStackTrace(sb, e);
+        l.error(sb.toString());
+    }
+    private static void logStackTrace(StringBuilder sb, Throwable e) {
+        Set<Throwable> dejaVu =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+        dejaVu.add(e);
+
+        StackTraceElement[] trace = e.getStackTrace();
+
+        sb.append(e).append('\n');
+        for (StackTraceElement traceElement : trace)
+            sb.append("\tat ").append(traceElement).append("\n");
+
+        for (Throwable se : e.getSuppressed())
+            logEnclosedStackTrace(sb, se, trace, "Suppressed: ", "\t", dejaVu);
+
+        Throwable cause = e.getCause();
+        if (cause != null) {
+            logEnclosedStackTrace(sb, cause, trace, "Caused by: ", "", dejaVu);
+        }
+    }
+    private static void logEnclosedStackTrace(StringBuilder sb, Throwable e, StackTraceElement[] enclosingTrace, String caption, String prefix, Set<Throwable> dejaVu) {
+        if (dejaVu.contains(e)) {
+            sb.append("\t[CIRCULAR REFERENCE:").append(e).append("]").append('\n');
+        }
+        else {
+            dejaVu.add(e);
+
+            // Compute number of frames in common between this and enclosing trace
+            StackTraceElement[] trace = e.getStackTrace();
+            int m = trace.length - 1;
+            int n = enclosingTrace.length - 1;
+            while (m >= 0 && n >=0 && trace[m].equals(enclosingTrace[n])) {
+                m--; n--;
+            }
+            int framesInCommon = trace.length - 1 - m;
+
+            // Print our stack trace
+            sb.append(prefix).append(caption).append(e).append('\n');
+            for (int i = 0; i <= m; i++)
+                sb.append(prefix).append("\tat ").append(trace[i]).append('\n');
+            if (framesInCommon != 0)
+                sb.append(prefix).append("\t... ").append(framesInCommon).append(" more").append('\n');
+
+            // Print suppressed exceptions, if any
+            for (Throwable se : e.getSuppressed())
+                logEnclosedStackTrace(sb, se, trace, "Suppressed: ", prefix + "\t", dejaVu);
+
+            // Print cause, if any
+            Throwable cause = e.getCause();
+            if (cause != null)
+                logEnclosedStackTrace(sb, cause, trace, "Caused by: ", prefix, dejaVu);
+        }
     }
 }

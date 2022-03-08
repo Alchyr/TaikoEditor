@@ -6,8 +6,8 @@ package alchyr.taikoedit.management;
 //Binding to a key already bound within a group should unbind that key.
 
 import alchyr.taikoedit.TaikoEditor;
-import alchyr.taikoedit.management.bindings.BindingGroup;
-import alchyr.taikoedit.management.bindings.InputBinding;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.InputBinding;
 import com.badlogic.gdx.Input;
 
 import java.util.HashMap;
@@ -33,8 +33,8 @@ public class BindingMaster {
 
         //Editor
         creating = new BindingGroup("Editor");
-        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT), new InputBinding.InputInfo(Input.Keys.RIGHT, true), new InputBinding.InputInfo(Input.Keys.X), new InputBinding.InputInfo(Input.Keys.X, true)));
-        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT), new InputBinding.InputInfo(Input.Keys.LEFT, true), new InputBinding.InputInfo(Input.Keys.Z), new InputBinding.InputInfo(Input.Keys.Z, true)));
+        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT), new InputBinding.InputInfo(Input.Keys.RIGHT, true), new InputBinding.InputInfo(Input.Keys.X), new InputBinding.InputInfo(Input.Keys.X, false, true, false)));
+        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT), new InputBinding.InputInfo(Input.Keys.LEFT, true), new InputBinding.InputInfo(Input.Keys.Z), new InputBinding.InputInfo(Input.Keys.Z, false, true, false)));
         creating.addBinding(InputBinding.create("RateUp", new InputBinding.InputInfo(Input.Keys.UP)));
         creating.addBinding(InputBinding.create("RateDown", new InputBinding.InputInfo(Input.Keys.DOWN)));
         creating.addBinding(InputBinding.create("ZoomIn", new InputBinding.InputInfo(Input.Keys.UP, false, true, false)));
@@ -97,6 +97,18 @@ public class BindingMaster {
         creating = new BindingGroup("Basic");
 
         creating.addBinding(InputBinding.create("Exit", new InputBinding.InputInfo(Input.Keys.ESCAPE)));
+        creating.addBinding(InputBinding.create("Confirm", new InputBinding.InputInfo(Input.Keys.ENTER)));
+        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1)));
+        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2)));
+        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3)));
+        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4)));
+        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5)));
+        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6)));
+        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7)));
+        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8)));
+        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9)));
+        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0)));
+        creating.addBinding(InputBinding.create("TAB", new InputBinding.InputInfo(Input.Keys.TAB)));
 
         creating.createInputMap();
 
@@ -116,6 +128,6 @@ public class BindingMaster {
 
     public static BindingGroup getBindingGroup(String key)
     {
-        return bindingGroups.get(key).resetBindings();
+        return bindingGroups.get(key).copy();
     }
 }

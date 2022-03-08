@@ -5,6 +5,7 @@ import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.input.sub.TextInputReceiver;
 import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
@@ -26,7 +28,8 @@ public class TextField implements UIElement, TextInputReceiver {
 
     public enum TextType {
         NORMAL,
-        NUMERIC
+        NUMERIC,
+        INTEGER
     }
 
     private final Texture pix = assetMaster.get("ui:pixel");
@@ -40,14 +43,17 @@ public class TextField implements UIElement, TextInputReceiver {
 
     private int charLimit;
 
-    Function<String, Boolean> onEnter = null;
+    private Function<String, Boolean> onEnter = null;
+    private BiConsumer<String, TextField> onEndInput = null;
 
     //blip
     private boolean renderBlip;
     private float blipTimer = 0;
     private float blipX;
 
-    public boolean active;
+    private TextInputProcessor active; //currently receiving input
+    private boolean enabled = true; //able to be interacted with
+    private boolean blocking = false; //does it block relevant input while active
 
     public String action = "";
 
@@ -74,7 +80,8 @@ public class TextField implements UIElement, TextInputReceiver {
         dx = 0;
         dy = 0;
 
-        this.active = false;
+        this.type = TextType.NORMAL;
+        this.active = null;
     }
     public TextField setType(TextType type) {
         this.type = type;
@@ -84,10 +91,24 @@ public class TextField implements UIElement, TextInputReceiver {
         this.onEnter = onEnter;
         return this;
     }
+    public TextField setOnEndInput(BiConsumer<String, TextField> onEndInput) {
+        this.onEndInput = onEndInput;
+        return this;
+    }
+    public TextField blocking() {
+        this.blocking = true;
+        return this;
+    }
 
     @Override
     public boolean acceptCharacter(char c) {
+        if (!enabled)
+            return false;
+
         switch (type) {
+            case INTEGER:
+                return (c == 8) ||
+                        (c >= '0' && c <= '9');
             case NUMERIC:
                 return (c == 8) ||
                         (c >= '0' && c <= '9') ||
@@ -103,34 +124,71 @@ public class TextField implements UIElement, TextInputReceiver {
         return this;
     }
 
-    public boolean click(int mouseX, int mouseY, TextInputProcessor processor)
+    public boolean tryClick(float clickX, float clickY) {
+        if (!enabled) {
+            disable();
+            return false;
+        }
+
+        if (this.x + dx < clickX && this.y + dy < clickY && clickX < x2 + dx && clickY < y2 + dy)
+        {
+            return true;
+        }
+        disable();
+        return false;
+    }
+
+    public boolean click(float clickX, float clickY, TextInputProcessor processor)
     {
-        if (x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy)
+        if (!enabled) {
+            disable();
+            return false;
+        }
+
+        if (this.x + dx < clickX && y + dy < clickY && clickX < x2 + dx && clickY < y2 + dy)
         {
             activate(processor);
             return true;
         }
-        disable(processor);
+        disable();
         return false;
     }
 
+    public boolean isActive() {
+        return active != null;
+    }
     public void activate(TextInputProcessor processor) {
-        active = true;
+        if (!enabled)
+            return;
+
+        active = processor;
         renderBlip = true;
         blipTimer = 0.4f;
         processor.setTextReceiver(this);
     }
-    public void disable(TextInputProcessor processor) {
-        processor.disableTextReceiver(this);
-        active = false;
+    public void disable() {
+        if (active != null && enabled && onEndInput != null) {
+            onEndInput.accept(text, this);
+        }
+        if (active != null)
+            active.disableTextReceiver(this);
+        active = null;
         renderBlip = false;
     }
 
+    public void lock() {
+        enabled = false;
+        disable();
+    }
+    public void unlock() {
+        enabled = true;
+    }
+
     @Override
-    public void update()
+    public void update(float elapsed)
     {
-        if (active) {
-            blipTimer -= Gdx.graphics.getDeltaTime();
+        if (active != null) {
+            blipTimer -= elapsed;
             if (blipTimer < 0) {
                 blipTimer = 0.4f;
                 renderBlip = !renderBlip;
@@ -140,8 +198,8 @@ public class TextField implements UIElement, TextInputReceiver {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
-        textRenderer.setFont(font).resetScale().renderTextYCentered(sb, label, this.x, this.centerY);
-        textRenderer.renderTextYCentered(sb, text, this.textX, this.centerY);
+        textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x, this.centerY);
+        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text, this.textX, this.centerY);
 
         if (renderBlip) {
             sb.setColor(Color.WHITE);
@@ -153,8 +211,8 @@ public class TextField implements UIElement, TextInputReceiver {
         dx = x; //adjustment to hover/click check position
         dy = y;
 
-        textRenderer.setFont(font).resetScale().renderTextYCentered(sb, label, this.x + x, this.centerY + y);
-        textRenderer.renderTextYCentered(sb, text, this.textX + x, this.centerY + y);
+        textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x + x, this.centerY + y);
+        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text, this.textX + x, this.centerY + y);
 
         if (renderBlip) {
             sb.setColor(Color.WHITE);
@@ -186,6 +244,25 @@ public class TextField implements UIElement, TextInputReceiver {
 
     @Override
     public boolean blockInput(int key) {
+        if (blocking) {
+            switch (type) {
+                case NUMERIC:
+                    return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
+                            (key >= Input.Keys.NUMPAD_0 && key <= Input.Keys.NUMPAD_9) ||
+                            key == Input.Keys.PERIOD || key == Input.Keys.COMMA ||
+                            key == Input.Keys.BACKSPACE;
+                case INTEGER:
+                    return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
+                            (key >= Input.Keys.NUMPAD_0 && key <= Input.Keys.NUMPAD_9) ||
+                            key == Input.Keys.BACKSPACE;
+                default:
+                    return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
+                            (key >= Input.Keys.NUMPAD_0 && key <= Input.Keys.NUMPAD_9) ||
+                            (key >= Input.Keys.A && key <= Input.Keys.Z) ||
+                            key == Input.Keys.BACKSPACE;
+
+            }
+        }
         return false;
     }
 

@@ -38,10 +38,11 @@ public class Reverse extends MapChange {
         switch (type)
         {
             case OBJECTS:
-                map.objects.removeAll(reversedObjects);
+                map.removeObjects(reversedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.removeAll(reversedObjects);
+                map.allPoints.removeAll(reversedObjects);
                 break;
         }
 
@@ -49,7 +50,7 @@ public class Reverse extends MapChange {
         {
             for (PositionalObject o : entry.getValue())
             {
-                o.setPosition(originalPositions.get(o));
+                o.setPos(originalPositions.get(o));
                 reversedCopy.add(o);
             }
         }
@@ -59,11 +60,13 @@ public class Reverse extends MapChange {
         switch (type)
         {
             case OBJECTS:
+                map.preAddObjects(reversedObjects);
                 map.objects.addAll(reversedObjects);
                 map.updateVolume(reversedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.addAll(reversedObjects);
+                map.allPoints.addAll(reversedObjects);
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : reversedObjects.entrySet()) {
                     map.updateVolume(e.getKey());
                 }
@@ -85,16 +88,17 @@ public class Reverse extends MapChange {
         switch (type)
         {
             case OBJECTS:
-                map.objects.removeAll(reversedObjects);
+                map.removeObjects(reversedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.removeAll(reversedObjects);
+                map.allPoints.removeAll(reversedObjects);
                 break;
         }
 
         for (Map.Entry<Long, ArrayList<PositionalObject>> entry : reversedObjects.entrySet())
         {
-            newPos = end - (entry.getValue().get(0).pos - start);
+            newPos = end - (entry.getValue().get(0).getPos() - start);
 
             if (resnap)
             {
@@ -111,11 +115,11 @@ public class Reverse extends MapChange {
             {
                 if (o instanceof ILongObject)
                 {
-                    o.setPosition(newPos - ((ILongObject) o).getDuration());
+                    o.setPos(newPos - ((ILongObject) o).getDuration());
                 }
                 else
                 {
-                    o.setPosition(newPos);
+                    o.setPos(newPos);
                 }
                 reversedCopy.add(o);
             }
@@ -126,11 +130,13 @@ public class Reverse extends MapChange {
         switch (type)
         {
             case OBJECTS:
+                map.preAddObjects(reversedObjects);
                 map.objects.addAll(reversedObjects);
                 map.updateVolume(reversedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.addAll(reversedObjects);
+                map.allPoints.addAll(reversedObjects);
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : reversedObjects.entrySet()) {
                     map.updateVolume(e.getKey());
                 }

@@ -17,12 +17,14 @@ public class DurationChange extends MapChange {
     @Override
     public MapChange undo() {
         changed.setDuration(changed.getDuration() - changeAmount);
+        map.adjustedEnd(changed, -changeAmount);
         return this;
     }
 
     @Override
     public MapChange perform() {
         changed.setDuration(changed.getDuration() + changeAmount);
+        map.adjustedEnd(changed, changeAmount);
         return this;
     }
 }

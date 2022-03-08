@@ -8,7 +8,8 @@ import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -20,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static alchyr.taikoedit.management.bindings.BindingGroup.shift;
+import static alchyr.taikoedit.core.input.BindingGroup.shift;
 
 public class GreenLineTool extends EditorTool {
     private static final int MAX_SNAP_OFFSET = 40;
@@ -51,7 +52,7 @@ public class GreenLineTool extends EditorTool {
 
     @Override
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
-        int y = SettingsMaster.getHeight() - Gdx.input.getY();
+        float y = SettingsMaster.gameY();
 
         renderPreview = false;
 
@@ -67,13 +68,16 @@ public class GreenLineTool extends EditorTool {
                 MapView hovered = v.getView(y);
                 if (this.supportsView(hovered))
                 {
-                    Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
+                    double time = hovered.getTimeFromPosition(Gdx.input.getX());
+                    Snap closest = hovered.getClosestSnap(time, MAX_SNAP_OFFSET);
 
-                    if (closest != null)
-                    {
-                        previewView = hovered;
-                        renderPreview = true;
-                        placementObject.setPosition((long) closest.pos);
+                    previewView = hovered;
+                    renderPreview = true;
+                    if (closest == null || BindingGroup.alt()) { //Just go to cursor position
+                        placementObject.setPos(Math.floor(time));
+                    }
+                    else { //Snap to closest snap
+                        placementObject.setPos(closest.pos);
                     }
                 }
                 return;
@@ -90,19 +94,21 @@ public class GreenLineTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
+    public MouseHoldObject click(MapView view, float x, float y, int button, int modifiers) {
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
         {
             //Generate an inherited copy of the closest previous timing point
-            Map.Entry<Long, ArrayList<TimingPoint>> lastEffect = view.map.effectPoints.floorEntry(placementObject.pos);
-            Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = view.map.timingPoints.floorEntry(placementObject.pos);
+            Map.Entry<Long, ArrayList<TimingPoint>> lastEffect = view.map.effectPoints.floorEntry(placementObject.getPos());
+            Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = view.map.timingPoints.floorEntry(placementObject.getPos());
 
             if (lastTiming == null && lastEffect == null)
             {
                 //No previous point, just use default values
-                TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(placementObject.pos)).inherit();
+                TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(placementObject.getPos())).inherit();
+                p.kiai = BindingGroup.shift();
 
                 view.map.effectPoints.add(p);
+                view.map.allPoints.add(p);
 
                 return hold = new SvAdjustHold(view, Gdx.input.getY(), p);
             }
@@ -110,11 +116,15 @@ public class GreenLineTool extends EditorTool {
                 lastEffect = lastTiming;
             }
 
-            TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy(placementObject.pos)).inherit();
+            TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy(placementObject.getPos())).inherit();
+            if (BindingGroup.shift()) {
+                p.kiai = !p.kiai;
+            }
 
             renderPreview = false;
 
             view.map.effectPoints.add(p);
+            view.map.allPoints.add(p);
 
             return hold = new SvAdjustHold(view, Gdx.input.getY(), p);
         }
@@ -124,6 +134,9 @@ public class GreenLineTool extends EditorTool {
 
     @Override
     public void instantUse(MapView view) {
+        if (hold != null)
+            return;
+
         double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
@@ -140,6 +153,7 @@ public class GreenLineTool extends EditorTool {
         {
             //No previous point, just use default values
             TimingPoint p = ((TimingPoint) placementObject.shiftedCopy((long) time)).inherit();
+            p.kiai = BindingGroup.shift();
 
             view.map.registerChange(new LineAddition(view.map, p).perform());
             return;
@@ -148,7 +162,11 @@ public class GreenLineTool extends EditorTool {
             lastEffect = lastTiming;
         }
 
+
         TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy((long) time)).inherit();
+        if (BindingGroup.shift()) {
+            p.kiai = !p.kiai;
+        }
 
         view.map.registerChange(new LineAddition(view.map, p).perform());
     }
@@ -171,7 +189,7 @@ public class GreenLineTool extends EditorTool {
 
     private class SvAdjustHold extends MouseHoldObject
     {
-        private static final float MIN_DRAG_DIST = 5;
+        private static final float MIN_DRAG_DIST = 10;
 
         private MapView placingView;
         private TimingPoint adjusting;
@@ -192,19 +210,20 @@ public class GreenLineTool extends EditorTool {
         }
 
         @Override
-        public boolean onRelease(int x, int y) {
+        public void onRelease(float x, float y) {
             //register object placement
             adjusting.registerChange();
 
-            placingView.map.registerChange(new LineAddition(placingView.map, adjusting));
+            placingView.map.effectPoints.removeObject(adjusting);
+            placingView.map.allPoints.removeObject(adjusting);
+            placingView.map.registerChange(new LineAddition(placingView.map, adjusting).perform());
 
             hold = null;
-
-            return true;
         }
 
         private void cancel() {
             placingView.map.effectPoints.removeObject(adjusting);
+            placingView.map.allPoints.removeObject(adjusting);
         }
 
         @Override
@@ -216,13 +235,16 @@ public class GreenLineTool extends EditorTool {
                 dragging = true;
             }
 
-            verticalChange *= (shift() ? 0.05f : 0.5f);
+            verticalChange *= (shift() ? 0.01f : 0.05f);
 
             if (dragging) {
                 adjusting.tempModification(totalVerticalOffset);
 
                 totalVerticalOffset += verticalChange; //Track separately every time so holding shift can adjust just new input
                 lastY = Gdx.input.getY();
+                //Do not check for removed points here for simpler check.
+                //Proper update will occur on release.
+                placingView.map.updateEffectPoints(adjusting, null);
             }
         }
     }

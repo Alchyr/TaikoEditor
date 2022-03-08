@@ -11,19 +11,21 @@ import java.util.Map;
 public class ValueModificationChange extends MapChange {
     private final PositionalObjectTreeMap<PositionalObject> modifiedObjects;
     private final HashMap<PositionalObject, Double> originalValues;
-    private final double change;
+    private final HashMap<PositionalObject, Double> newValues;
 
-    public ValueModificationChange(EditorBeatmap map, PositionalObjectTreeMap<PositionalObject> modifiedObjects, double change)
+    public ValueModificationChange(EditorBeatmap map, PositionalObjectTreeMap<PositionalObject> modifiedObjects)
     {
         super(map);
 
         this.modifiedObjects = modifiedObjects;
-        this.change = change;
 
         this.originalValues = new HashMap<>();
+        this.newValues = new HashMap<>();
         for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
-            for (PositionalObject o : objects)
+            for (PositionalObject o : objects) {
                 this.originalValues.put(o, o.registerChange());
+                this.newValues.put(o, o.getValue());
+            }
         }
     }
 
@@ -35,7 +37,7 @@ public class ValueModificationChange extends MapChange {
                 o.setValue(originalValues.get(o));
             }
         }
-        map.updateEffectPoints(modifiedObjects, modifiedObjects);
+        map.updateSv();
         return this;
     }
     @Override
@@ -43,11 +45,10 @@ public class ValueModificationChange extends MapChange {
         for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
         {
             for (PositionalObject o : e.getValue()) {
-                o.tempModification(change);
-                o.registerChange();
+                o.setValue(newValues.get(o));
             }
         }
-        map.updateEffectPoints(modifiedObjects, modifiedObjects);
+        map.updateSv();
         return this;
     }
 }

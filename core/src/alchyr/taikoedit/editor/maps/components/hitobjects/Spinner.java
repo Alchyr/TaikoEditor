@@ -11,15 +11,15 @@ public class Spinner extends HitObject implements ILongObject {
     private static final Color spinner = Color.LIGHT_GRAY.cpy();
 
     private long duration;
-    public long endPos;
+    private long endPos;
 
     public Spinner(int start, int duration)
     {
         this.type = HitObjectType.SPINNER;
 
-        this.pos = start;
+        setPos(start);
         this.duration = duration;
-        this.endPos = this.pos + this.duration;
+        this.endPos = getPos() + this.duration;
         this.x = 256;
         this.y = 192;
         this.newCombo = true;
@@ -48,7 +48,7 @@ public class Spinner extends HitObject implements ILongObject {
                     y = Integer.parseInt(params[i]);
                     break;
                 case 2:
-                    pos = Long.parseLong(params[i]);
+                    setPos(Double.parseDouble(params[i]));
                     break;
                 case 3:
                     int objectType = Integer.parseInt(params[i]);
@@ -65,7 +65,7 @@ public class Spinner extends HitObject implements ILongObject {
                     break;
                 case 5:
                     endPos = Long.parseLong(params[i]);
-                    duration = endPos - pos;
+                    duration = endPos - getPos();
                     break;
                 case 6:
                     //hitsamples
@@ -84,7 +84,7 @@ public class Spinner extends HitObject implements ILongObject {
 
     public Spinner(Spinner base) {
         this.type = HitObjectType.SPINNER;
-        this.pos = base.pos;
+        setPos(base.getPrecisePos());
         this.x = base.x;
         this.y = base.y;
         this.newCombo = base.newCombo;
@@ -109,9 +109,9 @@ public class Spinner extends HitObject implements ILongObject {
     }
 
     @Override
-    public void setPosition(long newPos) {
-        super.setPosition(newPos);
-        endPos = pos + duration;
+    public void setPos(long newPos) {
+        super.setPos(newPos);
+        endPos = getPos() + duration;
     }
     @Override
     public long getDuration() {
@@ -124,18 +124,18 @@ public class Spinner extends HitObject implements ILongObject {
     @Override
     public void setDuration(long duration) {
         this.duration = duration;
-        this.endPos = this.pos + this.duration;
+        this.endPos = this.getPos() + this.duration;
     }
     @Override
     public void setEndPos(long endPos) {
         this.endPos = endPos;
-        this.duration = this.endPos - this.pos;
+        this.duration = this.endPos - this.getPos();
     }
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
         spinner.a = alpha;
-        float startX = x + (float) (this.pos - pos) * viewScale;
+        float startX = x + (float) (this.getPos() - pos) * viewScale;
         float endX = x + (float) (this.endPos - pos) * viewScale;
         sb.setColor(spinner);
         if (duration > 0)
@@ -156,7 +156,7 @@ public class Spinner extends HitObject implements ILongObject {
     }
 
     @Override
-    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float viewScale, float baseX, float x, int y, float alpha) {
+    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
         spinner.a = alpha;
         sb.setColor(spinner);
 
@@ -170,22 +170,22 @@ public class Spinner extends HitObject implements ILongObject {
 
         sb.draw(selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        sb.draw(selection, (x + (float) (this.pos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        sb.draw(selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 LARGE_SCALE, LARGE_SCALE, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
     }
 
     @Override
     public String toString() {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (pos + duration) + "," + getHitSamples();
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (getPos() + duration) + "," + getHitSamples();
     }
     public String toString(double beatLength, double sliderMultiplier) {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (pos + duration) + "," + getHitSamples();
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + (getPos() + duration) + "," + getHitSamples();
     }
 
     @Override
     public PositionalObject shiftedCopy(long newPos) {
         Spinner copy = new Spinner(this);
-        copy.setPosition(newPos);
+        copy.setPos(newPos);
         return copy;
     }
 }

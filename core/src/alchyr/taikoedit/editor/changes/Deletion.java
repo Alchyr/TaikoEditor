@@ -43,27 +43,30 @@ public class Deletion extends MapChange {
             switch (type)
             {
                 case OBJECTS:
+                    map.preAddObject((HitObject) deletedObject);
                     map.objects.add((HitObject) deletedObject);
                     map.updateVolume((HitObject) deletedObject);
                     break;
                 case EFFECT:
                     map.effectPoints.add((TimingPoint) deletedObject);
+                    map.allPoints.add((TimingPoint) deletedObject);
                     map.updateEffectPoints((TimingPoint) deletedObject, null);
                     break;
             }
         }
-        else
+        else if (deletedObjects != null)
         {
-            assert deletedObjects != null;
             switch (type)
             {
                 case OBJECTS:
+                    map.preAddObjects(deletedObjects);
                     map.objects.addAll(deletedObjects);
                     map.updateVolume(deletedObjects);
                     break;
                 case EFFECT:
                     map.effectPoints.addAll(deletedObjects);
-                    map.updateEffectPoints(deletedObjects, null);
+                    map.allPoints.addAll(deletedObjects);
+                    map.updateEffectPoints(deletedObjects.entrySet(), null);
                     break;
             }
         }
@@ -76,10 +79,11 @@ public class Deletion extends MapChange {
             switch (type)
             {
                 case OBJECTS:
-                    map.objects.removeObject(deletedObject);
+                    map.removeObject(deletedObject);
                     break;
                 case EFFECT:
                     map.effectPoints.removeObject(deletedObject);
+                    map.allPoints.removeObject(deletedObject);
                     map.updateEffectPoints(null, (TimingPoint) deletedObject);
                     break;
             }
@@ -89,11 +93,12 @@ public class Deletion extends MapChange {
             switch (type)
             {
                 case OBJECTS:
-                    map.objects.removeAll(deletedObjects);
+                    map.removeObjects(deletedObjects);
                     break;
                 case EFFECT:
                     map.effectPoints.removeAll(deletedObjects);
-                    map.updateEffectPoints(null, deletedObjects);
+                    map.allPoints.removeAll(deletedObjects);
+                    map.updateEffectPoints(null, deletedObjects.entrySet());
                     break;
             }
         }

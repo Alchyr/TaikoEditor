@@ -1,5 +1,8 @@
 package alchyr.taikoedit.audio;
 
+import alchyr.taikoedit.audio.mp3.PreloadedMp3;
+import alchyr.taikoedit.audio.ogg.PreloadOgg;
+import alchyr.taikoedit.util.RunningAverage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.files.FileHandle;
@@ -8,17 +11,35 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 public class MusicWrapper implements Music.OnCompletionListener {
-    private static final float BASE_OFFSET = -0.083f;
-    public float offset = BASE_OFFSET;
+    public float getProgress() {
+        if (music == null || music.hasNoDevice)
+            return 1;
 
-    private PreloadedMp3 music;
+        return music.loadProgress();
+    }
+
+
+    private static final float BASE_OFFSET = -0.083f;
+    public float mp3Offset = BASE_OFFSET;
+    public float oggOffset = 0;
+    public float activeOffset = 0;
+
+    private CustomAudio music;
     private FileHandle musicFile;
 
     public double precise = -1; //The last value returned
-    public double time = -1; //Refresher to see if music has give a new value
-    public double last = -1; //The last updated value obtained from music
+    private double minimum = -1; //Minimum time, to prevent back-skipping on new time given
 
-    private float totalElapsed = 0;
+    //For mitigating forward-skipping
+    private boolean initGap = false;
+    private RunningAverage timeGap = new RunningAverage(1);
+    private RunningAverage updateGap = new RunningAverage(16);
+    private double catchup;
+
+    private double time = -1; //Refresher to see if music has give a new value
+    private double last = -1; //The last updated value obtained from music
+
+    private double totalElapsed = 0, baseElapsed = 0;
 
     private boolean playing = false;
 
@@ -67,12 +88,34 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     public void prep()
     {
-        if (musicFile != null && musicFile.extension().equals("mp3"))
+        if (musicFile != null)
         {
             try
             {
-                this.music = (PreloadedMp3) Gdx.audio.newMusic(musicFile);
-                music.setOnCompletionListener(this);
+                switch (musicFile.extension().toLowerCase()) {
+                    case "mp3":
+                        activeOffset = mp3Offset;
+                        this.music = (PreloadedMp3) Gdx.audio.newMusic(musicFile);
+                        music.setOnCompletionListener(this);
+                        break;
+                    case "ogg":
+                        activeOffset = oggOffset;
+                        this.music = (PreloadOgg) Gdx.audio.newMusic(musicFile);
+                        music.setOnCompletionListener(this);
+                        break;
+                    default:
+                        editorLogger.error("Attempted to load unsupported audio type " + musicFile.extension() + ".");
+                        return;
+                }
+                if (music == null) {
+                    editorLogger.error("Failed to load music file: " + musicFile.path());
+                }
+                else if (music.hasNoDevice) {
+                    editorLogger.error("No Audio Device");
+                }
+                else {
+                    music.preload();
+                }
             }
             catch (Throwable e)
             {
@@ -81,10 +124,6 @@ public class MusicWrapper implements Music.OnCompletionListener {
                 editorLogger.error("Failed to load music file: " + musicFile.path());
                 e.printStackTrace();
             }
-        }
-        else if (musicFile != null)
-        {
-            editorLogger.error("Attempted to load a non-mp3 music file with MusicWrapper.");
         }
     }
 
@@ -99,8 +138,11 @@ public class MusicWrapper implements Music.OnCompletionListener {
                 {
                     try
                     {
-                        if (this.music.initialize(offset))
+                        if (this.music.initialize(activeOffset))
                         {
+                            initGap = true;
+                            timeGap = new RunningAverage(64);
+                            updateGap.init(0);
                             return true;
                         }
                         else
@@ -130,7 +172,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     public boolean isPlaying()
     {
-        return playing = music.isPlaying();
+        return playing = music != null && music.isPlaying();
     }
 
     public boolean noTrack()
@@ -138,28 +180,78 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return music == null;
     }
 
-    public double getMsTime(float elapsed)
-    {
-        return getSecondTime(elapsed) * 1000.0f;
-    }
-    public double getSecondTime(float elapsed)
-    {
-        time = music.getPrecisePosition();
+    public boolean update(double elapsed) {
+        if (music != null) {
+            time = music.getPrecisePosition();
 
-        if (playing)
-        {
-            totalElapsed += elapsed; //Keep track of passing time
-
-            if (time == last) //Music has not updated position, but the song is playing
+            if (playing)
             {
-                precise = (time + (totalElapsed) * music.tempo);
-                return precise + offset;
-            }
-        }
+                totalElapsed += elapsed * (catchup + 1); //Keep track of passing time
+                baseElapsed += elapsed;
+                //editorLogger.info("Total elapsed time: " + baseElapsed);
 
-        totalElapsed = 0;
-        precise = last = time;
-        return time + offset;
+                precise = Math.max(last + totalElapsed * music.tempo, minimum);
+                if (time == last) //Music has not updated position, but the song is playing
+                {
+                    return false;
+                }
+                //editorLogger.info("Music updated position.");
+                double gap = time - last;
+                if (gap < 0.1) {
+                    if (initGap) {
+                        if (updateGap.avg() == 0) {
+                            updateGap.add(gap);
+                        }
+                        else {
+                            updateGap.init(gap); //fill based on the second gap, which will occur during continuous play and is thus more reliable
+                            initGap = false;
+                        }
+                    }
+                    else {
+                        updateGap.add(gap);
+                    }
+                }
+
+                gap = time - (last + baseElapsed * music.tempo);
+                if (gap < 0.1 && gap > -0.1)
+                    timeGap.add(gap);
+            }
+            baseElapsed = 0;
+            totalElapsed = 0;
+            minimum = Long.MIN_VALUE;
+
+            if (playing) {
+                double gap = updateGap.avg();
+                //editorLogger.debug("UpdateGap: " + gap + " | TimeGap: " + timeGap.avg());
+                if (precise > time && precise - time < 0.1) {
+                    minimum = precise;
+                    if (!initGap && gap != 0)
+                        catchup = timeGap.avg() / updateGap.avg();
+                    //editorLogger.debug("A bit ahead. Catchup: " + catchup);
+                }
+                else if (precise < time && time - precise < 0.1) {
+                    if (!initGap && gap != 0)
+                        catchup = timeGap.avg() / updateGap.avg();
+                    //editorLogger.debug("A bit behind. Catchup: " + catchup);
+                }
+                else {
+                    catchup = 0;
+                    //editorLogger.debug("Very far off.");
+                }
+            }
+
+            last = time;
+            precise = Math.max(last, minimum);
+        }
+        return true;
+    }
+    public double getMsTime()
+    {
+        return getSecondTime() * 1000.0f;
+    }
+    public double getSecondTime()
+    {
+        return precise + activeOffset;
     }
 
     public double getMsLength()
@@ -226,7 +318,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
     }
     public void seekSecond(double newPos)
     {
-        music.setPosition((float) Math.max(0, newPos) - offset);
+        music.setPosition((float) Math.max(0, newPos) - activeOffset);
     }
     public void seekSecond(double newPos, boolean continuePlaying)
     {
@@ -237,18 +329,21 @@ public class MusicWrapper implements Music.OnCompletionListener {
         }
         if (!continuePlaying)
             playing = false;
-        music.setPosition((float) Math.max(0, newPos) - offset, continuePlaying);
+        music.setPosition((float) Math.max(0, newPos) - activeOffset, continuePlaying);
     }
 
-    public float setTempo(float newTempo)
+    public float setTempo(float newRate)
     {
-        if (newTempo < 0.5f)
-            newTempo = 0.5f;
-        if (newTempo > 1.5f)
-            newTempo = 1.5f;
+        if (newRate < 0.1f)
+            newRate = 0.1f;
+        if (newRate > 2.0f)
+            newRate = 2.0f;
 
-        music.changeTempo(newTempo, (float) precise);
-        return newTempo;
+        if (Math.abs(1 - newRate) < 0.001f) //clear out rounding errors whenever you return to 1
+            newRate = 1;
+
+        music.changeTempo(newRate, (float) precise);
+        return newRate;
     }
     public float changeTempo(float add)
     {
@@ -261,18 +356,18 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     public void modifyOffset(float change)
     {
-        offset += change;
+        activeOffset += change;
         if (music != null)
             music.snapOffset -= change;
     }
     public int getDisplayOffset()
     {
-        return (int) ((offset - BASE_OFFSET) * 1000);
+        return (music instanceof PreloadedMp3) ? (int) ((activeOffset - BASE_OFFSET) * 1000) : (int) ((activeOffset - oggOffset) * 1000);
     }
 
     @Override
     public void onCompletion(Music music) {
         playing = false;
-        //music.setPosition(); set position to end? Cancel the reset? hm
+        //music.setPos(); set position to end? Cancel the reset? hm
     }
 }

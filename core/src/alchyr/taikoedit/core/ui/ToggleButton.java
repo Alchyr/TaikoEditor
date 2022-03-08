@@ -67,7 +67,7 @@ public class ToggleButton implements UIElement {
         return this;
     }
 
-    public boolean click(int mouseX, int mouseY, int button)
+    public boolean click(float mouseX, float mouseY, int button)
     {
         if (x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy)
         {
@@ -80,9 +80,9 @@ public class ToggleButton implements UIElement {
     }
 
     @Override
-    public void update()
+    public void update(float elapsed)
     {
-        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.getHeight() - Gdx.input.getY() && Gdx.input.getX() < x2 + dx && SettingsMaster.getHeight() - Gdx.input.getY() < y2 + dy;
+        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.gameY() && Gdx.input.getX() < x2 + dx && SettingsMaster.gameY() < y2 + dy;
     }
 
     @Override

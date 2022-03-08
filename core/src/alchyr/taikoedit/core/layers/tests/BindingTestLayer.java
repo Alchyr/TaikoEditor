@@ -5,16 +5,19 @@ import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.input.BoundInputProcessor;
 import alchyr.taikoedit.core.layers.LoadedLayer;
 import alchyr.taikoedit.core.layers.LoadingLayer;
-import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.util.function.Supplier;
+
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.end;
 
 public class BindingTestLayer extends LoadedLayer implements InputLayer {
     private BindingTestProcessor processor;
@@ -25,6 +28,11 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
     public BindingTestLayer()
     {
         processor = new BindingTestProcessor(this);
+    }
+
+    @Override
+    public void update(float elapsed) {
+        processor.update(elapsed);
     }
 
     @Override
@@ -40,11 +48,10 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
         pixel = assetMaster.get("ui:pixel");
     }
 
-    private boolean exit()
+    private void exit()
     {
         TaikoEditor.removeLayer(this);
-        TaikoEditor.addLayer(MenuLayer.getReturnLoader());
-        return true;
+        end();
     }
 
     @Override
@@ -66,7 +73,7 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
 
         public BindingTestProcessor(BindingTestLayer source)
         {
-            super(BindingMaster.getBindingGroup("test"));
+            super(BindingMaster.getBindingGroup("test"), true);
 
             this.source = source;
         }
@@ -74,16 +81,6 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
         @Override
         public void bind() {
             bindings.bind("Exit", source::exit);
-        }
-
-        @Override
-        public boolean keyTyped(char character) {
-            return false;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            return false;
         }
     }
 }

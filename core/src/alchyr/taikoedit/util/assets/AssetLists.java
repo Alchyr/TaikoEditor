@@ -41,7 +41,7 @@ public class AssetLists implements Json.Serializable {
         nearest.minFilter = Texture.TextureFilter.Nearest;
     }
 
-    public void loadList(String name, AssetManager manager)
+    public void loadList(String name, AssetMaster manager)
     {
         editorLogger.info("Loading asset list \"" + name + "\"");
 
@@ -98,6 +98,7 @@ public class AssetLists implements Json.Serializable {
                                 assetMaster.loadedAssets.put(info.getAssetName(name), info.getFileName());
                                 break;
                             case "truetypefont":
+                                TrueTypeFontGenerator.resetParameters();
                                 if (info.getParams() != null)
                                 {
                                     params = info.getParams().split(" ");
@@ -118,6 +119,9 @@ public class AssetLists implements Json.Serializable {
                                                 break;
                                             case "k":
                                                 TrueTypeFontGenerator.getParameters().kerning = Integer.parseInt(args[1]) != 0;
+                                                break;
+                                            case "all":
+                                                TrueTypeFontGenerator.getParameters().characters = TrueTypeFontGenerator.ALL_CHARS;
                                                 break;
                                         }
                                     }
@@ -190,7 +194,7 @@ public class AssetLists implements Json.Serializable {
         }
     }
 
-    public void unloadList(String name, AssetMaster master)
+    public void unloadList(String name)
     {
         if (lists.containsKey(name) && loadedLists.contains(name))
         {
@@ -208,7 +212,7 @@ public class AssetLists implements Json.Serializable {
                                 assetMaster.loadedRegions.remove(regionName);
                             }
                         }
-                        master.unload(info.getFileName());
+                        assetMaster.unload(info.getFileName());
                         break;
                     case "sound":
                         audioMaster.removeSfx(info.getAssetName(name));
@@ -231,7 +235,7 @@ public class AssetLists implements Json.Serializable {
                     case "font":
                         editorLogger.warn("Fonts shouldn't be unloaded! Trying to unload font " + info.getAssetName(name));
                     default:
-                        master.unload(info.getAssetName(name));
+                        assetMaster.unload(info.getAssetName(name));
                 }
             }
 

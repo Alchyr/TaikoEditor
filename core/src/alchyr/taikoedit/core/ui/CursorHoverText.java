@@ -13,10 +13,9 @@ import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class CursorHoverText {
-    private final int HORIZONAL_BUFFER = 12;
-    private final int VERTICAL_BUFFER = 6;
+    private final int HORIZONAL_BUFFER = 8;
 
-    private final int TEXT_OFFSET = 10;
+    private final int TEXT_OFFSET = 14;
 
     private final Color textColor = new Color(1.0f, 1.0f, 1.0f, 0.0f);
     private final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.0f);
@@ -27,21 +26,21 @@ public class CursorHoverText {
     private String text = "";
     private float fadeDelay = 0.0f;
 
-    private final int centerY;
+    private int centerY;
     private int height;
     private int width;
 
     public CursorHoverText()
     {
-        centerY = SettingsMaster.getHeight() / 2;
         width = 1;
         height = 1;
     }
 
-    public void initialize(BitmapFont font) {
+    public void initialize(BitmapFont font, int height) {
         this.font = font;
         pix = assetMaster.get("ui:pixel");
-        this.height = (int) textRenderer.setFont(font).getHeight("|");
+        centerY = SettingsMaster.getHeight() / 2;
+        this.height = height;
     }
 
     public void setText(String text)
@@ -70,12 +69,10 @@ public class CursorHoverText {
             float x = Gdx.input.getX() + (Gdx.input.getX() > SettingsMaster.getMiddle() ? -(width + TEXT_OFFSET) : TEXT_OFFSET);
             float y = SettingsMaster.screenToGameY(Gdx.input.getY());
             y += (y > centerY ? -TEXT_OFFSET : TEXT_OFFSET);
-
             backColor.a = textColor.a;
             sb.setColor(backColor);
-            sb.draw(pix, x, y, width, height);
-
-            TaikoEditor.textRenderer.setFont(font).renderText(sb, textColor, text, x + 5, y + 4);
+            sb.draw(pix, x, y - (height / 2.0f), width, height);
+            TaikoEditor.textRenderer.setFont(font).renderTextYCentered(sb, textColor, text, x + (HORIZONAL_BUFFER / 2.0f), y);
         }
     }
 }

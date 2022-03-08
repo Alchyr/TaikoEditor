@@ -2,6 +2,7 @@ package alchyr.taikoedit.core.ui;
 
 import alchyr.taikoedit.core.UIElement;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -16,9 +17,11 @@ import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ImageButton implements UIElement {
-    private int x, y, width, height, x2, y2, dx, dy;
+    private int x, y, width, height, x2, y2;
+    float dx, dy;
     private int centerX, centerY;
     private int imgWidth, imgHeight, hoverWidth, hoverHeight;
+    private boolean flipX, flipY;
 
     private Texture image;
     private Texture hoveredImage;
@@ -27,25 +30,25 @@ public class ImageButton implements UIElement {
 
     public boolean hovered;
 
-    private Consumer<Integer> onClick;
+    private Consumer<Integer> onClick = null;
 
     public String action = "";
 
-    public ImageButton(Texture image, Texture hoverImage, Consumer<Integer> onClick)
+    public ImageButton(Texture image, Texture hoverImage)
     {
-        this(0, 0, image, hoverImage, "", assetMaster.getFont("default"), onClick);
+        this(0, 0, image, hoverImage, "", assetMaster.getFont("default"));
     }
-    public ImageButton(int x, int y, Texture image, Texture hoverImage, Consumer<Integer> onClick)
+    public ImageButton(int x, int y, Texture image, Texture hoverImage)
     {
-        this(x, y, image, hoverImage, "", assetMaster.getFont("default"), onClick);
+        this(x, y, image, hoverImage, "", assetMaster.getFont("default"));
     }
-    public ImageButton(int x, int y, Texture image, String text, Consumer<Integer> onClick)
+    public ImageButton(int x, int y, Texture image, String text)
     {
-        this(x, y, image, image, text, assetMaster.getFont("default"), onClick);
+        this(x, y, image, image, text, assetMaster.getFont("default"));
     }
-    public ImageButton(int x, int y, Texture image, Texture hoveredImage, String text, BitmapFont font, Consumer<Integer> onClick)
+    public ImageButton(int x, int y, Texture image, Texture hoveredImage, String text, BitmapFont font)
     {
-        this(x, y, image.getWidth(), image.getHeight(), onClick);
+        this(x, y, image.getWidth(), image.getHeight());
         this.image = image;
         imgWidth = image.getWidth();
         imgHeight = image.getHeight();
@@ -55,12 +58,14 @@ public class ImageButton implements UIElement {
         this.text = text;
         this.font = font;
     }
-    private ImageButton(int x, int y, int width, int height, Consumer<Integer> onClick)
+    private ImageButton(int x, int y, int width, int height)
     {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+
+        flipX = flipY = false;
 
         dx = 0;
         dy = 0;
@@ -72,14 +77,16 @@ public class ImageButton implements UIElement {
         centerY = MathUtils.floor(y + height / 2.0f);
 
         hovered = false;
-
-        this.onClick = onClick;
     }
 
-    //Assumed that they are the same size.
-    public void setTextures(Texture image, Texture hover) {
-        this.image = image;
-        this.hoveredImage = hover;
+    public ImageButton setClick(Consumer<Integer> onClick) {
+        this.onClick = onClick;
+        return this;
+    }
+
+    public ImageButton setClick(VoidMethod onClick) {
+        this.onClick = (i)->onClick.run();
+        return this;
     }
 
     public ImageButton setAction(String action)
@@ -88,33 +95,55 @@ public class ImageButton implements UIElement {
         return this;
     }
 
-    public boolean click(int mouseX, int mouseY, int key)
+    //Assumed that they are the same size.
+    public void setTextures(Texture image, Texture hover) {
+        this.image = image;
+        this.hoveredImage = hover;
+    }
+
+    public boolean contains(int mouseX, int mouseY) {
+        return x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy;
+    }
+    public void effect(int button) {
+        if (onClick != null)
+            onClick.accept(button);
+    }
+    public boolean click(int gameX, int gameY, int button) {
+        return click((float)gameX, (float)gameY, button);
+    }
+    public boolean click(float gameX, float gameY, int button)
     {
-        if (x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy)
+        if (x + dx < gameX && y + dy < gameY && gameX < x2 + dx && gameY < y2 + dy)
         {
             hovered = true;
 
             if (onClick != null)
-                onClick.accept(key);
+                onClick.accept(button);
             return true;
         }
         return false;
     }
 
+    public ImageButton setFlip(boolean x, boolean y) {
+        flipX = x;
+        flipY = y;
+        return this;
+    }
+
     @Override
-    public void update()
+    public void update(float elapsed)
     {
-        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.getHeight() - Gdx.input.getY() && Gdx.input.getX() < x2 + dx && SettingsMaster.getHeight() - Gdx.input.getY() < y2 + dy;
+        hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.gameY() && Gdx.input.getX() < x2 + dx && SettingsMaster.gameY() < y2 + dy;
     }
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(Color.WHITE.cpy());
         if (hovered) {
-            sb.draw(hoveredImage, x, y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, false, false);
+            sb.draw(hoveredImage, x, y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, flipX, flipY);
         }
         else {
-            sb.draw(image, x, y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, false, false);
+            sb.draw(image, x, y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, flipX, flipY);
         }
         if (text != null)
         {
@@ -122,16 +151,16 @@ public class ImageButton implements UIElement {
         }
     }
 
-    public void render(SpriteBatch sb, ShapeRenderer sr, int x, int y) {
+    public void render(SpriteBatch sb, ShapeRenderer sr, float x, float y) {
         dx = x; //adjustment to hover/click check position
         dy = y;
 
         if (hovered) {
-            sb.draw(hoveredImage, this.x + x, this.y + y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, false, false);
+            sb.draw(hoveredImage, this.x + x, this.y + y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, flipX, flipY);
         }
         else {
             sb.setColor(Color.WHITE.cpy());
-            sb.draw(image, this.x + x, this.y + y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, false, false);
+            sb.draw(image, this.x + x, this.y + y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, flipX, flipY);
         }
         if (text != null)
         {

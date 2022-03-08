@@ -3,8 +3,28 @@ package alchyr.taikoedit.util.structures;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.text.DecimalFormat;
+
+import static alchyr.taikoedit.TaikoEditor.osuSafe;
+
 public abstract class PositionalObject implements Comparable<PositionalObject> {
-    public long pos = 0;
+    protected static final DecimalFormat limitedDecimals = new DecimalFormat("##0.###########", osuSafe);
+
+    private double pos = 0;
+
+    public long getPos() {
+        return Math.round(pos);
+    }
+    public double getPrecisePos() {
+        return pos;
+    }
+    public void setPos(long newPos) {
+        pos = newPos;
+    }
+    public void setPos(double newPos) {
+        pos = newPos;
+    }
+
     public boolean selected = false;
 
     //pos - time within song
@@ -17,13 +37,9 @@ public abstract class PositionalObject implements Comparable<PositionalObject> {
     }
     public abstract void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y); //render selection effect.
 
-    public void setPosition(long newPos) {
-        pos = newPos;
-    }
-
     @Override
     public int compareTo(PositionalObject o) {
-        return Long.compare(pos, o.pos);
+        return Double.compare(pos, o.pos);
     }
 
     public abstract PositionalObject shiftedCopy(long newPos);
@@ -35,5 +51,19 @@ public abstract class PositionalObject implements Comparable<PositionalObject> {
         return 0;
     }
     public void setValue(double value) {
+    }
+    public double getValue() {
+        return 0;
+    }
+
+    public void volumeModification(double verticalChange) {
+    }
+    public int registerVolumeChange() {
+        return 0;
+    }
+    public void setVolume(int vol) {
+    }
+    public int getVolume() {
+        return 0;
     }
 }

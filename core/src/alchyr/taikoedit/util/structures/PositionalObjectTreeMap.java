@@ -274,6 +274,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         super.putAll(map);
     }
 
+    @SuppressWarnings("unchecked")
     public void addAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
         for (Map.Entry<Long, ArrayList<V>> e : ((Map<Long, ArrayList<V>>)map).entrySet())
         {
@@ -638,7 +639,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     public void add(V value) {
-        long key = value.pos;
+        long key = value.getPos();
 
         Entry<V> t = root;
         if (t == null) {
@@ -722,7 +723,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     public PositionalObject removeObject(PositionalObject p) {
-        Entry<V> e = getEntry(p.pos);
+        Entry<V> e = getEntry(p.getPos());
         if (e == null)
             return null;
 
@@ -1995,7 +1996,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 return Spliterator.DISTINCT | Spliterator.ORDERED |
                         Spliterator.SORTED;
             }
-            public final Comparator<? super Long>  getComparator() {
+            public Comparator<? super Long>  getComparator() {
                 return NavigableSubMap.this.comparator();
             }
         }
@@ -2988,7 +2989,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                     Spliterator.DISTINCT | Spliterator.SORTED | Spliterator.ORDERED;
         }
 
-        public final Comparator<? super Long>  getComparator() {
+        public Comparator<? super Long>  getComparator() {
             return tree.comparator;
         }
 

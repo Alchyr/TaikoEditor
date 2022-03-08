@@ -13,6 +13,7 @@ import java.util.HashMap;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 public class TrueTypeFontGenerator {
+    public static final String ALL_CHARS;
     private static HashMap<String, BitmapFont> loadedFonts = new HashMap<>();
 
     private static FreeTypeFontGenerator.FreeTypeFontParameter parameters;
@@ -131,5 +132,13 @@ public class TrueTypeFontGenerator {
         }
 
         return null;
+    }
+
+    static {
+        String temp;
+        temp = FreeTypeFontGenerator.DEFAULT_CHARS;
+        temp += "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" //russian
+                + "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+        ALL_CHARS = temp;
     }
 }

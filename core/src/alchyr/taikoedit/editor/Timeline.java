@@ -4,7 +4,8 @@ import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.util.EditorTime;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -13,12 +14,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.textRenderer;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 public class Timeline {
     public static final int HEIGHT = 30;
@@ -29,6 +27,9 @@ public class Timeline {
     private static final int TIMELINE_START = 150, TIMELINE_END = SettingsMaster.getWidth() - 50, TIMELINE_LENGTH = TIMELINE_END - TIMELINE_START;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.85f);
+    private static final Color kiaiColor = new Color(240.0f/255.0f, 164.0f/255.0f, 66.0f/255.0f, 0.8f);
+    private static final Color breakColor = new Color(0.7f, 0.7f, 0.7f, 0.5f);
+    private static final Color bookmarkColor = new Color(0.25f, 0.25f, 0.95f, 1.0f);
 
     private BitmapFont font;
     private Texture pix = assetMaster.get("ui:pixel");
@@ -45,7 +46,7 @@ public class Timeline {
 
     private EditorTime time;
     private int pos;
-    private DecimalFormat percentFormat = new DecimalFormat("##0.#%");
+    private DecimalFormat percentFormat = new DecimalFormat("##0.#%", osuSafe);
 
     private MouseHoldObject holdObject;
 
@@ -78,7 +79,7 @@ public class Timeline {
         this.pos = TIMELINE_START;
     }
 
-    public MouseHoldObject click(int gameX, int gameY, int pointer, int button)
+    public MouseHoldObject click(float gameX, float gameY)
     {
         //if (button == Gdx)
         //{
@@ -95,12 +96,12 @@ public class Timeline {
         return null;
     }
 
-    private void drag(int gameX, int gameY)
+    private void drag(float gameX, float gameY)
     {
         EditorLayer.music.seekSecond(convertPosition(gameX));
     }
 
-    private boolean release(int gameX, int gameY)
+    private boolean release(float gameX, float gameY)
     {
         EditorLayer.music.unlock(this);
         return true;
@@ -117,9 +118,9 @@ public class Timeline {
     {
         return TIMELINE_START + (int) (percentage * (TIMELINE_LENGTH));
     }
-    private double convertPosition(int position)
+    private double convertPosition(float position)
     {
-        return MathUtils.clamp((float) (position - TIMELINE_START) * length / TIMELINE_LENGTH, 0, length);
+        return MathUtils.clamp((position - TIMELINE_START) * length / TIMELINE_LENGTH, 0, length);
     }
 
     public String getTimeString()
@@ -127,17 +128,46 @@ public class Timeline {
         return time.toString();
     }
 
+
+    private Iterator<Map.Entry<Long, Boolean>> kiaiIterator;
+    private Map.Entry<Long, Boolean> kiaiEntry;
     public void render(SpriteBatch sb, ShapeRenderer sr)
     {
         sb.setColor(backColor);
         sb.draw(pix, 0, y, SettingsMaster.getWidth(), HEIGHT);
+
+        //Kiai/breaks
+        if (currentMap != null) {
+            sb.setColor(kiaiColor);
+            kiaiIterator = currentMap.getKiai().entrySet().iterator();
+            boolean kiai = false;
+            int start = TIMELINE_START;
+            while (kiaiIterator.hasNext()) {
+                kiaiEntry = kiaiIterator.next();
+
+                if (!kiai && (kiai = kiaiEntry.getValue())) {
+                    //kiai started
+                    start = convertPercent((kiaiEntry.getKey() / 1000.0) / length);
+                }
+                else if (kiai && !(kiai = kiaiEntry.getValue())) {
+                    sb.draw(pix, start, lineY, convertPercent((kiaiEntry.getKey() / 1000.0) / length) - start, MARK_HEIGHT);
+                }
+            }
+            kiaiIterator = null;
+
+            sb.setColor(breakColor);
+            for (Pair<Long, Long> breakSection : currentMap.getBreaks()) {
+                start = convertPercent((breakSection.a / 1000.0) / length);
+                sb.draw(pix, start, lineY, convertPercent((breakSection.b / 1000.0) / length) - start, MARK_HEIGHT);
+            }
+        }
 
         //Timeline
         sb.setColor(Color.WHITE);
         sb.draw(pix, TIMELINE_START, lineY, TIMELINE_LENGTH, LINE_THICKNESS);
 
         //Bookmarks
-        sb.setColor(Color.BLUE);
+        sb.setColor(bookmarkColor);
         for (int i : bookmarkRenderPositions)
         {
             sb.draw(pix, i, bookmarkY, 1, MARK_HEIGHT);

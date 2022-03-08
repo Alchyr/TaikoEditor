@@ -3,211 +3,239 @@ package alchyr.taikoedit.core.layers.sub;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
-import alchyr.taikoedit.core.input.AdjustedInputProcessor;
+import alchyr.taikoedit.core.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.EditorLayer;
-import alchyr.taikoedit.core.ui.Button;
-import alchyr.taikoedit.editor.views.SvView;
-import alchyr.taikoedit.editor.views.ObjectView;
-import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.core.ui.*;
+import alchyr.taikoedit.editor.maps.FullMapInfo;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
-import com.badlogic.gdx.Input;
+import alchyr.taikoedit.editor.views.ObjectView;
+import alchyr.taikoedit.management.BindingMaster;
+import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Interpolation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.util.GeneralUtils.oneDecimal;
 
 public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
     private static CreateDifficultyProcessor processor;
-
+    private static final int METADATA_LIMIT = 80;
 
     //Rendering
-    private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.83f);
+    private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.9f);
+    private static final Color dividerColor = new Color(0.8f, 0.8f, 0.8f, 0.8f);
 
     //Textures
     private final Texture pix;
 
     //Positions
     private final int middleY = SettingsMaster.getHeight() / 2;
-    private final int minRenderY = -(middleY + 30);
+    //private final int minRenderY = -(middleY + 30);
 
     //For smoothness
-    private float optionY = 0, viewY = 0, targetOptionY, targetViewY, startOptionY, startViewY;
-    private float targetLineWidth, startLineWidth, lineWidth = 0, targetLineWidthB, startLineWidthB, lineWidthB = 0;
-    private float targetLinePos, startLinePos, linePos = 0, targetLinePosB, startLinePosB, linePosB = SettingsMaster.getWidth();
-    private float firstLineProgress = 0, secondLineProgress = 0, difficultyProgress = 0, viewProgress = 0;
 
     //Parts
-    private final List<Button> difficultyOptions;
-    private final List<Button> viewOptions;
-    private final Button openButton;
+    private final List<Label> labels;
+    private final List<TextField> textFields;
 
-    //Scroll
-    private int difficultyIndex = 0, viewIndex = 0;
+    private final TextOverlay textOverlay;
+
+    //right
+    private final TextField diffName;
+    private final TextField hp;
+    private final Slider hpSlider;
+    private final TextField od;
+    private final Slider odSlider;
+
+    //left
+    private final ToggleButton keepObjects, keepVolume, keepSv;
+    //private final TextField artist, romanizedArtist, title, romanizedTitle, source, tags;
+
+    private final Button cancelButton;
+    private final Button saveButton;
 
     //Other data
     private final EditorLayer sourceLayer;
-    private final List<MapInfo> maps;
 
+    private final Mapset set;
+    private final EditorBeatmap base;
 
-    public CreateDifficultyLayer(EditorLayer editor, Mapset set)
+    //Editing existing difficulty
+    public CreateDifficultyLayer(EditorLayer editor, Mapset set, EditorBeatmap base)
     {
         this.type = LAYER_TYPE.UPDATE_STOP;
 
         sourceLayer = editor;
 
+        this.set = set;
+        this.base = base;
+
         processor = new CreateDifficultyProcessor(this);
+
         pix = assetMaster.get("ui:pixel");
+        BitmapFont font = assetMaster.getFont("aller medium");
+        BitmapFont big = assetMaster.getFont("default");
 
-        int difficultyOptionX = SettingsMaster.getWidth() / 4;
-        int copyTypeX = SettingsMaster.getWidth() / 2;
-        int createButtonX = difficultyOptionX * 3;
+        labels = new ArrayList<>();
+        textFields = new ArrayList<>();
 
-        difficultyOptions = new ArrayList<>();
-        maps = set.getMaps();
-        for (MapInfo info : maps)
-        {
-            difficultyOptions.add(new Button(difficultyOptionX, middleY, info.difficultyName, assetMaster.getFont("aller medium"), null));
+        saveButton = new Button(SettingsMaster.getMiddle() + 100, 100, "Save", assetMaster.getFont("aller medium")).setClick(this::save);
+        cancelButton = new Button(SettingsMaster.getMiddle() - 100, 100, "Cancel", assetMaster.getFont("aller medium")).setClick(this::cancel);
+
+        textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
+
+        //left half for new difficulty copy settings, right half for normal difficulty settings
+        float leftX = 70, rightX = SettingsMaster.getMiddle() + leftX, leftCenter = SettingsMaster.getWidth() / 4, rightCenter = SettingsMaster.getMiddle() + leftCenter;
+
+        //Metadata stuff
+        float y = SettingsMaster.getHeight() - 60;
+        labels.add(new Label(leftCenter, y, big, "Creating From", Label.LabelAlign.CENTER));
+
+        y -= 60;
+        labels.add(new Label(leftCenter, y, font, "[" + base.getName() + "]", Label.LabelAlign.CENTER));
+
+        y -= 40;
+        keepObjects = new ToggleButton(leftX, y, "Keep Objects", font, true);
+
+        y -= 40;
+        keepVolume = new ToggleButton(leftX, y, "Keep Volume and Kiai", font, true);
+
+        y -= 40;
+        keepSv = new ToggleButton(leftX, y, "Keep SV Changes", font, false);
+
+        //Diff stuff
+        y = SettingsMaster.getHeight() - 60;
+        labels.add(new Label(rightCenter, y, big, "Difficulty", Label.LabelAlign.CENTER));
+
+        y -= 60;
+        diffName = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "Name:", "", METADATA_LIMIT, font);
+        textFields.add(diffName.setOnEnter((s)->{diffName.disable(); return true;}));
+
+        y -= 40;
+        hp = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "HP:", oneDecimal.format(5), 4, font).setType(TextField.TextType.NUMERIC);
+        hp.setOnEndInput(this::testDiffValue);
+        textFields.add(hp.setOnEnter((s)->{hp.disable(); return true;}));
+        y -= 30;
+        hpSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        hpSlider.onValueChange(this::setHP);
+
+        y -= 50;
+        od = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "OD:", oneDecimal.format(5), 4, font).setType(TextField.TextType.NUMERIC);
+        od.setOnEndInput(this::testDiffValue);
+        textFields.add(od.setOnEnter((s)->{od.disable(); return true;}));
+        y -= 30;
+        odSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        odSlider.onValueChange(this::setOD);
+
+        processor.bind();
+    }
+
+    private void save(int button)
+    {
+        try {
+            String newDiffname = diffName.text;
+            if (newDiffname.isEmpty()) {
+                textOverlay.setText("Please enter a difficulty name.", 2.0f);
+                return;
+            }
+
+            for (MapInfo info : set.getMaps()) {
+                if (info.getDifficultyName().equals(newDiffname)) {
+                    TaikoEditor.addLayer(new ConfirmationLayer("A difficulty with this name already exists. Create anyways?", "Yes", "No", false)
+                            .onConfirm(()->{
+                                /*boolean success = true;
+                                for (EditorBeatmap m : dirtyMaps) {
+                                    if (!m.save()) {
+                                        success = false;
+                                        textOverlay.setText("Failed to save!", 2.0f);
+                                    }
+                                }
+
+                                if (success) {
+                                    TaikoEditor.removeLayer(this);
+                                }*/
+                            }));
+                    return;
+                }
+            }
+
+            if (create()) {
+                TaikoEditor.removeLayer(this);
+            }
         }
-
-        viewOptions = new ArrayList<>();
-        viewOptions.add(new Button(copyTypeX, middleY, "Exact Copy", assetMaster.getFont("aller medium"), null).setAction("all"));
-        viewOptions.add(new Button(copyTypeX, middleY, "Timing and SV", assetMaster.getFont("aller medium"), null).setAction("sv"));
-        viewOptions.add(new Button(copyTypeX, middleY, "Timing and Volume", assetMaster.getFont("aller medium"), null).setAction("timing"));
-        viewOptions.add(new Button(difficultyOptionX, middleY, "Create New", assetMaster.getFont("aller medium"), null).setAction("NEW"));
-
-        openButton = new Button(createButtonX, middleY, "Open", assetMaster.getFont("aller medium"), this::open);
-
-        startLinePos = SettingsMaster.getMiddle() / 3.0f;
-        calculateFirstLine();
-        calculateSecondLine();
-        calculateDifficulties();
-        calculateViews();
-    }
-
-    private void open(int button)
-    {
-        EditorBeatmap b = sourceLayer.getEditorBeatmap(maps.get(difficultyIndex));
-        switch (viewOptions.get(viewIndex).action)
-        {
-            case "objects":
-                sourceLayer.addView(new ObjectView(sourceLayer, b), true);
-                break;
-            case "sv":
-                sourceLayer.addView(new SvView(sourceLayer, b), true);
-                break;
-            case "gameplay":
-                break;
-            case "NEW":
-
-                break;
+        catch (Exception e) {
+            sourceLayer.textOverlay.setText("Failed to save!", 2.0f);
         }
-
-        TaikoEditor.removeLayer(this);
     }
+    private boolean create() {
+        FullMapInfo newBase = new FullMapInfo(base.getFullMapInfo(), diffName.text);
 
-    private void calculateFirstLine()
-    {
-        targetLinePos = difficultyOptions.get(difficultyIndex).endX() + 10;
-        startLinePos = linePos;
-        float end = viewOptions.get(viewIndex).startX() - 10;
-        targetLineWidth = end - targetLinePos;
-        startLineWidth = lineWidth;
-        firstLineProgress = 0;
+        float newHp = Math.min(10, Math.max(0, Float.parseFloat(hp.text)));
+        float newOd = Math.min(10, Math.max(0, Float.parseFloat(od.text)));
+
+        newBase.hp = newHp;
+        newBase.od = newOd;
+
+        EditorBeatmap newMap = new EditorBeatmap(base, newBase, keepObjects.enabled, keepSv.enabled, keepVolume.enabled);
+
+        if (newMap.save()) {
+            this.set.add(newBase);
+
+            sourceLayer.addMap(newMap);
+            sourceLayer.textOverlay.setText("Difficulty \"" + newMap.getName() + "\" created!", 1.0f);
+            sourceLayer.addView(new ObjectView(sourceLayer, newMap), true);
+            return true;
+        }
+        else {
+            textOverlay.setText("Failed to save new difficulty!", 2.0f);
+            return false;
+        }
     }
-    private void calculateSecondLine()
-    {
-        targetLinePosB = viewOptions.get(viewIndex).endX() + 10;
-        startLinePosB = linePosB;
-        float end = openButton.startX() - 10;
-        targetLineWidthB = end - targetLinePosB;
-        startLineWidthB = lineWidthB;
-        secondLineProgress = 0;
+    private void testDiffValue(String s, TextField f) {
+        try {
+            float newVal = Float.parseFloat(s);
+
+            newVal = Math.min(10, Math.max(0, newVal));
+            f.setText(oneDecimal.format(newVal));
+        }
+        catch (Exception e) {
+            f.setText("5.0");
+        }
     }
-    private void calculateDifficulties()
-    {
-        targetOptionY = 30 * difficultyIndex;
-        startOptionY = optionY;
-        difficultyProgress = 0;
+    private void setHP(float value) {
+        hp.setText(oneDecimal.format(Math.min(10, Math.max(0, value))));
     }
-    private void calculateViews()
-    {
-        targetViewY = 30 * viewIndex;
-        startViewY = viewY;
-        viewProgress = 0;
-    }
-
-    private void updateLines(float elapsed)
-    {
-        if (firstLineProgress < 1)
-            firstLineProgress += elapsed * 4; //Just gotta make sure it doesn't overflow if you wait 5000 years or so
-
-        if (firstLineProgress < 1)
-            lineWidth = Interpolation.circle.apply(startLineWidth, targetLineWidth, firstLineProgress);
-        else
-            lineWidth = targetLineWidth;
-
-        if (firstLineProgress < 1)
-            linePos = Interpolation.circle.apply(startLinePos, targetLinePos, firstLineProgress);
-        else
-            linePos = targetLinePos;
-
-
-        if (secondLineProgress < 1)
-            secondLineProgress += elapsed * 4; //Just gotta make sure it doesn't overflow if you wait 5000 years or so
-
-        if (secondLineProgress < 1)
-            lineWidthB = Interpolation.circle.apply(startLineWidthB, targetLineWidthB, secondLineProgress);
-        else
-            lineWidthB = targetLineWidthB;
-
-        if (secondLineProgress < 1)
-            linePosB = Interpolation.circle.apply(startLinePosB, targetLinePosB, secondLineProgress);
-        else
-            linePosB = targetLinePosB;
-    }
-    private void updateButtons(float elapsed)
-    {
-        if (viewProgress < 1)
-            viewProgress += elapsed * 4; //Just gotta make sure it doesn't overflow if you wait 5000 years or so
-        //wtf why did I write that comment
-
-        if (viewProgress < 1)
-            viewY = Interpolation.circle.apply(startViewY, targetViewY, viewProgress);
-        else
-            viewY = targetViewY;
-
-        if (difficultyProgress < 1)
-            difficultyProgress += elapsed * 4;
-
-        if (difficultyProgress < 1)
-            optionY = Interpolation.circle.apply(startOptionY, targetOptionY, difficultyProgress);
-        else
-            optionY = targetOptionY;
+    private void setOD(float value) {
+        od.setText(oneDecimal.format(Math.min(10, Math.max(0, value))));
     }
 
     @Override
     public void update(float elapsed) {
-        for (Button b : difficultyOptions)
-        {
-            b.update();
-        }
-        for (Button b : viewOptions)
-        {
-            b.update();
-        }
-        openButton.update();
+        processor.update(elapsed);
 
-        updateLines(elapsed);
-        updateButtons(elapsed);
+        for (TextField f : textFields)
+            f.update(elapsed);
+
+        saveButton.update(elapsed);
+        cancelButton.update(elapsed);
+
+        keepObjects.update(elapsed);
+        keepVolume.update(elapsed);
+        keepSv.update(elapsed);
+
+        textOverlay.update(elapsed);
     }
 
     @Override
@@ -215,151 +243,83 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
         sb.setColor(backColor);
         sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
 
-        int index = 0;
-        for (float y = optionY; y > minRenderY && index < difficultyOptions.size(); y -= 30)
-        {
-            difficultyOptions.get(index).render(sb, sr, 0, y);
-            ++index;
-        }
-        index = 0;
-        for (float y = viewY; y > minRenderY && index < viewOptions.size(); y -= 30)
-        {
-            viewOptions.get(index).render(sb, sr, 0, y);
-            ++index;
-        }
+        sb.setColor(dividerColor);
+        sb.draw(pix, SettingsMaster.getMiddle(), 0, 1, SettingsMaster.getHeight());
 
-        openButton.render(sb, sr);
+        keepObjects.render(sb, sr);
+        keepVolume.render(sb, sr);
+        keepSv.render(sb, sr);
+
+        for (Label l : labels)
+            l.render(sb, sr);
+
+        for (TextField f : textFields)
+            f.render(sb, sr);
+
+        hpSlider.render(sb, sr);
+        odSlider.render(sb, sr);
+
+        saveButton.render(sb, sr);
+        cancelButton.render(sb, sr);
+
+        textOverlay.render(sb, sr);
 
         sb.setColor(Color.WHITE);
-        sb.draw(pix, linePos, middleY - 1, lineWidth, 3);
-        sb.draw(pix, linePosB, middleY - 1, lineWidthB, 3);
     }
 
-    private void close()
+    private void cancel()
     {
         TaikoEditor.removeLayer(this);
     }
 
-    private void chooseDifficulty(int buttonIndex)
-    {
-        difficultyIndex = buttonIndex;
-        calculateFirstLine();
-        calculateDifficulties();
-    }
-    private void chooseType(int buttonIndex)
-    {
-        boolean wasCreate = viewOptions.get(viewIndex).action.equals("NEW");
-        viewIndex = buttonIndex;
-
-        if (!wasCreate && viewOptions.get(viewIndex).action.equals("NEW"))
-        {
-            openButton.setText("Create", true);
-        }
-        else if (wasCreate && !viewOptions.get(viewIndex).action.equals("NEW"))
-        {
-            openButton.setText("Open", true);
-        }
-
-        calculateFirstLine();
-        calculateSecondLine();
-        calculateViews();
-    }
 
     @Override
     public InputProcessor getProcessor() {
         return processor;
     }
 
-    private static class CreateDifficultyProcessor extends AdjustedInputProcessor {
+    private static class CreateDifficultyProcessor extends TextInputProcessor {
         private final CreateDifficultyLayer sourceLayer;
 
         public CreateDifficultyProcessor(CreateDifficultyLayer source)
         {
+            super(BindingMaster.getBindingGroup("Basic"), true);
             this.sourceLayer = source;
         }
 
         @Override
-        public boolean keyDown(int keycode) {
-            switch (keycode) //Process input using the current primary view? TODO: Add keybindings? SettingsMaster has some keybind code.
-            {
-                case Input.Keys.ESCAPE:
-                    sourceLayer.close();
-                    return true;
-                case Input.Keys.RIGHT:
-                    break;
-            }
-            return true;
-        }
+        public void bind() {
+            bindings.bind("Exit", sourceLayer::cancel);
 
-        @Override
-        public boolean keyUp(int keycode) {
-            return true;
-        }
+            bindings.addMouseBind((x, y, b)->(b == 0) || (b == 1),
+                    (p, b) -> {
+                        boolean clicked = false;
+                        
+                        for (TextField f : sourceLayer.textFields) {
+                            if (f.click(p.x, p.y, this))
+                                clicked = true;
+                        }
+                        if (clicked)
+                            return null;
 
-        @Override
-        public boolean keyTyped(char character) {
-            /*if (sourceLayer.searchInput.keyTyped(character)) {
-                sourceLayer.mapOptions.clear();
+                        if (sourceLayer.saveButton.click(p.x, p.y, b))
+                            return null;
+                        if (sourceLayer.cancelButton.click(p.x, p.y, b))
+                            return null;
 
-                if (sourceLayer.searchInput.text.isEmpty()) {
-                    for (String key : MapMaster.mapDatabase.keys) {
-                        sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(key));
-                    }
-                }
-                else {
-                    MapMaster.search(sourceLayer.searchInput.text).forEach((m)->{
-                        sourceLayer.mapOptions.add(sourceLayer.hashedMapOptions.get(m.key));
+                        if (sourceLayer.keepObjects.click(p.x, p.y, b))
+                            return null;
+                        if (sourceLayer.keepVolume.click(p.x, p.y, b))
+                            return null;
+                        if (sourceLayer.keepSv.click(p.x, p.y, b))
+                            return null;
+
+                        MouseHoldObject mouseHold = sourceLayer.odSlider.click(p.x, p.y);
+                        if (mouseHold != null)
+                            return mouseHold;
+
+                        return sourceLayer.hpSlider.click(p.x, p.y);
                     });
-                }
-                return true;
-            }*/
-
-            return true;
-        }
-
-        @Override
-        public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            if (button != 0 && button != 1)
-                return true; //i only care about left and right click.
-
-            for (int i = 0; i < sourceLayer.difficultyOptions.size(); ++i)
-            {
-                if (sourceLayer.difficultyOptions.get(i).click(gameX, gameY, button))
-                {
-                    sourceLayer.chooseDifficulty(i);
-                    return true;
-                }
-            }
-            for (int i = 0; i < sourceLayer.viewOptions.size(); ++i)
-            {
-                if (sourceLayer.viewOptions.get(i).click(gameX, gameY, button))
-                {
-                    sourceLayer.chooseType(i);
-                    return true;
-                }
-            }
-            sourceLayer.openButton.click(gameX, gameY, button);
-            return true;
-        }
-
-        @Override
-        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
-            return true;
-        }
-
-        @Override
-        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
-            return true;
-        }
-
-        @Override
-        public boolean onMouseMoved(int gameX, int gameY) {
-            return true;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            return true;
         }
     }
 }

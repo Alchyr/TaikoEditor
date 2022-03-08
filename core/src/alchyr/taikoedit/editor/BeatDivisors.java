@@ -51,7 +51,7 @@ public class BeatDivisors {
 
     public NavigableMap<Long, Snap> getSnaps(double startPos, double endPos)
     {
-        if (combinedSnaps.isEmpty())
+        if (combinedSnaps.isEmpty() && !divisorOptions.activeSnappings.isEmpty())
         {
             generateCombinedSnaps();
         }
@@ -82,7 +82,7 @@ public class BeatDivisors {
     }
     public TreeMap<Long, Snap> getSnaps()
     {
-        if (combinedSnaps.isEmpty())
+        if (combinedSnaps.isEmpty() && !divisorOptions.activeSnappings.isEmpty())
         {
             generateCombinedSnaps();
         }
@@ -161,19 +161,19 @@ public class BeatDivisors {
             //TODO: Create a warning for stacked timing points.
             currentPoint = nextPoint;
             nextPoint = t.get(t.size() - 1);
-            long until = nextPoint.pos;
+            long until = nextPoint.getPos();
             if (currentPoint == null) //first point, generate in reverse from the next point
             {
-                generateReverseSnappings(snappings, subSnaps, divisor, nextPoint.pos, nextPoint.value, nextPoint.meter);
+                generateReverseSnappings(snappings, subSnaps, divisor, nextPoint.getPos(), nextPoint.value, nextPoint.meter);
                 continue;
             }
 
-            subGenerateSnappings(snappings, subSnaps, divisor, currentPoint.pos, currentPoint.value, currentPoint.meter, until, currentPoint.omitted);
+            subGenerateSnappings(snappings, subSnaps, divisor, currentPoint.getPos(), currentPoint.value, currentPoint.meter, until, currentPoint.omitted);
         }
 
         if (nextPoint != null)
         {
-            subGenerateSnappings(snappings, subSnaps, divisor, nextPoint.pos, nextPoint.value, nextPoint.meter, EditorLayer.music.getMsLength(), nextPoint.omitted);
+            subGenerateSnappings(snappings, subSnaps, divisor, nextPoint.getPos(), nextPoint.value, nextPoint.meter, EditorLayer.music.getMsLength(), nextPoint.omitted);
         }
 
         divisorSnappings.put(divisor, snappings);
@@ -184,8 +184,27 @@ public class BeatDivisors {
         long pos;
         int beatSegment = divisor - 1, beat = -1;
 
-        for (double t = start; t < endPoint; t += rate / divisor)
+        if (rate / divisor == 0) {
+            return;
+        }
+
+        double test = start - 1, mult = 1;
+        //In normal progression, multiplier will remain at 1.
+        //However, in extreme cases such as near-infinite bpm, mult will continue to increase as snaps are generated in the same position until it grows large enough to cause a change in value.
+
+        for (double t = start; t < endPoint; t += (mult * rate) / divisor)
         {
+            if (t == test) { //infinite loop test due to absurdly small rate value resulting in no change although it isn't 0
+                //Occurs due to ultra-high (infinite?) bpm resulting in effectively no gap between snaps
+                mult += 1;
+                if (mult > 64)
+                    return;
+            }
+            else {
+                mult = 1;
+            }
+            test = t;
+
             beatSegment = ++beatSegment % divisor;
             if (beatSegment == 0)
                 ++beat;

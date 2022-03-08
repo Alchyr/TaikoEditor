@@ -1,3 +1,0 @@
-anything hardcoded/required should be in all caps
-anything like a name or key that isn't fixed should be lowercase
-properties of an object where the properties are not fixed

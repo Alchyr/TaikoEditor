@@ -29,7 +29,7 @@ public abstract class DifficultyHitObject {
         this.baseObject = current;
         this.lastObject = previous;
 
-        this.deltaTime = (baseObject.pos - lastObject.pos) / EditorLayer.music.getTempo();
+        this.deltaTime = (baseObject.getPos() - lastObject.getPos()) / EditorLayer.music.getTempo();
     }
 }
 

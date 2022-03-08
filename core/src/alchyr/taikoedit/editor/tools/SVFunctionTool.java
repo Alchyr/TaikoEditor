@@ -5,15 +5,15 @@ import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.changes.LineAddition;
-import alchyr.taikoedit.editor.views.SvView;
+import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.management.bindings.BindingGroup;
+import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.PreviewLine;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
@@ -24,7 +24,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
-import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
@@ -41,13 +40,32 @@ public class SVFunctionTool extends EditorTool {
     private MapView previewView;
     private boolean renderPreview;
 
-    private PreviewLine start, end;
+    private final PreviewLine start, end;
 
     private int state = 0;
 
     SvFunctionLayer functionLayer = null;
 
+    /*
+        Adjust input layout:
+            - Generate Lines (default on) generates lines on snappings which will replace existing lines
+                - Objects (default on)
+                    - Selected Objects Only (default off)
+                - Barlines (default on)
+            - Adjust Existing (default on)
+                - Base on Objects (default on)
 
+                Generate Lines functions one of two ways.
+                If Adjust Existing is disabled or it's enabled but not based on objects: generate a line on every single position.
+
+                If Adjust Existing is enabled AND based on objects:
+                For each position, check if there's a line <= to it that is after the last position and after the previous object.
+                If so, adjust that line. If not, generate a new line.
+
+                If generate lines is disabled:
+                Adjusting based on objects - For each position, find the following object and adjust sv based on it.
+                Not based on objects: Just adjust all existing lines.
+     */
     private SVFunctionTool()
     {
         super("SV Function");
@@ -76,11 +94,11 @@ public class SVFunctionTool extends EditorTool {
 
     @Override
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
-        int y;
+        float y;
         switch (state)
         {
             case 0:
-                y = SettingsMaster.getHeight() - Gdx.input.getY();
+                y = SettingsMaster.gameY();
 
                 renderPreview = false;
 
@@ -102,10 +120,10 @@ public class SVFunctionTool extends EditorTool {
                             previewView = hovered;
                             renderPreview = true;
                             if (closest == null || BindingGroup.alt()) { //Just go to cursor position
-                                start.setPosition((int) time);
+                                start.setPos((int) time);
                             }
                             else { //Snap to closest snap
-                                start.setPosition((int) closest.pos);
+                                start.setPos((int) closest.pos);
                             }
                         }
                         return;
@@ -113,7 +131,7 @@ public class SVFunctionTool extends EditorTool {
                 }
                 break;
             case 1:
-                y = SettingsMaster.getHeight() - Gdx.input.getY();
+                y = SettingsMaster.gameY();
 
                 renderPreview = false;
 
@@ -129,11 +147,11 @@ public class SVFunctionTool extends EditorTool {
 
                     if (closest == null || BindingGroup.alt())
                     {
-                        end.setPosition((int) time);
+                        end.setPos((int) time);
                     }
                     else
                     {
-                        end.setPosition((int) closest.pos);
+                        end.setPos((int) closest.pos);
                     }
                 }
                 break;
@@ -145,7 +163,7 @@ public class SVFunctionTool extends EditorTool {
                     if (functionLayer.result != null) {
                         SvFunctionLayer.SvFunctionProperties result = functionLayer.result;
 
-                        applyFunction(result.isv, result.fsv, result.svBarlines, result.relativeLast, result.function);
+                        applyFunction(result);
 
                         functionLayer.result = null;
                     }
@@ -174,8 +192,8 @@ public class SVFunctionTool extends EditorTool {
                 {
                     previewView.renderObject(end, sb, sr, previewColor.a);
 
-                    int startPosition = previewView.getPositionFromTime(start.pos, SettingsMaster.getMiddle());
-                    int endPosition = previewView.getPositionFromTime(end.pos, SettingsMaster.getMiddle());
+                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddle());
+                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddle());
 
                     if (startPosition < endPosition)
                     {
@@ -198,7 +216,7 @@ public class SVFunctionTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
+    public MouseHoldObject click(MapView view, float x, float y, int button, int modifiers) {
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view)) {
             switch (state) {
                 case 0:
@@ -208,31 +226,25 @@ public class SVFunctionTool extends EditorTool {
                         source.showText("Select the end position.");
                     break;
                 case 1:
-                    if (end.pos <= start.pos) {
+                    if (end.getPos() <= start.getPos()) {
                         state = 0;
                     }
                     else {
                         state = 2;
-                        //applyFunction(exp);
-                        //TODO: Open a screen that allows you to set all the details.
-                        if (EditorLayer.music.isPlaying())
-                            EditorLayer.music.pause();
+                        source.clean();
 
-                        functionLayer = new SvFunctionLayer(svAtTime(start.pos), svAtTime(end.pos));
+                        functionLayer = new SvFunctionLayer(svAtTime(start.getPos()), svAtTime(end.getPos()));
                         TaikoEditor.addLayer(functionLayer);
 
-                        EditorLayer.processor.clearInput();
-                        if (EditorLayer.processor.mouseHold != null)
-                        {
-                            EditorLayer.processor.mouseHold.onRelease(Gdx.input.getX(), SettingsMaster.getHeight() - Gdx.input.getY());
-                            EditorLayer.processor.mouseHold = null;
-                        }
+                        EditorLayer.processor.releaseInput(true);
                     }
                     break;
             }
+            return MouseHoldObject.nothing;
         } else if (button == Input.Buttons.RIGHT) {
             if (state > 0) {
                 state = 0;
+                return MouseHoldObject.nothing;
             }
         }
 
@@ -251,7 +263,7 @@ public class SVFunctionTool extends EditorTool {
 
     private double svAtTime(long time) {
         Map.Entry<Long, ArrayList<TimingPoint>> baseSv = previewView.map.effectPoints.floorEntry(time);
-        Map.Entry<Long, ArrayList<TimingPoint>> baseTiming = previewView.map.effectPoints.floorEntry(time);
+        Map.Entry<Long, ArrayList<TimingPoint>> baseTiming = previewView.map.timingPoints.floorEntry(time);
         if (baseSv == null) {
             return 1;
         }
@@ -265,7 +277,7 @@ public class SVFunctionTool extends EditorTool {
             pointList = baseTiming.getValue();
             TimingPoint timing = pointList.get(pointList.size() - 1);
 
-            if (timing.pos > effect.pos) {
+            if (timing.getPos() > effect.getPos()) {
                 return 1;
             }
             else {
@@ -274,14 +286,12 @@ public class SVFunctionTool extends EditorTool {
         }
     }
 
-    //parameters: double initial sv, double final sv, boolean svBarlines, boolean relativeLast
-    public void applyFunction(double isv, double fsv, boolean svBarlines, boolean relativeLast, Function<Double, Double> f)
+    public void applyFunction(SvFunctionLayer.SvFunctionProperties info)
     {
-        //boolean svBarlines = true;
-        //boolean relativeLast = true; //if false: final sv is relative to starting bpm. If true, it's relative to ending bpm.
+        if (!info.generateLines && !info.adjustExisting)
+            return;
 
-        //isv = 1.0; //Initial SV
-        //fsv = 1.71; //Final SV
+        double fsv = info.fsv, isv = info.isv;
 
         if (state == 2)
         {
@@ -289,7 +299,7 @@ public class SVFunctionTool extends EditorTool {
             double dsv, dist;
             EditorBeatmap map = previewView.map;
 
-            long start = this.start.pos, end = this.end.pos;
+            long start = this.start.getPos(), end = this.end.getPos();
 
             if (start == end)
             {
@@ -316,19 +326,41 @@ public class SVFunctionTool extends EditorTool {
             dist = end - start;
 
             //Find all positions where green lines are needed
-            HashSet<Long> positions = new HashSet<>(map.getSubMap(start, end).keySet());
+            HashSet<Long> positions = new HashSet<>();
 
-            if (svBarlines)
-            {
-                for (Snap s : map.getSnaps(1))
+            if (info.generateLines) {
+                if (info.svObjects) {
+                    for (Map.Entry<Long, ArrayList<HitObject>> stack : map.getSubMap(start, end).entrySet()) {
+                        if (!info.selectedOnly || stack.getValue().stream().anyMatch((h)->h.selected)) {
+                            positions.add(stack.getKey());
+                        }
+                    }
+                }
+
+                //barlines
+                if (info.svBarlines)
                 {
-                    if (s.divisor == 0 && s.pos >= start && s.pos <= end)
-                        positions.add((long) s.pos);
+                    for (Snap s : map.getSnaps(1))
+                    {
+                        if (s.divisor == 0 && s.pos >= start && s.pos <= end)
+                            positions.add((long) s.pos);
+                    }
                 }
             }
 
+            //SV on existing lines and it has to be based on their own position
+            if ((info.adjustExisting && !info.basedOnFollowingObject) || (info.adjustExisting && !info.generateLines)) {
+                if (!info.generateLines)
+                    positions.add(start);
+
+                for (Map.Entry<Long, ArrayList<TimingPoint>> stack : map.effectPoints.subMap(start, true, end, true).entrySet()) {
+                    positions.add(stack.getKey());
+                }
+            }
+
+
             //Adjust final sv if it is relative to the ending bpm and not the initial bpm
-            if (relativeLast)
+            if (info.relativeLast)
             {
                 Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = map.timingPoints.floorEntry(end);
 
@@ -343,38 +375,105 @@ public class SVFunctionTool extends EditorTool {
             //Generate sv
             dsv = fsv - isv; //delta (change) in SV
 
-            PositionalObjectTreeMap<PositionalObject> generated = new PositionalObjectTreeMap<>();
+            PositionalObjectTreeMap<PositionalObject> sv = new PositionalObjectTreeMap<>();
 
-            for (long pos : positions)
-            {
-                Map.Entry<Long, ArrayList<TimingPoint>> lastEffect = map.effectPoints.floorEntry(pos);
-                Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = map.timingPoints.floorEntry(pos);
+            ArrayList<Long> sortedPositions = new ArrayList<>(positions);
+            sortedPositions.sort(Long::compare);
 
-                if (lastTiming == null)
+            if (!info.generateLines && info.basedOnFollowingObject) {
+                //This is purely adjusting all existing lines to do sv based on their following object.
+                //Positions are the positions of lines to adjust.
+
+                for (long pos : sortedPositions)
                 {
-                    lastTiming = map.timingPoints.ceilingEntry(pos);
+                    Map.Entry<Long, ArrayList<TimingPoint>> basePoint = map.allPoints.floorEntry(pos);
+                    if (basePoint == null)
+                        continue;
+
+                    TimingPoint adjust = basePoint.getValue().get(basePoint.getValue().size() - 1);
+                    if (adjust.uninherited)
+                        continue;
+
+                    Long basePos = map.objects.ceilingKey(pos);
+                    if (basePos == null || basePos > end) {
+                        basePos = pos;
+                    }
+
+                    Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = map.timingPoints.floorEntry(basePos);
                     if (lastTiming == null)
-                        return;
+                    {
+                        lastTiming = map.timingPoints.ceilingEntry(basePos);
+                        if (lastTiming == null)
+                            return;
+                    }
+
+                    //SV is based on the initial timing point. If the timing is different, the sv also must be adjusted.
+                    float ratio = (float) (firstTiming.getBPM() / lastTiming.getValue().get(lastTiming.getValue().size() - 1).getBPM());
+
+                    adjust.tempSet((isv + (dsv * info.function.apply((basePos - start) / dist))) * ratio);
+                    sv.add(adjust);
                 }
 
-                if (lastEffect == null || lastTiming.getKey() > lastEffect.getKey())
-                {
-                    lastEffect = lastTiming;
-                }
-
-                //SV is based on the initial timing point. If the timing is different, the sv also must be adjusted.
-                float ratio = (float) (firstTiming.getBPM() / lastTiming.getValue().get(lastTiming.getValue().size() - 1).getBPM());
-
-                //Generate an inherited copy of the closest previous timing point
-                TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy(pos)).inherit();
-
-                p.setValue((isv + (dsv * f.apply((pos - start) / dist))) * ratio);
-
-                generated.add(p);
+                map.registerValueChange(sv);
+                map.updateSv();
             }
+            else {
+                //Normal generation.
+                //For each position, if adjust is true, look for the closest recent line. If it's on the same position or there's no object in-between, adjust it.
+                //Otherwise just generate a new one.
 
-            map.registerChange(new LineAddition(map, generated).perform());
-            //map.effectPoints.add(p);
+                Long lastPos = Long.MIN_VALUE;
+                boolean adjust = info.adjustExisting && info.basedOnFollowingObject;
+
+                for (long pos : sortedPositions)
+                {
+                    Map.Entry<Long, ArrayList<TimingPoint>> basePoint = map.allPoints.floorEntry(pos);
+                    Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = map.timingPoints.floorEntry(pos);
+
+                    if (lastTiming == null)
+                    {
+                        lastTiming = map.timingPoints.ceilingEntry(pos);
+                        if (lastTiming == null)
+                            return;
+                    }
+
+                    if (basePoint == null)
+                    {
+                        basePoint = lastTiming;
+                    }
+
+                    TimingPoint closest = basePoint.getValue().get(basePoint.getValue().size() - 1);
+
+                    //SV is based on the initial timing point. If the timing is different, the sv also must be adjusted.
+                    float ratio = (float) (firstTiming.getBPM() / lastTiming.getValue().get(lastTiming.getValue().size() - 1).getBPM());
+
+                    if (adjust && !closest.uninherited && closest.getPos() > lastPos && closest.getPos() < pos) {
+                        //Adjusting and the most recent line is green and it's at least past the last point
+                        //and it's not on the target position. If it's on the target position, new line generation will handle it fine.
+                        lastPos = map.objects.lowerKey(pos);
+                        if (lastPos == null || lastPos < closest.getPos()) {
+                            //There's no other object between the closest green line and the current position.
+                            TimingPoint p = new TimingPoint(closest);
+                            p.setValue((isv + (dsv * info.function.apply((pos - start) / dist))) * ratio);
+                            sv.add(p);
+
+                            lastPos = pos;
+                            continue;
+                        }
+                    }
+
+                    //Generate an inherited copy of the closest previous timing point
+                    TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos)).inherit();
+
+                    p.setValue((isv + (dsv * info.function.apply((pos - start) / dist))) * ratio);
+
+                    sv.add(p);
+
+                    lastPos = pos;
+                }
+
+                map.registerChange(new LineAddition(map, sv).perform());
+            }
         }
     }
 }

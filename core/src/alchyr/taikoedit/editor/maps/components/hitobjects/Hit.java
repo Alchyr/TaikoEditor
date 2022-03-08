@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.maps.components.hitobjects;
 
 import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -9,18 +10,18 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 
 public class Hit extends HitObject {
-    private static final Color don = Color.RED.cpy();
-    private static final Color kat = Color.BLUE.cpy();
+    public static final Color don = new Color(245 / 255.0f, 55 / 255.0f, 40 / 255.0f, 1.0f);
+    public static final Color kat = new Color(60 / 255.0f, 118 / 255.0f, 231 / 255.0f, 1.0f);
 
     private boolean isRim;
 
     public Hit(long pos, boolean isRim)
     {
         type = HitObjectType.CIRCLE;
-        this.pos = pos;
+        setPos(pos);
         this.isRim = isRim;
-        x = 0;
-        y = 0;
+        x = isRim ? SettingsMaster.katX : SettingsMaster.donX;
+        y = isRim ? SettingsMaster.katY : SettingsMaster.donY;
 
         newCombo = false;
         colorSkip = 0;
@@ -35,10 +36,8 @@ public class Hit extends HitObject {
     public Hit(long pos, boolean isRim, boolean isFinish)
     {
         type = HitObjectType.CIRCLE;
-        this.pos = pos;
+        setPos(pos);
         this.isRim = isRim;
-        x = 0;
-        y = 0;
 
         newCombo = false;
         colorSkip = 0;
@@ -49,12 +48,14 @@ public class Hit extends HitObject {
         clap = isRim;
 
         hitSample = null;
+
+        updatePosition();
     }
 
     public Hit(Hit base)
     {
         this.type = HitObjectType.CIRCLE;
-        this.pos = base.pos;
+        setPos(base.getPrecisePos());
         this.x = base.x;
         this.y = base.y;
         this.newCombo = base.newCombo;
@@ -90,7 +91,7 @@ public class Hit extends HitObject {
                     y = Integer.parseInt(params[i]);
                     break;
                 case 2:
-                    pos = Long.parseLong(params[i]);
+                    setPos(Double.parseDouble(params[i]));
                     break;
                 case 3:
                     int objectType = Integer.parseInt(params[i]);
@@ -130,7 +131,7 @@ public class Hit extends HitObject {
 
         float scale = finish ? LARGE_SCALE : 1.0f;
 
-        sb.draw(circle, x + (float) (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
 
         if (selected)
@@ -145,7 +146,7 @@ public class Hit extends HitObject {
 
         float scale = finish ? LARGE_SCALE : 1.0f;
 
-        sb.draw(selection, x + (float) (this.pos - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        sb.draw(selection, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
     }
 
@@ -176,12 +177,24 @@ public class Hit extends HitObject {
         }
     }
 
+    public void updatePosition() {
+        if (finish) {
+            x = isRim ? SettingsMaster.bigKatX : SettingsMaster.bigDonX;
+            y = isRim ? SettingsMaster.bigKatY : SettingsMaster.bigDonY;
+        }
+        else {
+            x = isRim ? SettingsMaster.katX : SettingsMaster.donX;
+            y = isRim ? SettingsMaster.katY : SettingsMaster.donY;
+        }
+    }
     public void setIsRim(boolean isRim) {
         this.isRim = isRim;
         this.clap = isRim;
 
         if (!isRim)
             whistle = false;
+
+        updatePosition();
     }
     public boolean isRim()
     {
@@ -189,17 +202,24 @@ public class Hit extends HitObject {
     }
 
     @Override
+    public void setIsFinish(boolean finish) {
+        super.setIsFinish(finish);
+
+        updatePosition();
+    }
+
+    @Override
     public String toString() {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
     }
     public String toString(double beatLength, double sliderMultiplier) {
-        return x + "," + y + "," + pos + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
+        return x + "," + y + "," + limitedDecimals.format(getPrecisePos()) + "," + getTypeFlag() + "," + getHitsoundFlag() + "," + getHitSamples();
     }
 
     @Override
     public PositionalObject shiftedCopy(long newPos) {
         Hit copy = new Hit(this);
-        copy.setPosition(newPos);
+        copy.setPos(newPos);
         return copy;
     }
 }

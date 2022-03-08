@@ -20,8 +20,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.textRenderer;
+import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class DifficultyView extends MapView {
@@ -47,7 +46,7 @@ public class DifficultyView extends MapView {
 
         this.difficultyInfo = difficultyInfo;
 
-        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith"), this::close).setAction("Close View"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
     }
 
     public void close(int button)
@@ -105,16 +104,16 @@ public class DifficultyView extends MapView {
         sb.draw(pix, 0, bottom, SettingsMaster.getWidth(), height);
     }
 
-    private final DecimalFormat df = new DecimalFormat("#0.##");
+    private final DecimalFormat df = new DecimalFormat("#0.##", osuSafe);
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY + 250);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY + 200);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY + 150);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY + 100);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY + 50);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddle() + (float) (o.pos - time) * viewScale, textY);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 250);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 200);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 150);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 100);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 50);
+        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
@@ -252,7 +251,6 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void addSelectionRange(long startTime, long endTime)
     {
         if (startTime == endTime)
@@ -290,13 +288,13 @@ public class DifficultyView extends MapView {
         }
     }
 
-    public PositionalObject clickObject(int x, int y)
+    public PositionalObject clickObject(float x, float y)
     {
         return null;
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, int x) {
+    public boolean clickedEnd(PositionalObject o, float x) {
         return false;
     }
 
@@ -451,12 +449,12 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public double getTimeFromPosition(int x) {
+    public double getTimeFromPosition(float x) {
         return getTimeFromPosition(x, SettingsMaster.getMiddle());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get());
-    public static Toolset getToolset()
+    public Toolset getToolset()
     {
         return toolset;
     }

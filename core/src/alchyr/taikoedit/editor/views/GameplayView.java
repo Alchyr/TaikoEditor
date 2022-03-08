@@ -27,12 +27,14 @@ import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 /* TODO LIST
  *
  * On map change, update necessary data
+ * Spinners should fade in, not stay permanently
  */
 public class GameplayView extends MapView {
     //Objects that should be rendered are all those where given a current time, their start time is before it and their end time is after it.
-    private TreeMap<Long, ArrayList<HitObject>> startTimes; //A sorted set based on object start times
-    private TreeMap<Long, ArrayList<HitObject>> endTimes; //A sorted set based on object end times
-    private HashMap<HitObject, Long> oldEndTimes; //for getting end times of objects to remove them when they're updated.
+    private final TreeMap<Long, ArrayList<HitObject>> startTimes; //A sorted set based on object start times
+    private final TreeMap<Long, ArrayList<HitObject>> endTimes; //A sorted set based on object end times
+    private final TreeMap<Long, Float> svMap; //using for scaling sliders
+    //private HashMap<HitObject, Long> oldEndTimes; //for getting end times of objects to remove them when they're updated.
     //Start times do not need a similar list since they are stored on objects and will only be updated in this class.
 
     TreeMap<Long, Snap> barlineStartTimes; //Sorted maps for purpose of determining which snaps to render.
@@ -66,11 +68,13 @@ public class GameplayView extends MapView {
         super(MapView.ViewType.GAMEPLAY_VIEW, parent, beatmap, HEIGHT);
         lastSounded = 0;
 
-        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith"), this::close).setAction("Close View"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:refresh"), assetMaster.get("editor:refreshh")).setClick((i)->this.calculateTimes()).setAction("Refresh"));
 
         startTimes = new TreeMap<>();
         endTimes = new TreeMap<>();
-        oldEndTimes = new HashMap<>();
+        svMap = new TreeMap<>();
+        //oldEndTimes = new HashMap<>();
 
         /*objectStartTimes = HashBiMap.create(beatmap.objects.size());
         objectEndTimes = HashBiMap.create(beatmap.objects.size());*/
@@ -84,17 +88,26 @@ public class GameplayView extends MapView {
 
 
     private void calculateTimes() {
+        startTimes.clear();
+        endTimes.clear();
+        svMap.clear();
+
+        visibleObjects.clear();
+        lastPos = Long.MIN_VALUE;
+
         Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = map.objects.entrySet().iterator();
         Iterator<Map.Entry<Long, Snap>> snapIterator = map.getBarlineSnaps().entrySet().iterator();
 
         //Sv tracking variables
-        long lastTimingPos = -1, lastEffectPos = -1, startTime;
-        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> timing = null, effect = null;
+        long lastTimingPos = Long.MIN_VALUE, lastEffectPos = Long.MIN_VALUE, startTime;
+        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> timing, effect;
         Map.Entry<Long, Snap> nextSnap = null;
         Map.Entry<Long, ArrayList<HitObject>> stack = null;
         Map.Entry<Long, ArrayList<TimingPoint>> nextTiming = null, nextEffect = null;
         float baseSV = map.getBaseSV();
         double svRate = baseSV, currentBPM;
+
+        TimingPoint temp;
 
         timing = map.timingPoints.entrySet().iterator();
         effect = map.effectPoints.entrySet().iterator();
@@ -103,6 +116,7 @@ public class GameplayView extends MapView {
         {
             nextTiming = timing.next();
             currentBPM = nextTiming.getValue().get(0).value;
+            svMap.put(Long.MIN_VALUE, (float)(SCROLL_SPEED_SCALE * baseSV / currentBPM));
             if (timing.hasNext())
                 nextTiming = timing.next();
             else
@@ -115,7 +129,7 @@ public class GameplayView extends MapView {
         }
 
         if (effect.hasNext())
-            nextEffect = effect.next(); //First SV doesn't apply until the first timing point is reached.
+            nextEffect = effect.next(); //First SV doesn't apply until the first timing point is reached because game Dumb.
 
         if (objectIterator.hasNext())
             stack = objectIterator.next();
@@ -130,6 +144,7 @@ public class GameplayView extends MapView {
                     currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
                     lastTimingPos = nextTiming.getKey();
                     svRate = baseSV; //return to base sv
+                    svMap.put(lastTimingPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
 
                     if (timing.hasNext())
                         nextTiming = timing.next();
@@ -139,7 +154,9 @@ public class GameplayView extends MapView {
                 while (nextEffect != null && nextEffect.getKey() <= nextSnap.getKey())// + 1)
                 {
                     lastEffectPos = nextEffect.getKey();
-                    svRate = baseSV * nextEffect.getValue().get(nextEffect.getValue().size() - 1).value;
+                    temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
+                    svRate = baseSV * temp.value;
+                    svMap.put(lastEffectPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
 
                     if (effect.hasNext())
                         nextEffect = effect.next();
@@ -183,6 +200,7 @@ public class GameplayView extends MapView {
                     currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
                     lastTimingPos = nextTiming.getKey();
                     svRate = baseSV; //return to base sv
+                    svMap.put(lastTimingPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
 
                     if (timing.hasNext())
                         nextTiming = timing.next();
@@ -192,7 +210,9 @@ public class GameplayView extends MapView {
                 while (nextEffect != null && nextEffect.getKey() <= stack.getKey())// + 1)
                 {
                     lastEffectPos = nextEffect.getKey();
-                    svRate = baseSV * nextEffect.getValue().get(nextEffect.getValue().size() - 1).value;
+                    temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
+                    svRate = baseSV * temp.value;
+                    svMap.put(lastEffectPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
 
                     if (effect.hasNext())
                         nextEffect = effect.next();
@@ -240,7 +260,7 @@ public class GameplayView extends MapView {
                             return v;
                         }
                     });
-                    oldEndTimes.put(h, h.getEndPos());
+                    //oldEndTimes.put(h, h.getEndPos());
                 }
 
                 if (objectIterator.hasNext())
@@ -269,8 +289,8 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public void update(double exactPos, long msPos) {
-        super.update(exactPos, msPos);
+    public void update(double exactPos, long msPos, float elapsed) {
+        super.update(exactPos, msPos, elapsed);
     }
 
     @Override
@@ -303,7 +323,7 @@ public class GameplayView extends MapView {
         //time = start time, progress is 0
         //remaining time * speed = distance from hit zone
         //end time is always pos, the start time of the object.
-        h.gameplayRender(sb, sr, viewScale, HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((time - h.gameplayStart) / (h.pos - h.gameplayStart))), objectY, alpha);
+        h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((time - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
@@ -322,11 +342,11 @@ public class GameplayView extends MapView {
             while (objectIterator.hasNext()) {
                 stack = objectIterator.next();
 
-                if (((HitObject) stack.getValue().get(0)).getEndPos() < pos) {
+                if (((HitObject) stack.getValue().get(0)).getGameplayEndPos() < pos) {
                     objectIterator.remove();
                 }
             }
-            barlines.removeIf((snap)->snap.pos < pos);
+            barlines.removeIf((snap)->snap.pos+(snap.pos-barlineStartMap.get(snap)) / 2 < pos);
 
             for (ArrayList<HitObject> hits : startTimes.subMap(lastPos, false, pos, true).values()) {
                 for (HitObject h : hits)
@@ -495,12 +515,12 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public PositionalObject clickObject(int x, int y) {
+    public PositionalObject clickObject(float x, float y) {
         return null;
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, int x) {
+    public boolean clickedEnd(PositionalObject o, float x) {
         return false;
     }
 
@@ -553,12 +573,12 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public double getTimeFromPosition(int x) {
+    public double getTimeFromPosition(float x) {
         return getTimeFromPosition(x, HIT_AREA_X);
     }
 
     private static final Toolset toolset = new Toolset();
-    public static Toolset getToolset()
+    public Toolset getToolset()
     {
         return toolset;
     }

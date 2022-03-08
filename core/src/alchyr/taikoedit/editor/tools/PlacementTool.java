@@ -6,7 +6,7 @@ import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.util.input.KeyHoldManager;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -55,7 +55,7 @@ public abstract class PlacementTool extends EditorTool {
 
                 if (closest != null)
                 {
-                    placementObject.setPosition(closest.pos);
+                    placementObject.setPos(closest.pos);
                 }
                 return;
             }

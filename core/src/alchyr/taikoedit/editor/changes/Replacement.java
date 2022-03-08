@@ -25,13 +25,18 @@ public class Replacement extends MapChange {
         switch (type)
         {
             case OBJECTS:
-                map.objects.removeAll(addedObjects);
+                map.removeObjects(addedObjects);
+
+                map.preAddObjects(deletedObjects);
                 map.objects.addAll(deletedObjects);
                 map.updateVolume(deletedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.removeAll(addedObjects);
+                map.allPoints.removeAll(addedObjects);
+
                 map.effectPoints.addAll(deletedObjects);
+                map.allPoints.addAll(deletedObjects);
                 break;
         }
         return this;
@@ -41,13 +46,18 @@ public class Replacement extends MapChange {
         switch (type)
         {
             case OBJECTS:
-                map.objects.removeAll(deletedObjects);
+                map.removeObjects(deletedObjects);
+
+                map.preAddObjects(addedObjects);
                 map.objects.addAll(addedObjects);
                 map.updateVolume(addedObjects);
                 break;
             case EFFECT:
                 map.effectPoints.removeAll(deletedObjects);
+                map.allPoints.removeAll(deletedObjects);
+
                 map.effectPoints.addAll(addedObjects);
+                map.allPoints.addAll(addedObjects);
                 break;
         }
         return this;

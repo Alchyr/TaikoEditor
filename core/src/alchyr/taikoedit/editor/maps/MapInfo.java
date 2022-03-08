@@ -6,28 +6,39 @@ import java.io.File;
 import java.util.List;
 
 public class MapInfo {
-    public File mapFile;
-    public String songFile;
-    public String background;
+    private File mapFile;
+    private String songFile;
+    private String background;
 
-    public int mode = 0;
-    public String difficultyName = "";
+    private int mode = 0;
+    private String difficultyName = "";
 
-    public MapInfo()
-    {
-
+    //For the future: When loading map info from a database of existing data?
+    public MapInfo(File mapFile, String songFile, String background, String name) {
+        this.mapFile = mapFile;
+        this.songFile = songFile;
+        this.background = background;
+        this.mode = 1;
+        this.difficultyName = name;
     }
 
-    public MapInfo(File map, Mapset owner) {
-        //This constructor should be used when data for this map has not yet been saved
+    //Creating a new difficulty
+    public MapInfo(FullMapInfo base, File mapFile, String newDiffname) {
+        this.mapFile = mapFile;
+        this.songFile = base.getSongFile();
+        this.background = base.getBackground();
+        this.mode = 1;
+        this.difficultyName = newDiffname;
+    }
 
+    //This constructor should be used when loading data for a map from files
+    public MapInfo(File map, Mapset owner) {
         mapFile = map;
         background = "";
 
         List<String> lines = FileHelper.readFileLines(mapFile, "[TimingPoints]");
 
-        if (lines != null)
-        {
+        if (lines != null) {
             int section = -1;
             //-1 Header
             //0 General
@@ -38,12 +49,10 @@ public class MapInfo {
             //5 TimingPoints
             //6 HitObjects
 
-            read: for (String line : lines)
-            {
-                if (line.contains(":"))
-                {
-                    switch (line.substring(0, line.indexOf(":")))
-                    {
+            read:
+            for (String line : lines) {
+                if (line.contains(":")) {
+                    switch (line.substring(0, line.indexOf(":"))) {
                         case "AudioFilename":
                             songFile = FileHelper.concat(mapFile.getParent(), line.substring(14).trim());
                             break;
@@ -68,13 +77,9 @@ public class MapInfo {
                             difficultyName = line.substring(8).trim();
                             break;
                     }
-                }
-                else
-                {
-                    if (line.startsWith("["))
-                    {
-                        switch (line)
-                        {
+                } else {
+                    if (line.startsWith("[")) {
+                        switch (line) {
                             case "[General]":
                                 section = 0;
                                 break;
@@ -97,19 +102,14 @@ public class MapInfo {
                                 section = 6;
                                 break;
                         }
-                    }
-                    else if (section == 4 && background.isEmpty() && !line.startsWith("//"))
-                    {
+                    } else if (section == 4 && background.isEmpty() && !line.startsWith("//")) {
                         String[] parts = line.split(",");
 
-                        if (parts.length == 5)
-                        {
-                            if (parts[2].startsWith("\"") && parts[2].endsWith("\""))
-                            {
+                        if (parts.length == 5) {
+                            if (parts[2].startsWith("\"") && parts[2].endsWith("\"")) {
                                 parts[2] = parts[2].substring(1, parts[2].length() - 1);
                             }
-                            if (FileHelper.isImageFilename(parts[2]))
-                            {
+                            if (FileHelper.isImageFilename(parts[2])) {
                                 background = FileHelper.concat(mapFile.getParent(), parts[2]);
                                 if (owner.background.isEmpty())
                                     owner.background = background;
@@ -122,5 +122,44 @@ public class MapInfo {
         }
     }
 
+
     //Track last modified date to determine if file must be re-read?
+    public File getMapFile() {
+        return mapFile;
+    }
+
+    public void setMapFile(File newFile) {
+        this.mapFile = newFile;
+    }
+
+    public String getSongFile() {
+        return songFile;
+    }
+
+    public String getBackground() {
+        return background;
+    }
+
+    public int getMode() {
+        return mode;
+    }
+
+    public String getDifficultyName() {
+        return difficultyName;
+    }
+
+    public void setDifficultyName(String newName) {
+        this.difficultyName = newName;
+    }
+
+    @Override
+    public String toString() {
+        return "MapInfo{" +
+                "mapFile=" + mapFile +
+                ", songFile='" + songFile + '\'' +
+                ", background='" + background + '\'' +
+                ", mode=" + mode +
+                ", difficultyName='" + difficultyName + '\'' +
+                '}';
+    }
 }

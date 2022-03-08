@@ -20,14 +20,14 @@ public class FinisherChange extends MapChange {
     @Override
     public MapChange undo() {
         for (HitObject o : modifiedObjects) {
-            o.finish = !toFinisher;
+            o.setIsFinish(!toFinisher);
         }
         return this;
     }
     @Override
     public MapChange perform() {
         for (HitObject o : modifiedObjects) {
-            o.finish = toFinisher;
+            o.setIsFinish(toFinisher);
         }
         return this;
     }

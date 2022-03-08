@@ -82,7 +82,7 @@ public abstract class Skill {
     /// <returns>The peak strain.</returns>
     protected double GetPeakStrain(double time)
     {
-        return CurrentStrain * strainDecay(time - Previous[0].baseObject.pos);
+        return CurrentStrain * strainDecay(time - Previous[0].baseObject.getPos());
     }
 
     /// <summary>

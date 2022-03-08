@@ -6,6 +6,16 @@
       "class": "Texture"
     },
     {
+      "name": "arrow",
+      "file": "taikoedit/images/ui/arrow.png",
+      "class": "Texture"
+    },
+    {
+      "name": "slider",
+      "file": "taikoedit/images/ui/slider.png",
+      "class": "Texture"
+    },
+    {
       "name": "toggleoff",
       "file": "taikoedit/images/ui/ToggleDisabled.png",
       "class": "Texture"
@@ -44,14 +54,29 @@
       "name": "settingsh",
       "file": "taikoedit/images/ui/settingshover.png",
       "class": "Texture"
+    },
+    {
+      "name": "connect",
+      "file": "taikoedit/images/ui/connect.png",
+      "class": "Texture"
+    },
+    {
+      "name": "connecth",
+      "file": "taikoedit/images/ui/connecthover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "update",
+      "file": "taikoedit/images/ui/update.png",
+      "class": "Texture"
+    },
+    {
+      "name": "updateh",
+      "file": "taikoedit/images/ui/updatehover.png",
+      "class": "Texture"
     }
   ],
   "menu": [
-    {
-      "name": "test",
-      "file": "taikoedit/images/background/pink.png",
-      "class": "Texture"
-    },
     {
       "name": "background",
       "file": "taikoedit/images/background/default.png",
@@ -90,6 +115,56 @@
     {
       "name": "exith",
       "file": "taikoedit/images/editor/ui/exithover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "position",
+      "file": "taikoedit/images/editor/ui/position.png",
+      "class": "Texture"
+    },
+    {
+      "name": "positionh",
+      "file": "taikoedit/images/editor/ui/positionhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "refresh",
+      "file": "taikoedit/images/editor/ui/refresh.png",
+      "class": "Texture"
+    },
+    {
+      "name": "refreshh",
+      "file": "taikoedit/images/editor/ui/refreshhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "breaks",
+      "file": "taikoedit/images/editor/ui/breaks.png",
+      "class": "Texture"
+    },
+    {
+      "name": "breaksh",
+      "file": "taikoedit/images/editor/ui/breakshover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "mode",
+      "file": "taikoedit/images/editor/ui/mode.png",
+      "class": "Texture"
+    },
+    {
+      "name": "modeh",
+      "file": "taikoedit/images/editor/ui/modehover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "properties",
+      "file": "taikoedit/images/editor/ui/properties.png",
+      "class": "Texture"
+    },
+    {
+      "name": "propertiesh",
+      "file": "taikoedit/images/editor/ui/propertieshover.png",
       "class": "Texture"
     },
     {
@@ -132,7 +207,7 @@
       "name": "aller medium",
       "file": "taikoedit/fonts/Aller/Aller_Bd.ttf",
       "class": "TrueTypeFont",
-      "params": "s_18 x_0 y_0 k_1"
+      "params": "all s_18 x_0 y_0 k_1"
     }
   ],
   "hitsound": [

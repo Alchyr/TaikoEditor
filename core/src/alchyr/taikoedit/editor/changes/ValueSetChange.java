@@ -23,7 +23,7 @@ public class ValueSetChange extends MapChange {
         this.originalValues = new HashMap<>();
         for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
             for (PositionalObject o : objects)
-                this.originalValues.put(o, o.registerChange());
+                this.originalValues.put(o, o.getValue());
         }
     }
 
@@ -35,7 +35,7 @@ public class ValueSetChange extends MapChange {
                 o.setValue(originalValues.get(o));
             }
         }
-        map.updateEffectPoints(modifiedObjects, modifiedObjects);
+        map.updateSv();
         return this;
     }
     @Override
@@ -46,7 +46,7 @@ public class ValueSetChange extends MapChange {
                 o.setValue(newValue);
             }
         }
-        map.updateEffectPoints(modifiedObjects, modifiedObjects);
+        map.updateSv();
         return this;
     }
 }

@@ -17,7 +17,7 @@ import java.util.HashSet;
 public class AudioMaster {
     private static final Logger logger = LogManager.getLogger("SoundMaster");
 
-    private HashMap<String, Sfx> map = new HashMap<>();
+    private final HashMap<String, Sfx> map = new HashMap<>();
     //If a bunch of sound effect are played in a very short period (fractions of a second) reduce the volume of successive plays.
     private float audioFade = 1.0f; //multiplies volume.
 
@@ -60,13 +60,26 @@ public class AudioMaster {
     }
 
     @SuppressWarnings("unchecked")
+    public void setMusicVolume(float newVolume) {
+        for (OpenALMusic m : queuedAddMusic)
+            m.setVolume(newVolume);
+
+        try {
+            for (OpenALMusic m : (Array<OpenALMusic>) music.get(Gdx.audio))
+                m.setVolume(newVolume);
+        }
+        catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+    @SuppressWarnings("unchecked")
     public void update(float elapsed)
     {
-        audioFade = Math.min(1, audioFade + elapsed * 20);
+        audioFade = Math.min(1, audioFade + elapsed * 50);
         if (!queuedAddMusic.isEmpty() || !queuedRemoveMusic.isEmpty())
         {
             try {
-                Array<OpenALMusic> audioMusic  = (Array<OpenALMusic>) music.get(Gdx.audio);
+                Array<OpenALMusic> audioMusic = (Array<OpenALMusic>) music.get(Gdx.audio);
 
                 for (OpenALMusic m : queuedAddMusic)
                     audioMusic.add(m);
@@ -101,7 +114,7 @@ public class AudioMaster {
                 k = s.play(volume, pitch, pan);
             }
             if (diminish)
-                audioFade *= 0.8f;
+                audioFade *= 0.6f;
         }
         else
         {

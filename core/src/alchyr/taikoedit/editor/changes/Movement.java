@@ -31,25 +31,29 @@ public class Movement extends MapChange {
         switch (type)
         {
             case OBJECTS:
+                map.removeObjects(movedObjects);
+
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
                 {
-                    e.getValue().forEach((o)->o.setPosition(e.getKey() - moveAmount));
+                    e.getValue().forEach((o)->o.setPos(e.getKey() - moveAmount));
                     moved.put(e.getKey() - moveAmount, e.getValue());
                 }
-                map.objects.removeAll(movedObjects);
-                map.objects.addAll(movedObjects);
-                map.updateVolume(movedObjects);
+                map.preAddObjects(moved);
+                map.objects.addAll(moved);
+                map.updateVolume(moved);
                 break;
             case EFFECT:
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
                 {
-                    e.getValue().forEach((o)->o.setPosition(e.getKey() - moveAmount));
+                    e.getValue().forEach((o)->o.setPos(e.getKey() - moveAmount));
                     moved.put(e.getKey() - moveAmount, e.getValue());
                 }
                 map.effectPoints.removeAll(movedObjects);
-                map.effectPoints.addAll(movedObjects);
+                map.allPoints.removeAll(movedObjects);
+                map.effectPoints.addAll(moved);
+                map.allPoints.addAll(moved);
 
-                map.updateEffectPoints(moved, movedObjects);
+                map.updateEffectPoints(moved.entrySet(), movedObjects.entrySet());
                 break;
         }
         movedObjects.clear();
@@ -63,30 +67,95 @@ public class Movement extends MapChange {
         switch (type)
         {
             case OBJECTS:
+                map.removeObjects(movedObjects);
+
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
                 {
-                    e.getValue().forEach((o)->o.setPosition(e.getKey() + moveAmount));
+                    e.getValue().forEach((o)->o.setPos(e.getKey() + moveAmount));
                     moved.put(e.getKey() + moveAmount, e.getValue());
                 }
-                map.objects.removeAll(movedObjects);
-                map.objects.addAll(movedObjects);
-                map.updateVolume(movedObjects);
+                map.preAddObjects(moved);
+                map.objects.addAll(moved);
+                map.updateVolume(moved);
                 break;
             case EFFECT:
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
                 {
-                    e.getValue().forEach((o)->o.setPosition(e.getKey() + moveAmount));
+                    e.getValue().forEach((o)->o.setPos(e.getKey() + moveAmount));
                     moved.put(e.getKey() + moveAmount, e.getValue());
                 }
                 map.effectPoints.removeAll(movedObjects);
-                map.effectPoints.addAll(movedObjects);
+                map.allPoints.removeAll(movedObjects);
+                map.effectPoints.addAll(moved);
+                map.allPoints.addAll(moved);
 
                 //moved contains the objects with keys linked on new position, movedObjects still has the old position keys
-                map.updateEffectPoints(moved, movedObjects);
+                map.updateEffectPoints(moved.entrySet(), movedObjects.entrySet());
                 break;
         }
         movedObjects.clear();
         movedObjects.putAll(moved);
+        return this;
+    }
+
+    public MapChange redo() {
+        PositionalObjectTreeMap<PositionalObject> moved = new PositionalObjectTreeMap<>();
+
+        switch (type)
+        {
+            case OBJECTS:
+                map.objects.removeAll(movedObjects);
+
+                for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
+                {
+                    e.getValue().forEach((o)->o.setPos(e.getKey() - moveAmount));
+                    moved.put(e.getKey() - moveAmount, e.getValue());
+                }
+                map.objects.addAll(moved);
+                break;
+            case EFFECT:
+                for (Map.Entry<Long, ArrayList<PositionalObject>> e : movedObjects.entrySet())
+                {
+                    e.getValue().forEach((o)->o.setPos(e.getKey() - moveAmount));
+                    moved.put(e.getKey() - moveAmount, e.getValue());
+                }
+                map.effectPoints.removeAll(movedObjects);
+                map.allPoints.removeAll(moved);
+                map.effectPoints.addAll(moved);
+                break;
+        }
+
+        movedObjects.clear();
+
+        switch (type)
+        {
+            case OBJECTS:
+                map.removeObjects(moved);
+
+                for (Map.Entry<Long, ArrayList<PositionalObject>> e : moved.entrySet())
+                {
+                    e.getValue().forEach((o)->o.setPos(e.getKey() + moveAmount));
+                    movedObjects.put(e.getKey() + moveAmount, e.getValue());
+                }
+                map.preAddObjects(movedObjects);
+                map.objects.addAll(movedObjects);
+                map.updateVolume(movedObjects);
+                break;
+            case EFFECT:
+                for (Map.Entry<Long, ArrayList<PositionalObject>> e : moved.entrySet())
+                {
+                    e.getValue().forEach((o)->o.setPos(e.getKey() + moveAmount));
+                    movedObjects.put(e.getKey() + moveAmount, e.getValue());
+                }
+                map.effectPoints.removeAll(moved);
+                map.allPoints.removeAll(moved);
+                map.effectPoints.addAll(movedObjects);
+                map.allPoints.addAll(movedObjects);
+
+                //movedObjects contains the objects with keys linked on new position, moved has the old position keys
+                map.updateEffectPoints(movedObjects.entrySet(), moved.entrySet());
+                break;
+        }
         return this;
     }
 }

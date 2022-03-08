@@ -1,10 +1,17 @@
 package alchyr.taikoedit.editor.maps;
 
+import alchyr.taikoedit.util.structures.Pair;
+
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.*;
 
-public class FullMapInfo extends MapInfo {
+import static alchyr.taikoedit.TaikoEditor.osuSafe;
+
+public class FullMapInfo {
+    private Mapset parent;
+    private MapInfo base;
+
     //[General]
     public int audioLeadIn = 0;
     public int previewTime = -1;
@@ -43,26 +50,94 @@ public class FullMapInfo extends MapInfo {
 
     //[Events]
     List<String[]> backgroundEvents = new ArrayList<>(); //For changing
-    List<String[]> breakPeriods = new ArrayList<>(); //For changing
+    List<Pair<Long, Long>> breakPeriods = new ArrayList<>(); //For changing
     List<String> fullStoryboard = new ArrayList<>(); //Should not be modified in this program
 
     public FullMapInfo(Mapset set, MapInfo base)
     {
-        this.mapFile = base.mapFile;
-        this.songFile = base.songFile;
-        this.background = base.background;
-
-        this.mode = base.mode;
-        this.difficultyName = base.difficultyName;
+        this.parent = set;
+        this.base = base;
     }
 
+    public FullMapInfo(FullMapInfo base, String diffName) {
+        this.parent = base.parent;
+
+        this.audioLeadIn = base.audioLeadIn;
+        this.previewTime = base.previewTime;
+        this.countdown = base.countdown;
+        this.sampleSet = base.sampleSet;
+        this.stackLeniency = base.stackLeniency;
+        this.letterboxInBreaks = base.letterboxInBreaks;
+        this.widescreenStoryboard = base.widescreenStoryboard;
+
+        this.bookmarks.addAll(base.bookmarks);
+        this.distanceSpacing = base.distanceSpacing;
+        this.beatDivisor = base.beatDivisor;
+        this.gridSize = base.gridSize;
+        this.timelineZoom = base.timelineZoom;
+
+        this.creator = base.creator;
+        this.artist = base.artist;
+        this.artistUnicode = base.artistUnicode;
+        this.title = base.title;
+        this.titleUnicode = base.titleUnicode;
+        this.source = base.source;
+        this.tags = new String[base.tags.length];
+        System.arraycopy(base.tags, 0, tags, 0, tags.length);
+
+        this.beatmapSetID = base.beatmapSetID;
+        this.sliderTickRate = base.sliderTickRate;
+
+        this.backgroundEvents.addAll(base.backgroundEvents);
+        this.breakPeriods.addAll(base.breakPeriods);
+        this.fullStoryboard.addAll(base.fullStoryboard);
+
+        File f = new File(base.getMapFile().getParentFile(), generateFilename(diffName));
+        this.base = new MapInfo(base, f, diffName);
+    }
+
+    public File getMapFile() {
+        return base.getMapFile();
+    }
+    public void setMapFile(File newFile) {
+        base.setMapFile(newFile);
+    }
+    public String getSongFile() {
+        return base.getSongFile();
+    }
+    public String getBackground() {
+        return base.getBackground();
+    }
+    public int getMode() {
+        return base.getMode();
+    }
+    public String getDifficultyName() {
+        return base.getDifficultyName();
+    }
+    public void setDifficultyName(String name) {
+        base.setDifficultyName(name);
+    }
+
+    public File generateMapFile() {
+        return new File(getMapFile().getParentFile(), generateFilename());
+    }
+    public String generateFilename(String diffName) {
+        String name = artist + " - " + title + " (" + creator + ") [" + diffName + "].osu";
+        return name.replaceAll("[\\\\/:*?\"<>|]", "");
+    }
+    public String generateFilename() {
+        String name = artist + " - " + title + " (" + creator + ") [" + getDifficultyName() + "].osu";
+        return name.replaceAll("[\\\\/:*?\"<>|]", "");
+    }
+
+    private final StringBuilder saveBuilder = new StringBuilder();
     @Override
     public String toString() {
-        DecimalFormat df = new DecimalFormat("#0.#");
+        DecimalFormat df = new DecimalFormat("#0.#", osuSafe);
         return "osu file format v14\r\n" +
             "\r\n" +
             "[General]\r\n" +
-            "AudioFilename: " + getSongFile() + "\r\n" +
+            "AudioFilename: " + getSongFileForSave() + "\r\n" +
             "AudioLeadIn: " + audioLeadIn + "\r\n" +
             "PreviewTime: " + previewTime + "\r\n" +
             "Countdown: " + (countdown ? 1 : 0) + "\r\n" +
@@ -85,7 +160,7 @@ public class FullMapInfo extends MapInfo {
             "Artist:" + artist + "\r\n" +
             "ArtistUnicode:" + artistUnicode + "\r\n" +
             "Creator:" + creator + "\r\n" +
-            "Version:" + difficultyName + "\r\n" +
+            "Version:" + base.getDifficultyName() + "\r\n" +
             "Source:" + source + "\r\n" +
             "Tags:" + tagText() + "\r\n" +
             "BeatmapID:" + beatmapID + "\r\n" +
@@ -103,61 +178,70 @@ public class FullMapInfo extends MapInfo {
             "//Background and Video events\r\n" +
                 eventFormat(backgroundEvents) +
             "//Break Periods\r\n" +
-                eventFormat(breakPeriods) +
+                breaks() +
                 fullStoryboard();
     }
 
-    private String tagText()
+    public String tagText()
     {
-        StringBuilder returnVal = new StringBuilder();
+        saveBuilder.setLength(0);
         int i;
         for (i = 0; i < tags.length - 1; ++i)
-            returnVal.append(tags[i]).append(' ');
-        returnVal.append(tags[i]);
+            saveBuilder.append(tags[i]).append(' ');
+        saveBuilder.append(tags[i]);
 
-        return returnVal.toString();
+        return saveBuilder.toString();
     }
 
     private String bookmarkString()
     {
         if (bookmarks.isEmpty())
             return "";
-        StringBuilder returnVal = new StringBuilder("Bookmarks: ");
+        saveBuilder.setLength(0);
+        saveBuilder.append("Bookmarks: ");
         int count = 0;
         for (int i : bookmarks)
         {
-            returnVal.append(i);
+            saveBuilder.append(i);
             if (count++ < bookmarks.size() - 1)
-                returnVal.append(',');
+                saveBuilder.append(',');
         }
-        return returnVal.append("\r\n").toString();
+        return saveBuilder.append("\r\n").toString();
     }
 
     private String eventFormat(List<String[]> events)
     {
-        StringBuilder returnVal = new StringBuilder();
+        saveBuilder.setLength(0);
         int i;
         for (String[] event : events)
         {
             for (i = 0; i < event.length - 1; ++i)
-                returnVal.append(event[i]).append(',');
-            returnVal.append(event[i]).append("\r\n");
+                saveBuilder.append(event[i]).append(',');
+            saveBuilder.append(event[i]).append("\r\n");
         }
-        return returnVal.toString();
+        return saveBuilder.toString();
+    }
+    private String breaks() {
+        saveBuilder.setLength(0);
+        for (Pair<Long, Long> breakPeriod : breakPeriods) {
+            saveBuilder.append("2,").append(breakPeriod.a).append(",").append(breakPeriod.b).append("\r\n");
+        }
+        return saveBuilder.toString();
     }
 
     private String fullStoryboard()
     {
-        StringBuilder returnVal = new StringBuilder();
+        saveBuilder.setLength(0);
         for (String event : fullStoryboard)
         {
-            returnVal.append(event).append("\r\n");
+            saveBuilder.append(event).append("\r\n");
         }
-        return returnVal.toString();
+        return saveBuilder.toString();
     }
 
-    private String getSongFile()
+    private String getSongFileForSave()
     {
+        String songFile = base.getSongFile();
         if (songFile.contains(File.separator))
         {
             if (songFile.endsWith(File.separator))
@@ -173,5 +257,12 @@ public class FullMapInfo extends MapInfo {
         {
             return songFile;
         }
+    }
+
+    public MapInfo getInfo() {
+        return base;
+    }
+    public boolean is(MapInfo info) {
+        return base.equals(info);
     }
 }

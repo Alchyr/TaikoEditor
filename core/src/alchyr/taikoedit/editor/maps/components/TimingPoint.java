@@ -1,6 +1,6 @@
 package alchyr.taikoedit.editor.maps.components;
 
-import alchyr.taikoedit.editor.views.SvView;
+import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.text.DecimalFormat;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.osuSafe;
 
 public class TimingPoint extends PositionalObject {
     private static final Color red = Color.RED.cpy();
@@ -35,7 +36,8 @@ public class TimingPoint extends PositionalObject {
      */
 
     public double value = 500; //For red lines, bpm. For green lines, sv multiplier. (Converted to usable value. For bpm, kept as is. For multiplier, converted.)
-    public double lastRegisteredValue = 500; //doesn't change until the new value is tracked in undo/redo stuff
+    public double lastRegisteredValue; //doesn't change until the new value is tracked in undo/redo stuff
+    public int lastRegisteredVolume;
     public int meter = 4, sampleSet = 1, sampleIndex = 0, volume = 100;
     public boolean uninherited = true, kiai = false, omitted = false; //kiai and omitted are flags in effects
 
@@ -47,10 +49,11 @@ public class TimingPoint extends PositionalObject {
 
     public TimingPoint(long pos)
     {
-        this.pos = pos;
+        setPos(pos);
 
         this.uninherited = false;
         this.lastRegisteredValue = this.value = 1;
+        this.lastRegisteredVolume = this.volume;
         this.omitted = false;
     }
 
@@ -63,7 +66,7 @@ public class TimingPoint extends PositionalObject {
             switch (i)
             {
                 case 0:
-                    pos = Long.parseLong(params[i]);
+                    setPos(Double.parseDouble(params[i]));
                     break;
                 case 1:
                     value = Double.parseDouble(params[i]);
@@ -96,17 +99,18 @@ public class TimingPoint extends PositionalObject {
             }
         }
         lastRegisteredValue = value;
+        this.lastRegisteredVolume = this.volume;
     }
 
     public TimingPoint(TimingPoint base)
     {
-        this.pos = base.pos;
+        setPos(base.getPrecisePos());
         this.uninherited = base.uninherited;
         this.lastRegisteredValue = this.value = base.value;
         this.meter = base.meter;
         this.sampleSet = base.sampleSet;
         this.sampleIndex = base.sampleIndex;
-        this.volume = base.volume;
+        this.lastRegisteredVolume = this.volume = base.volume;
         this.kiai = base.kiai;
         this.omitted = base.omitted;
     }
@@ -121,17 +125,17 @@ public class TimingPoint extends PositionalObject {
         return 60000 / value;
     }
 
-    private static final DecimalFormat optionalDecimals = new DecimalFormat("##0.#############");
-    private static final DecimalFormat scientific = new DecimalFormat("0.####E0");
+    private static final DecimalFormat optionalDecimals = new DecimalFormat("##0.#############", osuSafe);
+    private static final DecimalFormat scientific = new DecimalFormat("0.####E0", osuSafe);
     @Override
     public String toString()
     {
         double d = uninherited ? value : -100 / value;
         if (Math.abs(d) >= 100000 || Math.abs(d) <= 0.000001) {
-            return pos + "," + scientific.format(d) + "," + meter + "," + sampleSet + "," + sampleIndex + "," + volume + "," + (uninherited ? 1 : 0) + "," + ((kiai ? KIAI : 0) | (omitted ? OMITTED : 0));
+            return limitedDecimals.format(getPrecisePos()) + "," + scientific.format(d) + "," + meter + "," + sampleSet + "," + sampleIndex + "," + volume + "," + (uninherited ? 1 : 0) + "," + ((kiai ? KIAI : 0) | (omitted ? OMITTED : 0));
         }
         else {
-            return pos + "," + optionalDecimals.format(d) + "," + meter + "," + sampleSet + "," + sampleIndex + "," + volume + "," + (uninherited ? 1 : 0) + "," + ((kiai ? KIAI : 0) | (omitted ? OMITTED : 0));
+            return limitedDecimals.format(getPrecisePos()) + "," + optionalDecimals.format(d) + "," + meter + "," + sampleSet + "," + sampleIndex + "," + volume + "," + (uninherited ? 1 : 0) + "," + ((kiai ? KIAI : 0) | (omitted ? OMITTED : 0));
         }
     }
 
@@ -146,32 +150,37 @@ public class TimingPoint extends PositionalObject {
         c.a = alpha;
         sb.setColor(c);
 
-        sb.draw(pix, x + (int) (this.pos - pos) * viewScale, y, 1, SvView.HEIGHT);
+        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
     }
 
-    public void renderYellow(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
+    public void renderColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c, float alpha) {
         if (selected)
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
         }
 
-        yellow.a = alpha;
-        sb.setColor(yellow);
+        c.a = alpha;
+        sb.setColor(c);
 
-        sb.draw(pix, x + (int) (this.pos - pos) * viewScale, y, 1, SvView.HEIGHT);
+        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
     }
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
         sb.setColor(selection);
 
-        sb.draw(pix, x + (int) (this.pos - pos) * viewScale - 1, y, 3, SvView.HEIGHT);
+        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
     }
 
     @Override
     public void tempModification(double change) {
         if (!this.uninherited) {
             this.value = Math.max(MIN_SV, this.lastRegisteredValue - (change / 20.0));
+        }
+    }
+    public void tempSet(double newVal) {
+        if (!this.uninherited) {
+            this.value = newVal;
         }
     }
     @Override
@@ -187,11 +196,36 @@ public class TimingPoint extends PositionalObject {
     public void setValue(double value) {
         this.lastRegisteredValue = this.value = value;
     }
+    @Override
+    public double getValue() {
+        return this.value;
+    }
+
+    @Override
+    public void volumeModification(double change) {
+        if (!this.uninherited) {
+            this.volume = Math.max(1, Math.min(100, (int) (this.lastRegisteredVolume - (change / 2))));
+        }
+    }
+    @Override
+    public int registerVolumeChange() {
+        int returnVal = lastRegisteredVolume;
+        lastRegisteredVolume = volume;
+        return returnVal;
+    }
+    @Override
+    public void setVolume(int volume) {
+        this.volume = volume;
+    }
+    @Override
+    public int getVolume() {
+        return volume;
+    }
 
     @Override
     public PositionalObject shiftedCopy(long newPos) {
         TimingPoint copy = new TimingPoint(this);
-        copy.setPosition(newPos);
+        copy.setPos(newPos);
         return copy;
     }
 

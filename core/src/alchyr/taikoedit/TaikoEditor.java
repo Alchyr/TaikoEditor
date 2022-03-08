@@ -1,21 +1,29 @@
 package alchyr.taikoedit;
 
 import alchyr.taikoedit.audio.MusicWrapper;
-import alchyr.taikoedit.audio.PreloadedMp3;
+import alchyr.taikoedit.audio.mp3.PreloadedMp3;
+import alchyr.taikoedit.audio.ogg.PreloadOgg;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.FastMenuLayer;
+import alchyr.taikoedit.core.layers.LoadingLayer;
 import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.CursorHoverText;
+import alchyr.taikoedit.editor.maps.MapInfo;
+import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.*;
+import alchyr.taikoedit.util.RunningAverage;
 import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.TextRenderer;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import com.badlogic.gdx.backends.lwjgl3.OnionExtension;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
@@ -24,13 +32,31 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.lwjgl.glfw.GLFW;
 
+import java.io.File;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
+    public static final int VERSION = 310; //x.x.x -> xxx
+
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 
     public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
+
+    public static DecimalFormatSymbols osuSafe;
+    static {
+        osuSafe = new DecimalFormatSymbols(Locale.US);
+        osuSafe.setDecimalSeparator('.');
+    }
 
     private SpriteBatch sb;
     private ShapeRenderer sr;
@@ -44,40 +70,49 @@ public class TaikoEditor extends ApplicationAdapter {
     private static Cursor hiddenCursor;
     private static Cursor defaultCursor;
 
-    public final static ArrayList<ProgramLayer> layers = new ArrayList<>();
+    public final static List<ProgramLayer> layers = new ArrayList<>();
 
-    private static final ArrayList<ProgramLayer> addTopLayers = new ArrayList<>();
-    private static final ArrayList<ProgramLayer> addBottomLayers = new ArrayList<>();
-    private static final ArrayList<ProgramLayer> removeLayers = new ArrayList<>();
+    private static final List<ProgramLayer> addTopLayers = new ArrayList<>();
+    private static final List<ProgramLayer> addBottomLayers = new ArrayList<>();
+        private static final List<ProgramLayer> removeLayers = new ArrayList<>();
+        private static final List<ProgramLayer> disposeLayers = new ArrayList<>();
 
     private static InputMultiplexer input = new InputMultiplexer();
 
-    private static boolean end = false;
+    private static final Queue<VoidMethod> actionQueue = new ConcurrentLinkedQueue<>();
 
-    //update/framerate control
-    private boolean paused;
+    private static volatile boolean end = false;
+
+    //launch info
     private final int launchWidth, launchHeight;
     private final boolean borderless;
-    private boolean vsync;
-    private boolean unlimited;
-    private boolean useSync;
-    private final int fps;
+    private final String directOpen;
 
-    private boolean useFastMenu;
+    //update/framerate control
+    private Thread updateThread;
+    private boolean paused;
+    private final RunningAverage fpsTracker = new RunningAverage(20);
+    private int updateCount = 0;
+
+    private static final ReentrantLock layerLock = new ReentrantLock();
+
+    int renderLayer = 0;
+
+    private final boolean useFastMenu;
 
     private static final Sync sync = new Sync();
 
-    public TaikoEditor(int width, int height, boolean borderless, boolean vsyncEnabled, boolean unlimited, int fps, boolean fastMenu) {
-        vsync = vsyncEnabled;
-        this.unlimited = unlimited;
-        useSync = !vsync && !unlimited;
-        this.fps = fps;
+    public TaikoEditor(int width, int height, boolean borderless, boolean fastMenu, String directOpen) {
+        //this.targetFps = fps;
+        //this.frameDuration = this.targetFrameDuration = 1.0f / targetFps; //1 second / number of frames per second
+        fpsTracker.init(1.0f / 60.0f);
 
         launchWidth = width;
         launchHeight = height;
         this.borderless = borderless;
 
         this.useFastMenu = fastMenu;
+        this.directOpen = directOpen;
     }
 
     @Override
@@ -104,12 +139,15 @@ public class TaikoEditor extends ApplicationAdapter {
         addBottomLayers.clear();
         removeLayers.clear();
 
+        actionQueue.clear();
+
         //set up input
         input = new InputMultiplexer();
         Gdx.input.setInputProcessor(input);
 
         //A U D I O
         ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
+        ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("ogg", PreloadOgg.class);
         EditorLayer.music = new MusicWrapper();
 
 
@@ -118,16 +156,18 @@ public class TaikoEditor extends ApplicationAdapter {
 
     private void postCreate() {
         if (launchWidth != -1 && launchHeight != -1) {
-            if (borderless)
-                Gdx.graphics.setUndecorated(true); //updating size directly in the create method results in issues
-            Gdx.graphics.setWindowedMode(launchWidth, launchHeight);
+            //windowed/borderless
             if (borderless) {
-                ((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition(0, 0);
+                Gdx.graphics.setUndecorated(true); //updating size directly in the create method results in issues
+                Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
+                OnionExtension.setBorderlessFullscreen((Lwjgl3Graphics) Gdx.graphics, displayMode.width, displayMode.height + 1); //little +1 to avoid certain fullscreen mode
+                //Gdx.graphics.setWindowedMode(displayMode.width, displayMode.height);
             }
             else {
-                ((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition(
+                Gdx.graphics.setWindowedMode(launchWidth, launchHeight);
+                /*((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition( //auto-repositioning was added
                         ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionX() + 200 - (launchWidth / 2),
-                        ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionY() + 200 - (launchHeight / 2));
+                        ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionY() + 200 - (launchHeight / 2));*/
             }
         }
 
@@ -143,12 +183,73 @@ public class TaikoEditor extends ApplicationAdapter {
 
         BindingMaster.initialize();
 
-        if (useFastMenu) {
+        if (directOpen != null) {
+            //Check if valid. If it isn't, error message and end.
+            if (!open(directOpen)) {
+                end();
+                return;
+            }
+        }
+        else if (useFastMenu) {
             addLayer(new FastMenuLayer().getLoader());
         }
         else {
             addLayer(new MenuLayer().getLoader());
         }
+
+        //Setup and start update thread
+        //Gdx.graphics.setContinuousRendering(false);
+        //GLFW.glfwSwapInterval(2);
+
+        updateThread = new Thread(() -> {
+            try {
+                if (lastTime == 0)
+                    lastTime = getTime();
+
+                double time;
+                float elapsed;
+                while (!end) {
+                    sync.sync(1000);
+
+                    time = getTime();
+                    elapsed = (float)(time - lastTime);
+
+                    layerLock.lock();
+                    EditorLayer.music.update(time - lastTime);
+                    renderLayer = gameUpdate(elapsed);
+                    updateLayers();
+                    layerLock.unlock();
+
+                    lastTime = time;
+
+                    ++updateCount;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+
+                while (layerLock.getHoldCount() > 0)
+                    layerLock.unlock();
+            }
+
+            try {
+                end();
+                //Gdx.graphics.setContinuousRendering(true);
+            }
+            catch (Exception e) {
+                //wtf another one?
+                e.printStackTrace();
+                Gdx.app.exit();
+            }
+        });
+
+        updateThread.setName("TaikoEditor Update");
+        updateThread.setDaemon(true);
+        updateThread.start();
+    }
+
+    private double lastTime = 0;
+    private double getTime() {
+        return glfwGetTime();
     }
 
     private boolean first = true;
@@ -157,7 +258,8 @@ public class TaikoEditor extends ApplicationAdapter {
     public void render() {
         if (end)
         {
-            //dispose();
+            if (updateThread != null && updateThread.isAlive())
+                return;
             Gdx.app.exit(); //causes disposal
             return;
         }
@@ -171,13 +273,29 @@ public class TaikoEditor extends ApplicationAdapter {
         if (paused)
             return;
 
-        if (useSync)
-            sync.sync(fps);
+        //editorLogger.info(Gdx.graphics.getFramesPerSecond());
+
+        layerLock.lock();
 
         float elapsed = Gdx.graphics.getDeltaTime();
+        fpsTracker.add(elapsed);
 
-        gameRender(gameUpdate(elapsed), elapsed);
-        updateLayers();
+        updateCount = 0;
+
+        VoidMethod m;
+        while (!actionQueue.isEmpty()) {
+            m = actionQueue.poll();
+            if (m != null)
+                m.run();
+        }
+
+        TextRenderer.swapLayouts();
+        assetMaster.update(); //has to be updated on the main thread
+        gameRender(renderLayer);
+        disposeLayers();
+        TextRenderer.swapLayouts();
+
+        layerLock.unlock();
     }
 
 
@@ -217,7 +335,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
         return renderIndex;
     }
-    private void gameRender(int renderIndex, float elapsed)
+    private void gameRender(int renderIndex)
     {
         if (renderIndex < 0) //the lowest layer does not cancel rendering, clear with black color
         {
@@ -263,7 +381,8 @@ public class TaikoEditor extends ApplicationAdapter {
 
         for (ProgramLayer l : removeLayers)
         {
-            l.dispose();
+            //l.dispose();
+            disposeLayers.add(l);
             layers.remove(l);
             editorLogger.info("Removed " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
@@ -271,13 +390,23 @@ public class TaikoEditor extends ApplicationAdapter {
         }
         removeLayers.clear();
     }
+    private void disposeLayers() {
+        for (ProgramLayer l : disposeLayers) {
+            l.dispose();
+        }
+        disposeLayers.clear();
+    }
 
 
     @Override
     public void dispose() {
+        layerLock.lock();
+
         //dispose of layers
         for (ProgramLayer layer : layers)
             layer.dispose();
+
+        disposeLayers();
 
         layers.clear();
         addBottomLayers.clear();
@@ -287,6 +416,8 @@ public class TaikoEditor extends ApplicationAdapter {
         SvFunctionLayer.disposeFunctions();
         assetMaster.dispose();
         sb.dispose();
+
+        layerLock.unlock();
     }
 
     public static void end()
@@ -294,18 +425,28 @@ public class TaikoEditor extends ApplicationAdapter {
         end = true;
     }
 
+    public static void onMain(VoidMethod later) {
+        actionQueue.add(later);
+    }
 
+    //Should only be called from contexts that have already acquired the layer lock
     public static void addLayer(ProgramLayer layer)
     {
+        layerLock.lock();
         addTopLayers.add(layer);
+        layerLock.unlock();
     }
     public static void addLayerToBottom(ProgramLayer layer)
     {
+        layerLock.lock();
         addBottomLayers.add(layer);
+        layerLock.unlock();
     }
     public static void removeLayer(ProgramLayer layer)
     {
+        layerLock.lock();
         removeLayers.add(layer);
+        layerLock.unlock();
     }
 
     private static void createCursors()
@@ -315,7 +456,13 @@ public class TaikoEditor extends ApplicationAdapter {
         blank.setColor(0.0f, 0.0f, 0.0f, 0.0f);
         blank.fill();
 
+        //Pixmap test = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+
+        //test.setColor(1.0f, 0.0f, 0.0f, 1.0f);
+        //test.fill();
+
         hiddenCursor = Gdx.graphics.newCursor(blank, 0, 0);
+        //defaultCursor = Gdx.graphics.newCursor(test, 0, 0);
 
         defaultCursor = Gdx.graphics.newCursor(new Pixmap(Gdx.files.internal("taikoedit/images/ui/cursor.png")), 16, 16);
     }
@@ -329,13 +476,96 @@ public class TaikoEditor extends ApplicationAdapter {
         Gdx.graphics.setCursor(defaultCursor);
     }
 
+    private boolean open(String file) {
+        File map = new File(file);
+        if (map.exists()) {
+            File mapFolder = map;
+            if (map.isFile() && map.getName().endsWith(".osu")) {
+                mapFolder = map.getParentFile();
+            }
+            else if (map.isDirectory()) {
+                map = null;
+            }
+            else {
+                return false;
+            }
+
+            if (mapFolder == null)
+                return false;
+
+            //mapFolder is the folder, map is the specific difficulty to open (if not null)
+            Mapset set = null;
+            try { //Subfolders are ignored
+                boolean hasMap = map != null;
+
+                File[] all = mapFolder.listFiles();
+                if (all != null && !hasMap) {
+                    for (File f : all) {
+                        if (f.isFile() && f.getPath().endsWith(".osu")) {
+                            hasMap = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (hasMap)
+                {
+                    editorLogger.info("Mapset: " + mapFolder.getName());
+                    set = new Mapset(mapFolder);
+
+                    if (!set.isEmpty())
+                    {
+                        editorLogger.info("Mapset " + mapFolder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
+                    }
+                    else
+                    {
+                        set = null;
+                        editorLogger.info("Mapset " + mapFolder.getName() + " has no taiko maps.");
+                    }
+                }
+            }
+            catch (Exception e) {
+                editorLogger.info("Error occurred reading folder " + mapFolder.getPath());
+                editorLogger.error(e.getStackTrace());
+                e.printStackTrace();
+            }
+
+            if (set != null) {
+                MapInfo initial = null;
+                if (map != null) {
+                    for (MapInfo info : set.getMaps()) {
+                        if (info.getMapFile().equals(map)) {
+                            initial = info;
+                            break;
+                        }
+                    }
+
+                    if (initial == null) {
+                        editorLogger.info("Selected file isn't a taiko map or isn't in set?");
+                    }
+                }
+                EditorLayer edit = new EditorLayer(null, set, initial); //no source, will close on exit
+                ProgramLayer loader = edit.getLoader();
+                addLayer(new LoadingLayer(new String[] {
+                        "ui",
+                        "font",
+                        "background",
+                        "menu",
+                        "hitsound"
+                }, new LoadingLayer(null, loader).addTask(TaikoEditor::initialize), true));
+                return true;
+            }
+        }
+        return false;
+    }
+
     //Callback of MenuLayer. Todo: Allow TextRenderer to be instantiated sooner, and then initialized here to actually load fonts.
     public static void initialize()
     {
         try
         {
             textRenderer = new TextRenderer(assetMaster.getFont("default"));
-            hoverText.initialize(assetMaster.getFont("aller small"));
+            hoverText.initialize(assetMaster.getFont("aller small"), 16);
             showCursor();
         }
         catch (Exception e)

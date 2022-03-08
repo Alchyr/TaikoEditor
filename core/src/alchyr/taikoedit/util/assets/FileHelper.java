@@ -1,5 +1,7 @@
 package alchyr.taikoedit.util.assets;
 
+import com.badlogic.gdx.utils.StreamUtils;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -61,10 +63,12 @@ public class FileHelper {
     {
         if (f.isFile() && f.canRead())
         {
+            FileInputStream in = null;
+            InputStreamReader reader = null;
             try
             {
-                FileInputStream in = new FileInputStream(f);
-                InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
+                in = new FileInputStream(f);
+                reader = new InputStreamReader(in, StandardCharsets.UTF_8);
 
                 ArrayList<String> lines = new ArrayList<>();
                 StringBuilder line = new StringBuilder();
@@ -96,6 +100,10 @@ public class FileHelper {
             {
                 e.printStackTrace();
             }
+            finally {
+                StreamUtils.closeQuietly(reader);
+                StreamUtils.closeQuietly(in);
+            }
         }
         return null;
     }
@@ -104,9 +112,10 @@ public class FileHelper {
     {
         if (f.isFile() && f.canRead())
         {
+            FileReader reader = null;
             try
             {
-                FileReader reader = new FileReader(f);
+                reader = new FileReader(f);
 
                 ArrayList<String> lines = new ArrayList<>();
                 StringBuilder line = new StringBuilder();
@@ -141,6 +150,9 @@ public class FileHelper {
             catch (IOException e)
             {
                 e.printStackTrace();
+            }
+            finally {
+                StreamUtils.closeQuietly(reader);
             }
         }
         return null;

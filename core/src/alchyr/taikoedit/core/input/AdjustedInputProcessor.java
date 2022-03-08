@@ -10,7 +10,7 @@ public abstract class AdjustedInputProcessor implements InputProcessor {
     @Deprecated
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-        return onTouchUp(screenX, SettingsMaster.screenToGameY(screenY), pointer, button);
+        return onTouchUp(screenX, (int)SettingsMaster.screenToGameY(screenY), pointer, button);
     }
 
     public boolean onTouchUp(int gameX, int gameY, int pointer, int button)
@@ -21,7 +21,7 @@ public abstract class AdjustedInputProcessor implements InputProcessor {
     @Deprecated
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        return onTouchDown(screenX, SettingsMaster.screenToGameY(screenY), pointer, button);
+        return onTouchDown(screenX, (int)SettingsMaster.screenToGameY(screenY), pointer, button);
     }
 
     public boolean onTouchDown(int gameX, int gameY, int pointer, int button)
@@ -32,7 +32,7 @@ public abstract class AdjustedInputProcessor implements InputProcessor {
     @Deprecated
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        return onTouchDragged(screenX, SettingsMaster.screenToGameY(screenY), pointer);
+        return onTouchDragged(screenX, (int)SettingsMaster.screenToGameY(screenY), pointer);
     }
 
     public boolean onTouchDragged(int gameX, int gameY, int pointer)
@@ -43,7 +43,7 @@ public abstract class AdjustedInputProcessor implements InputProcessor {
     @Deprecated
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        return onMouseMoved(screenX, SettingsMaster.screenToGameY(screenY));
+        return onMouseMoved(screenX, (int)SettingsMaster.screenToGameY(screenY));
     }
 
     public boolean onMouseMoved(int gameX, int gameY)

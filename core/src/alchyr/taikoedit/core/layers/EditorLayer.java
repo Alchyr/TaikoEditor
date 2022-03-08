@@ -2,23 +2,23 @@ package alchyr.taikoedit.core.layers;
 
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.audio.MusicWrapper;
-import alchyr.taikoedit.audio.PreloadedMp3;
 import alchyr.taikoedit.core.InputLayer;
-import alchyr.taikoedit.core.input.BoundInputProcessor;
+import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
 import alchyr.taikoedit.core.layers.sub.DifficultyMenuLayer;
+import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
-import alchyr.taikoedit.editor.views.SvView;
+import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.management.bindings.BindingGroup;
-import alchyr.taikoedit.management.bindings.InputBinding;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.InputBinding;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
@@ -27,8 +27,7 @@ import alchyr.taikoedit.editor.maps.components.PreviewLine;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.editor.views.ViewSet;
-import alchyr.taikoedit.util.input.KeyHoldObject;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.KeyHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
@@ -40,17 +39,20 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class EditorLayer extends LoadedLayer implements InputLayer {
     public static MusicWrapper music; //There shouldn't ever be more than one.
+
+    //Return to menu
+    private ProgramLayer src;
 
     //Input
     public static boolean finisherLock = false;
@@ -61,7 +63,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private Texture pixel; //General rendering
 
     //Overlays
-    private TextOverlay textOverlay;
+    public TextOverlay textOverlay;
 
     //Background
     private static final Color bgColor = new Color(0.3f, 0.3f, 0.25f, 1.0f);
@@ -71,12 +73,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private static final Color CENTER_LINE_COLOR = new Color(0.6f, 0.6f, 0.6f, 0.5f);
 
-    //Title/top bar
-    private float titleOffsetX, titleOffsetY;
     private int topBarHeight;
     private int topBarY;
     private int timelineY;
     private ImageButton exitButton;
+    private ImageButton settingsButton;
     private ImageButton openButton;
 
     private Timeline timeline; //Timeline
@@ -97,6 +98,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private final ArrayList<EditorBeatmap> activeMaps;
 
     private final Mapset set;
+    private final MapInfo initial;
     private final ArrayList<MapView> addLater;
 
     private DivisorOptions divisorOptions; //Always shared
@@ -114,9 +116,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private boolean verticalScrollEnabled = false;
     private int scrollPos = 0, maxScrollPosition = 0;
 
-    public EditorLayer(Mapset set)
+    public EditorLayer(ProgramLayer src, Mapset set, MapInfo initial)
     {
+        this.src = src;
         this.set = set;
+        this.initial = initial;
 
         processor = new EditorProcessor(this);
         backgroundImg = set.getBackground();
@@ -138,7 +142,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         //input
-        processor.bind();
         finisherLock = false;
 
         //graphics positions/initialization
@@ -164,32 +167,43 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         topBarHeight = 40;
         timelineY = SettingsMaster.getHeight() - (topBarHeight + Timeline.HEIGHT);
         topBarY = SettingsMaster.getHeight() - topBarHeight;
-        titleOffsetX = 10;
-        titleOffsetY = 35;
+        //Title/top bar
+        //float titleOffsetX = 10;
+        //float titleOffsetY = 35;
         minimumVisibleY = Tools.HEIGHT;
         textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
 
         //Top bar
-        exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"), (i)->this.returnToMenu());
-        openButton = new ImageButton(SettingsMaster.getWidth() - 80, topBarY, assetMaster.get("editor:open"), (Texture) assetMaster.get("editor:openh"), this::openDifficultyMenu);
+        exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::returnToMenu);
+        settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
+        openButton = new ImageButton(SettingsMaster.getWidth() - 120, topBarY, assetMaster.get("editor:open"), (Texture) assetMaster.get("editor:openh")).setClick(this::openDifficultyMenu);
 
         setViewScale(1.0f);
+
+        //Initialize this
+        SvFunctionLayer.init();
 
         //Editor stuff
         timeline = new Timeline(timelineY, music.getSecondLength());
         tools = new Tools(this);
         if (activeMaps.isEmpty())
         {
-            openDifficultyMenu(0);
+            openDifficultyMenu();
         }
-        else
+        else //started with a diff open
         {
             organizeViews(); //Positions views and sets primary view, determines scroll
+            if (!activeMaps.get(0).autoBreaks) {
+                textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
+            }
         }
+        processor.bind();
     }
 
     @Override
     public void update(float elapsed) {
+        processor.update(elapsed);
+
         if (exitDelay > 0)
             exitDelay -= elapsed;
 
@@ -203,11 +217,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             organizeViews();
         }
 
-        processor.update(elapsed);
-        if (processor.mouseHold != null)
-            processor.mouseHold.update(elapsed);
-
-        currentPos = getSecondPosition(Gdx.graphics.getRawDeltaTime());
+        currentPos = getSecondPosition();
         long msTime = Math.round(currentPos * 1000);
         //editorLogger.info(pos);
 
@@ -215,16 +225,21 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         for (ViewSet views : mapViews.values())
         {
-            views.update(currentPos, msTime, music.isPlaying());
+            views.update(currentPos, msTime, elapsed, music.isPlaying());
         }
 
         textOverlay.update(elapsed);
         tools.update(timelineY, minimumVisibleY, activeMaps, mapViews, elapsed);
 
-        exitButton.update();
-        openButton.update();
+        exitButton.update(elapsed);
+        openButton.update(elapsed);
+        settingsButton.update(elapsed);
+
         if (openButton.hovered) {
-            TaikoEditor.hoverText.setText("Open New View");
+            hoverText.setText("Open New View");
+        }
+        else if (settingsButton.hovered) {
+            hoverText.setText("Settings");
         }
     }
 
@@ -265,6 +280,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         sb.setColor(Color.BLACK);
         sb.draw(pixel, 0, topBarY, SettingsMaster.getWidth(), topBarHeight);
         exitButton.render(sb, sr);
+        settingsButton.render(sb, sr);
         openButton.render(sb, sr);
 
         timeline.render(sb, sr);
@@ -279,13 +295,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         searchInput.render(sb, searchTextOffsetX, SettingsMaster.getHeight() - searchTextOffsetY);*/
     }
 
-    private static double getMillisecondPosition(float elapsed)
+    /*private static double getMillisecondPosition(float elapsed)
     {
         return music.getMsTime(elapsed);
-    }
-    private static double getSecondPosition(float elapsed)
+    }*/
+    private static double getSecondPosition()
     {
-        return music.getSecondTime(elapsed);
+        return music.getSecondTime();
     }
 
     public ViewSet getViewSet(EditorBeatmap map)
@@ -300,8 +316,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void returnToMenu()
     {
-        if (music.isPlaying())
-            music.pause();
+        clean();
 
         List<EditorBeatmap> dirtyMaps = new ArrayList<>();
         for (EditorBeatmap map : mapViews.keySet()) {
@@ -311,11 +326,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         if (dirtyMaps.isEmpty()) {
-            TaikoEditor.removeLayer(this);
-            TaikoEditor.addLayer(MenuLayer.getReturnLoader());
+            returnToSrc();
         }
         else {
-            StringBuilder unsaved = new StringBuilder("Save changes to unsaved difficult");
+            StringBuilder unsaved = new StringBuilder("Save changes to difficult");
             if (dirtyMaps.size() == 1) {
                 unsaved.append("y ");
             }
@@ -329,7 +343,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
             unsaved.append("?");
 
-            TaikoEditor.addLayer(new ConfirmationLayer(unsaved.toString(), "Yes", "No")
+            TaikoEditor.addLayer(new ConfirmationLayer(unsaved.toString(), "Yes", "No", true)
                     .onConfirm(()->{
                         boolean success = true;
                         for (EditorBeatmap m : dirtyMaps) {
@@ -340,14 +354,23 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         }
 
                         if (success) {
-                            TaikoEditor.removeLayer(this);
-                            TaikoEditor.addLayer(MenuLayer.getReturnLoader());
+                            returnToSrc();
                         }
                     })
-                    .onDeny(()->{
-                        TaikoEditor.removeLayer(this);
-                        TaikoEditor.addLayer(MenuLayer.getReturnLoader());
-                    }));
+                    .onDeny(this::returnToSrc));
+        }
+    }
+
+    private void returnToSrc() {
+        TaikoEditor.removeLayer(this);
+        if (src instanceof LoadedLayer) {
+            TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
+        }
+        else if (src != null) {
+            TaikoEditor.addLayer(src);
+        }
+        else {
+            TaikoEditor.end();
         }
     }
 
@@ -376,7 +399,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 "background"
         },  this, true)
                 .addTask(this::setMusic)
-                .addTask(true, this::prepMusic).addTracker(PreloadedMp3::getProgress)
+                .addTask(true, this::prepMusic).addTracker(music::getProgress)
                 .addCallback(true, HitObject::loadTextures).addCallback(TimingPoint::loadTexture).addCallback(PreviewLine::loadTexture).addCallback(this::loadBeatmap)
                 .addCallback(true, this::initMusic);
     }
@@ -413,10 +436,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         divisorOptions = new DivisorOptions();
         divisorOptions.reset();
 
-        //If single difficulty, load automatically
-        if (set.getMaps().size() == 1)
+        if (initial != null) {
+            prepSingleDiff(initial);
+        }
+        else if (set.getMaps().size() == 1) //If single difficulty, load automatically
         {
-            prepSingleDiff();
+            prepSingleDiff(set.getMaps().get(0));
         }
 
         //Test code: Load all diffs automatically
@@ -437,8 +462,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         editorLogger.info("Loaded beatmap successfully.");
     }
 
-    private void prepSingleDiff() {
-        EditorBeatmap newMap = new EditorBeatmap(set, set.getMaps().get(0));
+    private void prepSingleDiff(MapInfo info) {
+        EditorBeatmap newMap = new EditorBeatmap(set, info);
 
         if (!set.sameSong)
         {
@@ -457,6 +482,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         addEditView(newMap, false);
+        addEffectView(newMap, false);
         activeMaps.add(newMap);
     }
 
@@ -486,12 +512,40 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         activeMaps.add(newMap);
+
+        if (!newMap.autoBreaks) {
+            textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
+        }
         return newMap;
+    }
+    public void addMap(EditorBeatmap newMap) {
+
+        if (!set.sameSong)
+        {
+            newMap.generateDivisor(divisorOptions);
+        }
+        else
+        {
+            if (universalDivisor == null)
+            {
+                universalDivisor = newMap.generateDivisor(divisorOptions);
+            }
+            else
+            {
+                newMap.setDivisorObject(universalDivisor);
+            }
+        }
+
+        activeMaps.add(newMap);
     }
 
     private void addEditView(EditorBeatmap beatmap, boolean delayed)
     {
         addView(new ObjectView(this, beatmap), delayed);
+    }
+    private void addEffectView(EditorBeatmap beatmap, boolean delayed)
+    {
+        addView(new EffectView(this, beatmap), delayed);
     }
     public void addView(MapView newView, boolean delayed)
     {
@@ -518,7 +572,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         if (container != null)
         {
             if (container.getViews().contains(toRemove) && container.getViews().size() == 0 && toRemove.map.dirty) {
-                TaikoEditor.addLayer(new ConfirmationLayer("Save changes to unsaved difficulty [" + toRemove.map.getName() + "]?", "Yes", "No")
+                TaikoEditor.addLayer(new ConfirmationLayer("Save changes to difficulty [" + toRemove.map.getName() + "]?", "Yes", "No", true)
                         .onConfirm(()->{
                             if (toRemove.map.save()) {
                                 container.removeView(toRemove);
@@ -612,7 +666,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         {
             timeline.setMap(primaryView.map);
             tools.changeToolset(primaryView);
-            primaryView.isPrimary = true;
+            primaryView.primary();
         }
         else
         {
@@ -746,7 +800,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             for (ArrayList<PositionalObject> stack : primaryView.getSelection().values()) {
                 for (PositionalObject o : stack) {
                     if (o instanceof HitObject) {
-                        if (((HitObject) o).finish) {
+                        if (((HitObject) o).isFinish()) {
                             finisher.add((HitObject) o);
                         }
                         else {
@@ -772,49 +826,43 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
 
     /// Overlays?
-    private void openDifficultyMenu(int button)
+    private void openDifficultyMenu()
     {
+        clean();
+        TaikoEditor.addLayer(new DifficultyMenuLayer(this, set));
+    }
+    private void settings()
+    {
+        clean();
+        TaikoEditor.addLayer(new SettingsLayer());
+    }
+
+    public void clean() {
         if (music.isPlaying())
             music.pause();
-        TaikoEditor.addLayer(new DifficultyMenuLayer(this, set));
 
-        processor.clearInput();
-
-        if (processor.mouseHold != null)
-        {
-            processor.mouseHold.onRelease(Gdx.input.getX(), SettingsMaster.getHeight() - Gdx.input.getY());
-            processor.mouseHold = null;
-        }
+        processor.releaseInput(false);
     }
 
 
     public static class EditorProcessor extends TextInputProcessor {
         private final EditorLayer sourceLayer;
 
-        public MouseHoldObject mouseHold;
-
-        private final DecimalFormat oneDecimal = new DecimalFormat("##0.#");
+        private static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuSafe);
+        private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##", osuSafe);
 
         public EditorProcessor(EditorLayer source)
         {
-            super(BindingMaster.getBindingGroup("Editor"));
+            super(BindingMaster.getBindingGroup("Editor"), true);
             this.sourceLayer = source;
-        }
-
-        public void cancelMouseHold(MouseHoldObject obj)
-        {
-            if (obj.equals(mouseHold))
-            {
-                mouseHold = null;
-            }
         }
 
         @Override
         public void bind() {
             //Arrows
             {
-                KeyHoldObject left = new KeyHoldObject(Input.Keys.LEFT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekLeft(), null);
-                KeyHoldObject right = new KeyHoldObject(Input.Keys.RIGHT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekRight(), null);
+                KeyHoldObject left = new KeyHoldObject(Input.Keys.LEFT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekLeft());
+                KeyHoldObject right = new KeyHoldObject(Input.Keys.RIGHT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekRight());
 
                 bindings.bind("SeekRight", sourceLayer::seekRight, right);
                 bindings.bind("SeekLeft", sourceLayer::seekLeft, left);
@@ -826,14 +874,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                     left.addConflictingKey(input.getCode());
 
 
-                bindings.bind("RateUp", () -> {
-                    sourceLayer.textOverlay.setText("Playback rate " + oneDecimal.format(music.changeTempo(0.1f)), 1.0f);
-                    return true;
-                });
-                bindings.bind("RateDown", () -> {
-                    sourceLayer.textOverlay.setText("Playback rate " + oneDecimal.format(music.changeTempo(-0.1f)), 1.0f);
-                    return true;
-                });
+                bindings.bind("RateUp", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(0.05f)), 1.0f));
+                bindings.bind("RateDown", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(-0.05f)), 1.0f));
 
                 bindings.bind("ZoomIn", () -> zoom(-1));
                 bindings.bind("ZoomOut", () -> zoom(1));
@@ -844,10 +886,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
             bindings.bind("Bookmark", () -> {
                 for (EditorBeatmap map : sourceLayer.activeMaps) {
-                    map.addBookmark((int) music.getMsTime(0));
+                    map.addBookmark((int) music.getMsTime());
                 }
                 sourceLayer.timeline.recalculateBookmarks();
-                return true;
             });
 
             //Selection controls
@@ -855,7 +896,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 bindings.bind("SelectAll", () -> {
                     if (sourceLayer.primaryView != null)
                         sourceLayer.primaryView.selectAll();
-                    return true;
                 });
 
                 bindings.bind("Copy", () -> {
@@ -871,14 +911,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                                     .getSystemClipboard()
                                     .setContents(new StringSelection(sourceLayer.timeline.getTimeString() + " - "), null);
                         }
-                        return true;
                     }
-                    return false;
                 });
 
                 bindings.bind("Cut", () -> {
                     if (sourceLayer.primaryView != null) {
                         if (sourceLayer.primaryView.hasSelection()) {
+                            releaseMouse(true);
+
                             copyObjects = sourceLayer.primaryView.getSelection().copy();
                             copyType = sourceLayer.primaryView.type; //Can only paste into same type of layer.
                             Toolkit.getDefaultToolkit()
@@ -886,18 +926,16 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                                     .setContents(new StringSelection(sourceLayer.primaryView.getSelectionString()), null);
 
                             sourceLayer.primaryView.deleteSelection();
-                            return true;
                         }
                     }
-                    return false;
                 });
 
                 bindings.bind("Paste", () -> {
                     if (copyObjects != null && sourceLayer.primaryView != null && sourceLayer.primaryView.type == copyType) {
+                        releaseMouse(true);
+
                         sourceLayer.primaryView.pasteObjects(copyObjects);
-                        return true;
                     }
-                    return false;
                 });
 
                 bindings.bind("ClearSelect", () -> {
@@ -907,30 +945,30 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
                 bindings.bind("Reverse", () -> {
                     if (sourceLayer.primaryView != null && sourceLayer.primaryView.hasSelection()) {
+                        releaseMouse(true);
+
                         sourceLayer.primaryView.reverse();
-                        return true;
                     }
-                    return false;
                 });
 
                 bindings.bind("Resnap", () -> {
                     if (sourceLayer.primaryView != null) {
+                        releaseMouse(true);
+
                         sourceLayer.primaryView.resnap();
-                        return true;
                     }
-                    return false;
                 });
 
                 bindings.bind("FUCK", () -> {
                     if (sourceLayer.primaryView != null && sourceLayer.primaryView.hasSelection() && sourceLayer.primaryView.type == MapView.ViewType.EFFECT_VIEW) {
-                        ((SvView) sourceLayer.primaryView).fuckSelection();
-                        return true;
+                        releaseMouse(true);
+
+                        ((EffectView) sourceLayer.primaryView).fuckSelection();
                     }
-                    return false;
                 });
             }
 
-            bindings.bind("OpenView", ()->sourceLayer.openDifficultyMenu(0));
+            bindings.bind("OpenView", sourceLayer::openDifficultyMenu);
 
             bindings.bind("Save", ()->{
                 if (sourceLayer.primaryView != null) {
@@ -940,9 +978,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                     else {
                         sourceLayer.textOverlay.setText("Failed to save!", 2.0f);
                     }
-                    return true;
                 }
-                return false;
             });
             bindings.bind("SaveAll", ()->{
                 int failures = 0;
@@ -962,7 +998,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 else {
                     sourceLayer.textOverlay.setText("Failed to save difficulties" + failed + ".", 2.0f);
                 }
-                return true;
             });
 
             bindings.bind("TJASave", ()->{
@@ -973,7 +1008,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         sourceLayer.textOverlay.setText("TJA Save is not yet supported!", 2.0f); //Failed to save!", 2.0f);
                     }
                 }
-                return false;
             });
 
             bindings.bind("FinishLock", sourceLayer::toggleFinisher);
@@ -981,28 +1015,25 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bindings.bind("Redo", ()->{
                 if (sourceLayer.primaryView != null)
                 {
+                    releaseMouse(true);
                     if (sourceLayer.primaryView.map.redo())
                         sourceLayer.primaryView.refreshSelection();
-                    return true;
                 }
-                return false;
             });
             bindings.bind("Undo", ()->{
                 if (sourceLayer.primaryView != null)
                 {
+                    releaseMouse(true);
                     if (sourceLayer.primaryView.map.undo())
                         sourceLayer.primaryView.refreshSelection();
-                    return true;
                 }
-                return false;
             });
             bindings.bind("Delete", ()->{
                 if (sourceLayer.primaryView != null)
                 {
+                    releaseMouse(true);
                     sourceLayer.primaryView.delete(SettingsMaster.getMiddle(), (sourceLayer.primaryView.bottom + sourceLayer.primaryView.top) / 2);
-                    return true;
                 }
-                return false;
             });
 
             bindings.bind("IncreaseOffset", sourceLayer::increaseOffset);
@@ -1013,7 +1044,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bindings.bind("Exit", ()->{
                 if (sourceLayer.exitDelay <= 0)
                     sourceLayer.returnToMenu();
-                return true;
             });
 
             for (int i = 1; i < 10; ++i)
@@ -1024,15 +1054,18 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 if (i > 1) { //instant use bindings
                     bindings.bind("i" + i, ()->{
                         if (sourceLayer.primaryView != null) {
-                            return sourceLayer.tools.instantUse(index, sourceLayer.primaryView);
+                            MapView view = sourceLayer.primaryView;
+                            return ()->{
+                                releaseMouse(true);
+
+                                sourceLayer.tools.instantUse(index, view);
+                            };
                         }
-                        return false;
+                        return null;
                     });
                 }
             }
             bindings.bind("0", ()->sourceLayer.tools.selectToolIndex(9));
-
-
 
             //NOTE: DEBUG
             /*bindings.bind("DEBUG", ()->{
@@ -1057,109 +1090,67 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                    if (sourceLayer.primaryView != null)
                        sourceLayer.getViewSet(sourceLayer.primaryView.map).calculateDifficulty();
                 });
-        }
 
-        @Override
-        public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
-            if (button != 0 && button != 1)
-                return false; //i only care about left and right click.
-
-            if (mouseHold != null)
-            {
-                mouseHold.onRelease(gameX, gameY);
-                mouseHold = null;
-            }
-
-            if (gameY > sourceLayer.timelineY)
-            {
-                if (gameY < sourceLayer.topBarY)
-                {
-                    //timeline area
-                    mouseHold = sourceLayer.timeline.click(gameX, gameY, pointer, button);
-                    return mouseHold != null;
-                }
-                else
-                {
-                    if (sourceLayer.openButton.click(gameX, gameY, button))
-                    {
-                        return true;
-                    }
-                    else if (sourceLayer.exitButton.click(gameX, gameY, button))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if (gameY > sourceLayer.minimumVisibleY) //ViewSet area
-            {
-                for (EditorBeatmap m : sourceLayer.activeMaps)
-                {
-                    ViewSet set = sourceLayer.mapViews.get(m);
-                    if (set.containsY(gameY))
-                    {
-                        boolean delete = button == Input.Buttons.RIGHT && sourceLayer.tools.getCurrentTool() != null && !sourceLayer.tools.getCurrentTool().consumesRightClick();
-                        mouseHold = set.click(gameX, gameY, pointer, button, BindingGroup.modifierState());
-
-                        if (mouseHold == null && delete) {
-                            sourceLayer.primaryView.deletePrecise(gameX, gameY);
+            //------------ Mouse Bindings ------------
+            //Top area
+            bindings.addMouseBind((x, y, b) -> y > sourceLayer.timelineY,
+                    (p, button) -> {
+                        if (p.y < sourceLayer.topBarY)
+                        {
+                            //timeline area
+                            return sourceLayer.timeline.click(p.x, p.y);
                         }
-                        return true;
-                    }
-                }
-            }
-            else
+                        else
+                        {
+                            if (sourceLayer.openButton.click(p.x, p.y, button))
+                                return null;
+                            else if (sourceLayer.settingsButton.click(p.x, p.y, button))
+                                return null;
+                            else if (sourceLayer.exitButton.click(p.x, p.y, button))
+                                return null;
+                        }
+                        return null;
+                    });
+            //MapView area
+            bindings.addMouseBind((x, y, b) -> y > sourceLayer.minimumVisibleY,
+                    (p, button) -> {
+                        for (EditorBeatmap m : sourceLayer.activeMaps)
+                        {
+                            ViewSet set = sourceLayer.mapViews.get(m);
+                            if (set.containsY(p.y))
+                            {
+                                return set.click(p.x, p.y, button, BindingGroup.modifierState());
+                            }
+                        }
+                        return null;
+                    });
+            //tools
+            bindings.addMouseBind((x, y, b)->true,
+                    (p, b) -> {
+                        sourceLayer.tools.click(p.x, p.y, b);
+                        return null;
+                    });
+        }
+
+        @Override
+        public boolean scrolled(float amountX, float amountY) {
+            queue(()->{if (BindingGroup.ctrl())
             {
-                //Tools area
-
-                //Tool selection logic. in Tools.java?
-                return sourceLayer.tools.click(gameX, gameY, button);
-            }
-            return false;
-        }
-
-        @Override
-        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
-            if (mouseHold != null) //shouldn't be possible to have mouseHold non-null here, but just in case of some cases like alt-tabbing and missing release or something.
-            {
-                boolean consumed = mouseHold.onRelease(gameX, gameY);
-                mouseHold = null;
-                return consumed;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
-            if (mouseHold != null)
-                mouseHold.onDrag(gameX, gameY);
-            return false;
-        }
-
-        @Override
-        public boolean onMouseMoved(int gameX, int gameY) {
-            return false;
-        }
-
-        @Override
-        public boolean scrolled(int amount) {
-            if (BindingGroup.ctrl())
-            {
-                changeSnapping(amount);
+                changeSnapping(amountY);
             }
             else if (BindingGroup.shift())
             {
-                zoom(amount);
+                zoom(amountY);
             }
             else
             {
                 if (sourceLayer.verticalScrollEnabled)
                 {
-                    int gameY = SettingsMaster.getHeight() - Gdx.input.getY();
+                    float gameY = SettingsMaster.gameY();
 
                     if (gameY < sourceLayer.timelineY && gameY > sourceLayer.minimumVisibleY)
                     {
-                        sourceLayer.scrollPos += amount * 16;
+                        sourceLayer.scrollPos += amountY * 16;
 
                         if (sourceLayer.scrollPos < 0)
                             sourceLayer.scrollPos = 0;
@@ -1170,11 +1161,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         }
 
                         sourceLayer.updateScrollOffset();
-                        return true;
+                        return;
                     }
                 }
 
-                if (amount > 0)
+                if (amountY > 0)
                 {
                     sourceLayer.seekRight();
                 }
@@ -1182,11 +1173,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 {
                     sourceLayer.seekLeft();
                 }
-            }
+            }});
+
             return true;
         }
 
-        private void zoom(int direction) {
+        private void zoom(float direction) {
             if (direction > 0)
             {
                 EditorLayer.setViewScale(EditorLayer.viewScale * 0.90909090909f);
@@ -1197,7 +1189,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
             sourceLayer.textOverlay.setText("View scale: " + oneDecimal.format(viewScale), 1.0f);
         }
-        private void changeSnapping(int direction) {
+        private void changeSnapping(float direction) {
             sourceLayer.divisorOptions.adjust(direction);
             sourceLayer.textOverlay.setText("Snapping: " + sourceLayer.divisorOptions.toString(), 1.0f);
         }

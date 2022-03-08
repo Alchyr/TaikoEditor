@@ -11,7 +11,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TextRenderer {
-    private static GlyphLayout layout = new GlyphLayout();
+    private static final GlyphLayout[] layouts = new GlyphLayout[2];
+    public static int layoutIndex = 0;
+    static {
+        for (int i = 0; i < layouts.length; ++i) {
+            layouts[i] = new GlyphLayout();
+        }
+    }
+    public static void swapLayouts() {
+        layoutIndex = (layoutIndex + 1) % layouts.length;
+    }
 
     private HashMap<BitmapFont, BitmapFontCache> staticTextCaches;
     private ArrayList<BitmapFontCache> staticTextCacheList;
@@ -67,11 +76,16 @@ public class TextRenderer {
     }
     public TextRenderer renderTextYCentered(SpriteBatch sb, String s, float x, float y)
     {
-        layout.reset();
+        return renderTextYCentered(sb, Color.WHITE, s, x, y);
+    }
+    public TextRenderer renderTextYCentered(SpriteBatch sb, Color c, String s, float x, float y)
+    {
+        int index = layoutIndex;
+        layouts[index].reset();
 
-        layout.setText(currentRendering, s, Color.WHITE.cpy(), 1, Align.left, false);
+        layouts[index].setText(currentRendering, s, c, 1, Align.left, false);
 
-        currentRendering.draw(sb, layout, x, y + layout.height / 2.0f);
+        currentRendering.draw(sb, layouts[index], x, y + layouts[index].height / 2.0f);
 
         return this;
     }
@@ -81,11 +95,12 @@ public class TextRenderer {
     }
     public TextRenderer renderTextCentered(SpriteBatch sb, String s, float x, float y, Color c)
     {
-        layout.reset();
+        int index = layoutIndex;
+        layouts[index].reset();
 
-        layout.setText(currentRendering, s, c.cpy(), 1, Align.center, false);
+        layouts[index].setText(currentRendering, s, c, 1, Align.center, false);
 
-        currentRendering.draw(sb, layout, x, y + layout.height / 2.0f);
+        currentRendering.draw(sb, layouts[index], x, y + layouts[index].height / 2.0f);
 
         return this;
     }
@@ -101,14 +116,20 @@ public class TextRenderer {
 
     public float getWidth(String text)
     {
-        layout.setText(currentRendering, text);
+        int index = layoutIndex;
+        layouts[index].reset();
 
-        return layout.width;
+        layouts[index].setText(currentRendering, text);
+
+        return layouts[index].width;
     }
     public float getHeight(String text)
     {
-        layout.setText(currentRendering, text);
+        int index = layoutIndex;
+        layouts[index].reset();
 
-        return layout.height;
+        layouts[index].setText(currentRendering, text);
+
+        return layouts[index].height;
     }
 }

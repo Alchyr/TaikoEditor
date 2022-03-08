@@ -20,23 +20,34 @@ public class Mapset {
     protected String artist = "";
     protected String background = "";
 
-    private String shortCreator, shortTitle, shortArtist;
+    private String shortCreator = null, shortTitle = null, shortArtist = null, songMeta = null; //temporary things.
 
     private final File directory;
-    private final ArrayList<MapInfo> maps;
+    private List<MapInfo> maps;
 
-    public Mapset(File directory)
+    public Mapset(File directory) // loading new
     {
         this.directory = directory;
-        this.key = directory.getName();
+        this.key = directory.getAbsolutePath();
 
         this.maps = new ArrayList<>();
         sameSong = true;
 
-
-        //TODO: only load maps here if data is not already found from map database
-        //When mapset is opened, data should be checked to ensure it has not changed
         loadMaps();
+    }
+    public Mapset(File directory, List<MapInfo> maps, boolean sameSong, String songFile, String creator, String title, String artist, String background) //from data
+    {
+        this.directory = directory;
+        this.key = directory.getAbsolutePath();
+
+        this.maps = maps;
+        this.sameSong = sameSong;
+
+        this.songFile = songFile;
+        this.creator = creator;
+        this.title = title;
+        this.artist = artist;
+        this.background = background;
     }
 
     public String getArtist() {
@@ -56,6 +67,10 @@ public class Mapset {
     {
         return maps;
     }
+    public void setMaps(List<MapInfo> confirmed) {
+        maps = confirmed;
+        sortMaps();
+    }
 
     //For display, some of these will be too long.
     //Save these to avoid slow process?
@@ -74,13 +89,14 @@ public class Mapset {
 
         do
         {
+            while (len > 0 && artist.charAt(len - 1) == ' ')
+                --len;
+
             shortArtist = artist.substring(0, len) + "...";
             width = textRenderer.getWidth(shortArtist);
 
             --len;
-            if (artist.charAt(len - 1) == ' ')
-                --len;
-        } while (width >= limit);
+        } while (width >= limit && len > 0);
 
         return shortArtist;
     }
@@ -95,17 +111,18 @@ public class Mapset {
         if (width < limit)
             return title;
 
-        int len = title.length() - 3;
+        int len = title.length() - 2;
 
         do
         {
+            while (len > 0 && title.charAt(len - 1) == ' ')
+                --len;
+
             shortTitle = title.substring(0, len) + "...";
             width = textRenderer.getWidth(shortTitle);
 
             --len;
-            if (title.charAt(len - 1) == ' ')
-                --len;
-        } while (width >= limit);
+        } while (width >= limit && len > 0);
 
         return shortTitle;
     }
@@ -125,15 +142,74 @@ public class Mapset {
 
         do
         {
+            while (len > 0 && creator.charAt(len - 1) == ' ')
+                --len;
+
             shortCreator = creator.substring(0, len) + "...";
             width = textRenderer.getWidth(shortCreator);
 
             --len;
-            if (creator.charAt(len - 1) == ' ')
-                --len;
-        } while (width >= limit);
+        } while (width >= limit && len > 0);
 
         return shortCreator;
+    }
+
+    public String songMeta(BitmapFont font, float limit) {
+        if (songMeta != null)
+        {
+            return songMeta;
+        }
+
+        songMeta = artist + " - " + title;
+        float width = textRenderer.setFont(font).getWidth(songMeta);
+
+        if (width < limit)
+            return songMeta;
+
+        int len = title.length() - 3;
+
+        do
+        {
+            while (len > 0 && title.charAt(len - 1) == ' ')
+                --len;
+
+            songMeta = artist + " - " + title.substring(0, len) + "...";
+            width = textRenderer.getWidth(songMeta);
+
+            --len;
+        } while (width >= limit && len > 0);
+
+        if (len == 0) { //could not get short enough by just shortening title
+            float artistLimit = limit * 0.4f, titleLimit = limit - artistLimit;
+
+            len = artist.length() - 3;
+            do
+            {
+                while (len > 0 && artist.charAt(len - 1) == ' ')
+                    --len;
+
+                songMeta = artist.substring(0, len) + "... - ";
+                width = textRenderer.getWidth(songMeta);
+
+                --len;
+            } while (width >= artistLimit && len > 0);
+
+            int titleLen = title.length() - 3;
+            do
+            {
+                while (titleLen > 0 && title.charAt(len - 1) == ' ')
+                    --titleLen;
+
+                songMeta = title.substring(0, titleLen) + "...";
+                width = textRenderer.getWidth(songMeta);
+
+                --titleLen;
+            } while (width >= titleLimit && titleLen > 0);
+
+            songMeta = artist.substring(0, len) + "... - " + title.substring(0, titleLen) + "...";
+        }
+
+        return songMeta;
     }
 
     public String getSongFile() {
@@ -150,17 +226,20 @@ public class Mapset {
     {
         File[] mapFiles = directory.listFiles((f)->f.getPath().endsWith(".osu"));
 
+        if (mapFiles == null)
+            return;
+
         for (File map : mapFiles)
         {
             MapInfo info = new MapInfo(map, this);
-            if (info.mode == 1)
+            if (info.getMode() == 1)
             {
                 maps.add(info);
 
                 if (songFile.isEmpty())
-                    songFile = info.songFile;
-                else if (!songFile.equals(info.songFile))
-                    sameSong = false;
+                    songFile = info.getSongFile();
+                else if (!songFile.equals(info.getSongFile()))
+                    sameSong = false; //i don't handle this very well right now xd
             }
         }
 
@@ -176,27 +255,33 @@ public class Mapset {
         maps.sort(new MapDifficultyComparator());
     }
 
+    public void add(FullMapInfo newBase) {
+        maps.add(newBase.getInfo());
+
+        sortMaps();
+    }
+
     private static class MapDifficultyComparator implements Comparator<MapInfo>
     {
         private static int getDifficultyValue(MapInfo info)
         {
-            if (info.difficultyName.contains("Inner Oni"))
+            if (info.getDifficultyName().toLowerCase().contains("inner") || info.getDifficultyName().toLowerCase().contains("ura"))
             {
                 return 4;
             }
-            else if (info.difficultyName.contains("Oni"))
+            else if (info.getDifficultyName().toLowerCase().contains("oni"))
             {
                 return 3;
             }
-            else if (info.difficultyName.contains("Muzu"))
+            else if (info.getDifficultyName().toLowerCase().contains("muzu"))
             {
                 return 2;
             }
-            else if (info.difficultyName.contains("Futsuu"))
+            else if (info.getDifficultyName().toLowerCase().contains("futsuu"))
             {
                 return 1;
             }
-            else if (info.difficultyName.contains("Kantan"))
+            else if (info.getDifficultyName().toLowerCase().contains("kantan"))
             {
                 return 0;
             }

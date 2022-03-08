@@ -8,7 +8,8 @@ import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
-import alchyr.taikoedit.util.input.MouseHoldObject;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -62,10 +63,10 @@ public class HitTool extends EditorTool {
 
     @Override
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
-        int y = SettingsMaster.getHeight() - Gdx.input.getY();
+        float y = SettingsMaster.gameY();
 
         renderPreview = false;
-        placementObject.finish = finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
+        placementObject.setIsFinish(finisherLock ^ BindingGroup.shift());
 
         if (y > viewsTop || y < viewsBottom)
             return;
@@ -85,7 +86,7 @@ public class HitTool extends EditorTool {
                     {
                         previewView = hovered;
                         renderPreview = true;
-                        placementObject.setPosition((long) closest.pos);
+                        placementObject.setPos((long) closest.pos);
                     }
                 }
                 return;
@@ -102,7 +103,7 @@ public class HitTool extends EditorTool {
     }
 
     @Override
-    public MouseHoldObject click(MapView view, int x, int y, int button, int modifiers) {
+    public MouseHoldObject click(MapView view, float x, float y, int button, int modifiers) {
         //Place an object at current previewed placement position
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
@@ -111,6 +112,7 @@ public class HitTool extends EditorTool {
 
             placementObject = new Hit(0, isRim);
             renderPreview = false;
+            return MouseHoldObject.nothing;
         }
 
         return null;
