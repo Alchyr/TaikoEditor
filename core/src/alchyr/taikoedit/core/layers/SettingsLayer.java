@@ -4,28 +4,27 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.UIElement;
-import alchyr.taikoedit.core.input.AdjustedInputProcessor;
-import alchyr.taikoedit.core.input.BoundInputMultiplexer;
-import alchyr.taikoedit.core.input.BoundInputProcessor;
+import alchyr.taikoedit.core.input.*;
+import alchyr.taikoedit.core.layers.sub.GetHotkeyLayer;
 import alchyr.taikoedit.core.ui.*;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.management.BindingMaster;
+import alchyr.taikoedit.management.LocalizationMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputMultiplexer;
+import alchyr.taikoedit.management.localization.LocalizedText;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 //SETTINGS:
 
@@ -55,8 +54,9 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
     //editor settings
     //divided into 5 columns, one of which is wider than the others. 1/6 1/6 1/6 2/6 1/6
-    private static final int SMALL_SECTION_WIDTH, LARGE_SECTION_WIDTH, X_1, X_2, X_3, X_4, X_5, LABEL_Y_START;
+    private static final int SMALL_SECTION_WIDTH, LARGE_SECTION_WIDTH, X_1, X_2, X_3, X_4, X_5, X_CENTER, LABEL_Y_START, HOTKEY_Y_START;
     private static final int LABEL_Y_SPACING = 50;
+    private static final int HOTKEY_SPACING = 40;
 
     static {
         float displayAreaWidth = SettingsMaster.getWidth() - BUTTON_WIDTH - 20;
@@ -68,7 +68,10 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         X_4 = X_3 + SMALL_SECTION_WIDTH;
         X_5 = X_4 + LARGE_SECTION_WIDTH;
 
+        X_CENTER = (int) (X_1 + displayAreaWidth / 2);
+
         LABEL_Y_START = (int) (SettingsMaster.getHeight() * 0.8f);
+        HOTKEY_Y_START = (int) (SettingsMaster.getHeight() * 0.9f);
     }
 
 
@@ -82,22 +85,21 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
     private ImageButton exitButton;
 
+    private final Set<BindingGroup> adjustedGroups = new HashSet<>();
+
     private static int currentPage = 0;
 
 
     public SettingsLayer()
     {
-        mainProcessor = new SettingsProcessor(this);
         this.type = LAYER_TYPE.FULL_STOP;
-
-        initialize();
-        mainProcessor.bind();
     }
 
     private static final DecimalFormat oneDecimal = new DecimalFormat("#0.#", osuSafe);
     @Override
     public void initialize() {
         BitmapFont font = assetMaster.getFont("aller medium");
+        mainProcessor = new SettingsProcessor(this);
         processor = new BoundInputMultiplexer(mainProcessor);
 
         exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::close);
@@ -108,80 +110,28 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         pageButtons[0] = new Button(BUTTON_X, BUTTON_Y + BUTTON_HEIGHT / 2.0f, BUTTON_WIDTH, BUTTON_HEIGHT, "Editor", font).setClick((i)->this.swapPages(0)).useBorderRendering();
         pageButtons[1] = new Button(BUTTON_X, BUTTON_Y - BUTTON_HEIGHT / 2.0f, BUTTON_WIDTH, BUTTON_HEIGHT, "Hotkeys", font).setClick((i)->this.swapPages(1)).useBorderRendering();
 
-        Page editorSettings = new Page(null);
-
-        //editor settings page
-        {
-            int y = LABEL_Y_START;
-            editorSettings.addLabel(X_1 + 10, y, font, "Don");
-            editorSettings.addLabel(xPositions[0] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.donX));
-            editorSettings.addLabel(yPositions[0] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.donY));
-            Button don = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(0)).useBorderRendering();
-
-            y -= LABEL_Y_SPACING;
-            editorSettings.addLabel(X_1 + 10, y, font, "Kat");
-            editorSettings.addLabel(xPositions[1] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.katX));
-            editorSettings.addLabel(yPositions[1] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.katY));
-            Button kat = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(1)).useBorderRendering();
-
-            xField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "x:", "", 3, font).setType(TextField.TextType.INTEGER);
-            xField.setOnEndInput(this::setXPosition);
-            xField.lock();
-            editorSettings.addTextField(xField);
-
-            positioningArea = new ObjectPositioningArea(X_4 + LARGE_SECTION_WIDTH / 2.0f, y - LABEL_Y_SPACING / 2.0f, LARGE_SECTION_WIDTH * 0.8f, 180);
-            editorSettings.addUIElement(positioningArea);
-
-            y -= LABEL_Y_SPACING;
-            editorSettings.addLabel(X_1 + 10, y, font, "Big Don");
-            editorSettings.addLabel(xPositions[2] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.bigDonX));
-            editorSettings.addLabel(yPositions[2] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.bigDonY));
-            Button bigDon = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(2)).useBorderRendering();
-
-            yField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "y:", "", 3, font).setType(TextField.TextType.INTEGER);
-            yField.setOnEndInput(this::setYPosition);
-            yField.lock();
-            editorSettings.addTextField(yField);
-
-            y -= LABEL_Y_SPACING;
-            editorSettings.addLabel(X_1 + 10, y, font, "Big Kat");
-            editorSettings.addLabel(xPositions[3] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.bigKatX));
-            editorSettings.addLabel(yPositions[3] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.bigKatY));
-            Button bigKat = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(3)).useBorderRendering();
-
-            y -= LABEL_Y_SPACING * 2;
-
-            musicVolume = new TextField(X_2 + 10, y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
-                    .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateMusicVolume);
-            effectVolume = new TextField(X_4 + 10, y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
-                    .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateEffectVolume);
-
-            editorSettings.addTextField(musicVolume);
-            editorSettings.addTextField(effectVolume);
-
-            positioningButtons.add(don);
-            editorSettings.addButton(don);
-            positioningButtons.add(kat);
-            editorSettings.addButton(kat);
-            positioningButtons.add(bigDon);
-            editorSettings.addButton(bigDon);
-            positioningButtons.add(bigKat);
-            editorSettings.addButton(bigKat);
-        }
-
-        pages[0] = editorSettings;
-        pages[1] = new Page(null);
+        pages[0] = editorSettingsPage(font);
+        pages[1] = hotkeysPage(font);
 
         pages[0].bind();
         pages[1].bind();
 
-        swapPages(0);
+        swapPages(currentPage);
 
         pixel = assetMaster.get("ui:pixel");
+
+        mainProcessor.bind();
     }
 
     private void close() {
         TaikoEditor.removeLayer(this);
+
+        for (BindingGroup group : adjustedGroups) {
+            group.updateInputMap();
+        }
+        if (!adjustedGroups.isEmpty()) {
+            BindingMaster.save();
+        }
     }
     private void swapPages(int page) {
         for (int i = 0; i < pageButtons.length; ++i) {
@@ -192,9 +142,477 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             processor.setProcessors(pages[currentPage], mainProcessor);
         }
     }
+    private void updateMusicVolume(String t, TextField f) {
+        try {
+            float vol = Float.parseFloat(t);
+
+            vol = Math.min(1.0f, Math.max(0.0f, vol / 100.0f));
+
+            SettingsMaster.setMusicVolume(vol);
+
+            SettingsMaster.save();
+        }
+        catch (Exception ignored) {
+        }
+        f.setText(oneDecimal.format(SettingsMaster.getMusicVolume() * 100));
+    }
+    private void updateEffectVolume(String t, TextField f) {
+        try {
+            float vol = Float.parseFloat(t);
+
+            vol = Math.min(1.0f, Math.max(0.0f, vol / 100.0f));
+
+            SettingsMaster.effectVolume = vol;
+
+            SettingsMaster.save();
+        }
+        catch (Exception ignored) {
+        }
+        f.setText(oneDecimal.format(SettingsMaster.effectVolume * 100));
+    }
+
+    @Override
+    public void update(float elapsed) {
+        processor.update(elapsed);
+        //pages[currentPage].update(elapsed);
+
+        for (Button b : pageButtons)
+            b.update(elapsed);
+
+        exitButton.update(elapsed);
+    }
+
+    @Override
+    public void render(SpriteBatch sb, ShapeRenderer sr) {
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        pages[currentPage].render(sb, sr);
+
+        for (Button b : pageButtons)
+            b.render(sb, sr);
+
+        exitButton.render(sb, sr);
+    }
+
+    @Override
+    public InputProcessor getProcessor() {
+        return processor;
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        mainProcessor.dispose();
+
+        for (Page page : pages)
+            page.dispose();
+    }
+
+    private static class SettingsProcessor extends BoundInputProcessor {
+        private final SettingsLayer sourceLayer;
+
+        public SettingsProcessor(SettingsLayer source)
+        {
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
+            this.sourceLayer = source;
+        }
+
+        @Override
+        public void bind() {
+            bindings.bind("Exit", sourceLayer::close);
+
+            bindings.addMouseBind((x, y, b)->{
+                for (Button button : sourceLayer.pageButtons) {
+                    if (button.contains(x, y)) {
+                        return true;
+                    }
+                }
+                return false;
+            }, (p, b)-> {
+                for (Button button : sourceLayer.pageButtons) {
+                    if (button.click(p.x, p.y, b)) {
+                        return null;
+                    }
+                }
+                return null;
+            });
+
+            bindings.addMouseBind((x, y, b)->currentPage == 0 && !sourceLayer.activePositioning.isEmpty(),
+                    (p, b)-> {
+                        if (sourceLayer.positioningArea.position(p.x, p.y, sourceLayer)) {
+                            sourceLayer.activePositioning.clear();
+                            sourceLayer.xField.setText("");
+                            sourceLayer.xField.disable();
+                            sourceLayer.yField.setText("");
+                            sourceLayer.yField.disable();
+                            for (Button button : sourceLayer.positioningButtons)
+                                button.renderBorder = false;
+                        }
+                        return null;
+                    });
+
+            bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);
+        }
+    }
+
+
+
+
+    // Page Generation
+    private Page editorSettingsPage(BitmapFont font) {
+        Page editorSettings = new Page(null);
+
+        //editor settings page
+        int y = LABEL_Y_START;
+        editorSettings.addLabel(X_1 + 10, y, font, "Don");
+        editorSettings.add(xPositions[0] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.donX));
+        editorSettings.add(yPositions[0] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.donY));
+        Button don = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(0)).useBorderRendering();
+
+        y -= LABEL_Y_SPACING;
+        editorSettings.addLabel(X_1 + 10, y, font, "Kat");
+        editorSettings.add(xPositions[1] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.katX));
+        editorSettings.add(yPositions[1] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.katY));
+        Button kat = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(1)).useBorderRendering();
+
+        xField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "x:", "", 3, font).setType(TextField.TextType.INTEGER);
+        xField.setOnEndInput(this::setXPosition);
+        xField.lock();
+        editorSettings.add(xField);
+
+        positioningArea = new ObjectPositioningArea(X_4 + LARGE_SECTION_WIDTH / 2.0f, y - LABEL_Y_SPACING / 2.0f, LARGE_SECTION_WIDTH * 0.8f, 180);
+        editorSettings.addUIElement(positioningArea);
+
+        y -= LABEL_Y_SPACING;
+        editorSettings.addLabel(X_1 + 10, y, font, "Big Don");
+        editorSettings.add(xPositions[2] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.bigDonX));
+        editorSettings.add(yPositions[2] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.bigDonY));
+        Button bigDon = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(2)).useBorderRendering();
+
+        yField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "y:", "", 3, font).setType(TextField.TextType.INTEGER);
+        yField.setOnEndInput(this::setYPosition);
+        yField.lock();
+        editorSettings.add(yField);
+
+        y -= LABEL_Y_SPACING;
+        editorSettings.addLabel(X_1 + 10, y, font, "Big Kat");
+        editorSettings.add(xPositions[3] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.bigKatX));
+        editorSettings.add(yPositions[3] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.bigKatY));
+        Button bigKat = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(3)).useBorderRendering();
+
+        y -= LABEL_Y_SPACING * 2;
+
+        musicVolume = new TextField(X_2 + 10, y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
+                .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateMusicVolume);
+        effectVolume = new TextField(X_4 + 10, y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
+                .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateEffectVolume);
+
+        editorSettings.add(musicVolume);
+        editorSettings.add(effectVolume);
+
+        positioningButtons.add(don);
+        editorSettings.add(don);
+        positioningButtons.add(kat);
+        editorSettings.add(kat);
+        positioningButtons.add(bigDon);
+        editorSettings.add(bigDon);
+        positioningButtons.add(bigKat);
+        editorSettings.add(bigKat);
+
+        return editorSettings;
+    }
+
+    private Page hotkeysPage(BitmapFont font) {
+        Page page = new Page(null);
+
+        LocalizedText keyNames = LocalizationMaster.getLocalizedText("keys", "names");
+        if (keyNames == null)
+            return page;
+
+        String[] keyNameArray = keyNames.get("");
+        if (keyNameArray == null)
+            return page;
+
+        Map<String, LocalizedText> hotkeyGroups = LocalizationMaster.getLocalizedGroup("hotkeys");
+
+        Map<String, BindingGroup> bindingGroups = BindingMaster.getBindingGroups();
+
+        int x = X_2 + 10;
+        int y = HOTKEY_Y_START;
+
+        List<UIElement> orderedElements = new ArrayList<>();
+
+        for (Map.Entry<String, BindingGroup> group : bindingGroups.entrySet()) {
+            if (group.getValue().isModifiable()) {
+                //Group Label
+                LocalizedText groupLocalization = hotkeyGroups.getOrDefault(group.getKey(), LocalizationMaster.noText);
+                orderedElements.add(page.addLabel(X_CENTER, y, font, groupLocalization.getOrDefault("SetName", 0, group.getKey())));
+                y -= HOTKEY_SPACING;
+
+                for (InputBinding binding : group.getValue().getOrderedBindings()) {
+                    //Binding label
+                    Button addInput = new Button(x - 40, y - 15, 30, 30, "+", font).useBorderRendering(true);
+                    orderedElements.add(page.add(addInput));
+                    Label bindingLabel = page.addLabel(x, y, font, groupLocalization.getOrDefault(binding.getInputID(), 0));
+                    orderedElements.add(bindingLabel);
+
+                    addInput.setClick(()->{
+                        GetHotkeyLayer hotkeyLayer = new GetHotkeyLayer(keyNameArray, null);
+                        hotkeyLayer.onConfirm(()->{
+                            InputBinding.InputInfo info = new InputBinding.InputInfo(hotkeyLayer.keycode, hotkeyLayer.ctrl, hotkeyLayer.alt, hotkeyLayer.shift);
+                            binding.addInput(info);
+
+                            float newY = bindingLabel.getY() - HOTKEY_SPACING;
+                            Button adjustInput = new Button(X_3, newY - HOTKEY_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, HOTKEY_SPACING, null, font).useBorderRendering();
+                            adjustInput.renderBorder = true;
+                            Button removeInput = new Button(X_3 - 40, newY - 15, 30, 30, "-", font).useBorderRendering(true);
+                            Label inputLabel = page.addLabel(X_3 + 10, newY, font, info.toString(keyNameArray));
+
+                            int index = orderedElements.indexOf(bindingLabel) + 1;
+                            orderedElements.add(index++, page.add(removeInput));
+                            orderedElements.add(index++, page.add(adjustInput));
+                            orderedElements.add(index++, inputLabel);
+
+                            //These internal methods don't have to register the group as changed since for them to happen the group was already marked as changed
+                            removeInput.setClick(()->{
+                                binding.removeInput(info);
+                                page.remove(removeInput);
+                                page.remove(adjustInput);
+                                page.remove(inputLabel);
+
+                                boolean adjust = false;
+                                Iterator<UIElement> elementIterator = orderedElements.iterator();
+                                while (elementIterator.hasNext()) {
+                                    UIElement e = elementIterator.next();
+                                    if (e.equals(removeInput) || e.equals(adjustInput) || e.equals(inputLabel)) {
+                                        elementIterator.remove();
+                                        adjust = true;
+                                    }
+                                    else if (adjust) {
+                                        e.move(0, HOTKEY_SPACING);
+                                    }
+                                }
+                                page.adjustMaximumScroll(-HOTKEY_SPACING);
+                            });
+
+                            adjustInput.setClick(()->{
+                                GetHotkeyLayer subHotkeyLayer = new GetHotkeyLayer(keyNameArray, info);
+                                subHotkeyLayer.onConfirm(()->{
+                                    info.set(subHotkeyLayer.keycode, subHotkeyLayer.ctrl, subHotkeyLayer.alt, subHotkeyLayer.shift, false);
+                                    inputLabel.setText(info.toString(keyNameArray));
+                                });
+                                addLayer(subHotkeyLayer);
+                            });
+
+                            for (; index < orderedElements.size(); ++index) {
+                                orderedElements.get(index).move(0, -HOTKEY_SPACING);
+                            }
+                            page.adjustMaximumScroll(HOTKEY_SPACING);
+
+                            adjustedGroups.add(group.getValue());
+                        });
+                        addLayer(hotkeyLayer);
+                    });
+
+                    y -= HOTKEY_SPACING;
+
+                    //Input labels
+                    for (InputBinding.InputInfo info : binding.getInputs()) {
+                        Button adjustInput = new Button(X_3, y - HOTKEY_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, HOTKEY_SPACING, null, font).useBorderRendering();
+                        adjustInput.renderBorder = true;
+                        Button removeInput = new Button(X_3 - 40, y - 15, 30, 30, "-", font).useBorderRendering(true);
+                        Label inputLabel = page.addLabel(X_3 + 10, y, font, info.toString(keyNameArray));
+
+                        orderedElements.add(page.add(removeInput));
+                        orderedElements.add(page.add(adjustInput));
+                        orderedElements.add(inputLabel);
+
+                        removeInput.setClick(()->{
+                            binding.removeInput(info);
+                            page.remove(removeInput);
+                            page.remove(adjustInput);
+                            page.remove(inputLabel);
+
+                            boolean adjust = false;
+                            Iterator<UIElement> elementIterator = orderedElements.iterator();
+                            while (elementIterator.hasNext()) {
+                                UIElement e = elementIterator.next();
+                                if (e.equals(removeInput) || e.equals(adjustInput) || e.equals(inputLabel)) {
+                                    elementIterator.remove();
+                                    adjust = true;
+                                }
+                                else if (adjust) {
+                                    e.move(0, HOTKEY_SPACING);
+                                }
+                            }
+                            page.adjustMaximumScroll(-HOTKEY_SPACING);
+
+                            adjustedGroups.add(group.getValue());
+                        });
+
+                        adjustInput.setClick(()->{
+                            GetHotkeyLayer hotkeyLayer = new GetHotkeyLayer(keyNameArray, info);
+                            hotkeyLayer.onConfirm(()->{
+                                info.set(hotkeyLayer.keycode, hotkeyLayer.ctrl, hotkeyLayer.alt, hotkeyLayer.shift, false);
+                                inputLabel.setText(info.toString(keyNameArray));
+
+                                adjustedGroups.add(group.getValue());
+                            });
+                            addLayer(hotkeyLayer);
+                        });
+
+                        y -= HOTKEY_SPACING;
+                    }
+                }
+            }
+        }
+
+        //y positive: no scrolling
+        //y negative, moving below screen, small amount of scrolling
+        page.setMaximumScroll(-(y - HOTKEY_SPACING));
+
+        return page;
+    }
 
     //page 1 stuff
     private ObjectPositioningArea positioningArea;
+    private static class ObjectPositioningArea implements UIElement {
+        private float cX, cY, width, height, scale, dx, dy;
+
+        public ObjectPositioningArea(float cX, float cY, float maxWidth, float maxHeight) {
+            height = maxWidth * 12 / 16; //height if using maxWidth
+            if (height > maxHeight) { //too big
+                width = maxHeight * 16 / 12;
+                height = maxHeight;
+            }
+            else {
+                width = maxWidth;
+            }
+            scale = width / 512.0f;
+
+            this.cX = cX;
+            this.cY = cY;
+
+            dx = 0;
+            dy = 0;
+        }
+
+        public boolean position(float gameX, float gameY, SettingsLayer source) {
+            if (gameX < cX - width / 2.0f || gameY < cY - height / 2.0f || gameX > cX + width / 2.0f || gameY > cY + height / 2.0f) {
+                return false;
+            }
+
+            int x = Math.max(0, (Math.min(512, (int) ((gameX - (cX - width / 2.0f)) / scale))));
+            int y = Math.max(0, (Math.min(384, (int) (((cY + height / 2.0f) - gameY) / scale))));
+
+            String xString = "x:" + x;
+            String yString = "y:" + y;
+            for (int i : source.activePositioning) {
+                source.xPositions[i].setText(xString);
+                source.yPositions[i].setText(yString);
+
+                switch (i) {
+                    case 0:
+                        SettingsMaster.donX = x;
+                        SettingsMaster.donY = y;
+                        break;
+                    case 1:
+                        SettingsMaster.katX = x;
+                        SettingsMaster.katY = y;
+                        break;
+                    case 2:
+                        SettingsMaster.bigDonX = x;
+                        SettingsMaster.bigDonY = y;
+                        break;
+                    case 3:
+                        SettingsMaster.bigKatX = x;
+                        SettingsMaster.bigKatY = y;
+                        break;
+                }
+            }
+
+            SettingsMaster.save();
+
+            return true;
+        }
+
+        @Override
+        public void move(float dx, float dy) {
+            cX += dx;
+            cY += dy;
+        }
+
+        @Override
+        public void update(float elapsed) {
+
+        }
+
+        @Override
+        public void render(SpriteBatch sb, ShapeRenderer sr) {
+            sb.end();
+            //grid first
+            sr.begin(ShapeRenderer.ShapeType.Line);
+
+            float left = cX - width / 2 + dx, right = cX + width / 2 + dx, top = cY + height / 2 + dy, bottom = cY - height / 2 + dy, temp = top;
+            sr.setColor(Color.WHITE);
+            sr.rect(left, bottom, width, height);
+
+            sr.setColor(Color.GRAY);
+            //horizontal lines
+            temp -= height / 6.0f;
+            sr.line(left, temp, right, temp);
+            temp -= height / 6.0f;
+            sr.line(left, temp, right, temp);
+            temp -= height / 6.0f;
+            sr.line(left, temp, right, temp);
+            temp -= height / 6.0f;
+            sr.line(left, temp, right, temp);
+            temp -= height / 6.0f;
+            sr.line(left, temp, right, temp);
+
+            //vertical lines
+            temp = left + width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+            temp += width / 8.0f;
+            sr.line(temp, top, temp, bottom);
+
+            sr.end();
+            sr.begin(ShapeRenderer.ShapeType.Filled);
+
+            //preview objects
+            //0,0 in osu coordinates is top left
+            sr.setColor(Hit.kat);
+            sr.circle(left + SettingsMaster.bigKatX * scale, top - SettingsMaster.bigKatY * scale, 40 * scale);
+            sr.setColor(Hit.don);
+            sr.circle(left + SettingsMaster.bigDonX * scale, top - SettingsMaster.bigDonY * scale, 40 * scale);
+            sr.circle(left + SettingsMaster.donX * scale, top - SettingsMaster.donY * scale, 25 * scale);
+            sr.setColor(Hit.kat);
+            sr.circle(left + SettingsMaster.katX * scale, top - SettingsMaster.katY * scale, 25 * scale);
+
+            sr.end();
+            sb.begin();
+        }
+
+        @Override
+        public void render(SpriteBatch sb, ShapeRenderer sr, float dx, float dy) {
+            this.dx = dx;
+            this.dy = dy;
+
+            render(sb, sr);
+        }
+    }
+
     private final List<Button> positioningButtons = new ArrayList<>();
     private final List<Integer> activePositioning = new ArrayList<>();
     private final Label[] xPositions = new Label[4];
@@ -311,242 +729,6 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         }
         catch (NumberFormatException e) {
             f.setText("");
-        }
-    }
-    private void updateMusicVolume(String t, TextField f) {
-        try {
-            float vol = Float.parseFloat(t);
-
-            vol = Math.min(1.0f, Math.max(0.0f, vol / 100.0f));
-
-            SettingsMaster.setMusicVolume(vol);
-
-            SettingsMaster.save();
-        }
-        catch (Exception ignored) {
-        }
-        f.setText(oneDecimal.format(SettingsMaster.getMusicVolume() * 100));
-    }
-    private void updateEffectVolume(String t, TextField f) {
-        try {
-            float vol = Float.parseFloat(t);
-
-            vol = Math.min(1.0f, Math.max(0.0f, vol / 100.0f));
-
-            SettingsMaster.effectVolume = vol;
-
-            SettingsMaster.save();
-        }
-        catch (Exception ignored) {
-        }
-        f.setText(oneDecimal.format(SettingsMaster.effectVolume * 100));
-    }
-
-    @Override
-    public void update(float elapsed) {
-        processor.update(elapsed);
-        //pages[currentPage].update(elapsed);
-
-        for (Button b : pageButtons)
-            b.update(elapsed);
-
-        exitButton.update(elapsed);
-    }
-
-    @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr) {
-        sb.setColor(Color.BLACK);
-        sb.draw(pixel, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
-
-        pages[currentPage].render(sb, sr);
-
-        for (Button b : pageButtons)
-            b.render(sb, sr);
-
-        exitButton.render(sb, sr);
-    }
-
-    @Override
-    public InputProcessor getProcessor() {
-        return processor;
-    }
-
-    private static class SettingsProcessor extends BoundInputProcessor {
-        private final SettingsLayer sourceLayer;
-
-        public SettingsProcessor(SettingsLayer source)
-        {
-            super(BindingMaster.getBindingGroup("Basic"), true);
-            this.sourceLayer = source;
-        }
-
-        @Override
-        public void bind() {
-            bindings.bind("Exit", sourceLayer::close);
-
-            bindings.addMouseBind((x, y, b)->{
-                for (Button button : sourceLayer.pageButtons) {
-                    if (button.contains(x, y)) {
-                        return true;
-                    }
-                }
-                return false;
-            }, (p, b)-> {
-                for (Button button : sourceLayer.pageButtons) {
-                    if (button.click(p.x, p.y, b)) {
-                        return null;
-                    }
-                }
-                return null;
-            });
-
-            bindings.addMouseBind((x, y, b)->currentPage == 0 && !sourceLayer.activePositioning.isEmpty(),
-                    (p, b)-> {
-                        if (sourceLayer.positioningArea.position(p.x, p.y, sourceLayer)) {
-                            sourceLayer.activePositioning.clear();
-                            sourceLayer.xField.setText("");
-                            sourceLayer.xField.disable();
-                            sourceLayer.yField.setText("");
-                            sourceLayer.yField.disable();
-                            for (Button button : sourceLayer.positioningButtons)
-                                button.renderBorder = false;
-                        }
-                        return null;
-                    });
-
-            bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);
-        }
-    }
-
-
-
-    private static class ObjectPositioningArea implements UIElement {
-        private float cX, cY, width, height, scale, dx, dy;
-
-        public ObjectPositioningArea(float cX, float cY, float maxWidth, float maxHeight) {
-            height = maxWidth * 12 / 16; //height if using maxWidth
-            if (height > maxHeight) { //too big
-                width = maxHeight * 16 / 12;
-                height = maxHeight;
-            }
-            else {
-                width = maxWidth;
-            }
-            scale = width / 512.0f;
-
-            this.cX = cX;
-            this.cY = cY;
-
-            dx = 0;
-            dy = 0;
-        }
-
-        public boolean position(float gameX, float gameY, SettingsLayer source) {
-            if (gameX < cX - width / 2.0f || gameY < cY - height / 2.0f || gameX > cX + width / 2.0f || gameY > cY + height / 2.0f) {
-                return false;
-            }
-
-            int x = Math.max(0, (Math.min(512, (int) ((gameX - (cX - width / 2.0f)) / scale))));
-            int y = Math.max(0, (Math.min(384, (int) (((cY + height / 2.0f) - gameY) / scale))));
-
-            String xString = "x:" + x;
-            String yString = "y:" + y;
-            for (int i : source.activePositioning) {
-                source.xPositions[i].setText(xString);
-                source.yPositions[i].setText(yString);
-
-                switch (i) {
-                    case 0:
-                        SettingsMaster.donX = x;
-                        SettingsMaster.donY = y;
-                        break;
-                    case 1:
-                        SettingsMaster.katX = x;
-                        SettingsMaster.katY = y;
-                        break;
-                    case 2:
-                        SettingsMaster.bigDonX = x;
-                        SettingsMaster.bigDonY = y;
-                        break;
-                    case 3:
-                        SettingsMaster.bigKatX = x;
-                        SettingsMaster.bigKatY = y;
-                        break;
-                }
-            }
-
-            SettingsMaster.save();
-
-            return true;
-        }
-
-        @Override
-        public void update(float elapsed) {
-
-        }
-
-        @Override
-        public void render(SpriteBatch sb, ShapeRenderer sr) {
-            sb.end();
-            //grid first
-            sr.begin(ShapeRenderer.ShapeType.Line);
-
-            float left = cX - width / 2 + dx, right = cX + width / 2 + dx, top = cY + height / 2 + dy, bottom = cY - height / 2 + dy, temp = top;
-            sr.setColor(Color.WHITE);
-            sr.rect(left, bottom, width, height);
-
-            sr.setColor(Color.GRAY);
-            //horizontal lines
-            temp -= height / 6.0f;
-            sr.line(left, temp, right, temp);
-            temp -= height / 6.0f;
-            sr.line(left, temp, right, temp);
-            temp -= height / 6.0f;
-            sr.line(left, temp, right, temp);
-            temp -= height / 6.0f;
-            sr.line(left, temp, right, temp);
-            temp -= height / 6.0f;
-            sr.line(left, temp, right, temp);
-
-            //vertical lines
-            temp = left + width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-            temp += width / 8.0f;
-            sr.line(temp, top, temp, bottom);
-
-            sr.end();
-            sr.begin(ShapeRenderer.ShapeType.Filled);
-
-            //preview objects
-            //0,0 in osu coordinates is top left
-            sr.setColor(Hit.kat);
-            sr.circle(left + SettingsMaster.bigKatX * scale, top - SettingsMaster.bigKatY * scale, 40 * scale);
-            sr.setColor(Hit.don);
-            sr.circle(left + SettingsMaster.bigDonX * scale, top - SettingsMaster.bigDonY * scale, 40 * scale);
-            sr.circle(left + SettingsMaster.donX * scale, top - SettingsMaster.donY * scale, 25 * scale);
-            sr.setColor(Hit.kat);
-            sr.circle(left + SettingsMaster.katX * scale, top - SettingsMaster.katY * scale, 25 * scale);
-
-            sr.end();
-            sb.begin();
-        }
-
-        @Override
-        public void render(SpriteBatch sb, ShapeRenderer sr, float dx, float dy) {
-            this.dx = dx;
-            this.dy = dy;
-
-            render(sb, sr);
         }
     }
 }

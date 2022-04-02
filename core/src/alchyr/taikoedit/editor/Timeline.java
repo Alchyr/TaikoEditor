@@ -1,11 +1,12 @@
 package alchyr.taikoedit.editor;
 
-import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.util.EditorTime;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.Pair;
+import alchyr.taikoedit.util.structures.StackingTreeMap;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -23,7 +24,7 @@ public class Timeline {
 
     private static final int LINE_THICKNESS = 1;
     private static final int TICK_HEIGHT = 19;
-    private static final int MARK_HEIGHT = 9;
+    private static final int MARK_HEIGHT = 9, SECTION_HEIGHT = MARK_HEIGHT * 2;
     private static final int TIMELINE_START = 150, TIMELINE_END = SettingsMaster.getWidth() - 50, TIMELINE_LENGTH = TIMELINE_END - TIMELINE_START;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.85f);
@@ -54,6 +55,9 @@ public class Timeline {
     private Set<Integer> bookmarks;
     private final List<Integer> bookmarkRenderPositions;
 
+    private final Map<EditorBeatmap, Map<Long, MarkInfo>> timingPointPositions;
+    private final Map<EditorBeatmap, StackingTreeMap.ExtendedStackingTreeMap<Integer, MarkInfo>> visiblePointPositions;
+
     public Timeline(int y, float length)
     {
         font = assetMaster.getFont("aller small");
@@ -76,6 +80,9 @@ public class Timeline {
         bookmarks = null;
         bookmarkRenderPositions = new ArrayList<>();
 
+        timingPointPositions = new HashMap<>();
+        visiblePointPositions = new HashMap<>();
+
         this.pos = TIMELINE_START;
     }
 
@@ -85,9 +92,9 @@ public class Timeline {
         //{
         if (gameX >= TIMELINE_START && gameX <= TIMELINE_END && gameY >= minClickY && gameY <= maxClickY)
         {
-            if (EditorLayer.music.lock(this))
+            if (music.lock(this))
             {
-                EditorLayer.music.seekSecond(convertPosition(gameX));
+                music.seekSecond(convertPosition(gameX));
 
                 return holdObject;
             } //If it cannot be locked, something else has locked it. Timeline drag should probably not work in this situation.
@@ -98,12 +105,12 @@ public class Timeline {
 
     private void drag(float gameX, float gameY)
     {
-        EditorLayer.music.seekSecond(convertPosition(gameX));
+        music.seekSecond(convertPosition(gameX));
     }
 
     private boolean release(float gameX, float gameY)
     {
-        EditorLayer.music.unlock(this);
+        music.unlock(this);
         return true;
     }
 
@@ -136,7 +143,7 @@ public class Timeline {
         sb.setColor(backColor);
         sb.draw(pix, 0, y, SettingsMaster.getWidth(), HEIGHT);
 
-        //Kiai/breaks
+        //Kiai/breaks, timing points
         if (currentMap != null) {
             sb.setColor(kiaiColor);
             kiaiIterator = currentMap.getKiai().entrySet().iterator();
@@ -150,7 +157,7 @@ public class Timeline {
                     start = convertPercent((kiaiEntry.getKey() / 1000.0) / length);
                 }
                 else if (kiai && !(kiai = kiaiEntry.getValue())) {
-                    sb.draw(pix, start, lineY, convertPercent((kiaiEntry.getKey() / 1000.0) / length) - start, MARK_HEIGHT);
+                    sb.draw(pix, start, bookmarkY, convertPercent((kiaiEntry.getKey() / 1000.0) / length) - start, SECTION_HEIGHT);
                 }
             }
             kiaiIterator = null;
@@ -158,7 +165,12 @@ public class Timeline {
             sb.setColor(breakColor);
             for (Pair<Long, Long> breakSection : currentMap.getBreaks()) {
                 start = convertPercent((breakSection.a / 1000.0) / length);
-                sb.draw(pix, start, lineY, convertPercent((breakSection.b / 1000.0) / length) - start, MARK_HEIGHT);
+                sb.draw(pix, start, bookmarkY, convertPercent((breakSection.b / 1000.0) / length) - start, SECTION_HEIGHT);
+            }
+
+            for (List<MarkInfo> info : visiblePointPositions.get(currentMap).values()) {
+                sb.setColor(info.get(0).c);
+                sb.draw(pix, info.get(0).pos, lineY, 1, MARK_HEIGHT);
             }
         }
 
@@ -184,16 +196,28 @@ public class Timeline {
         currentMap = map;
         if (currentMap != null)
         {
+            currentMap.setTimeline(this);
             bookmarks = currentMap.getBookmarks(); //Same list. Changes will be reflected in the FullMapInfo itself.
             bookmarkRenderPositions.clear();
             for (int bookmark : bookmarks)
                 bookmarkRenderPositions.add(convertPercent((bookmark / 1000.0) / length));
+
+            if (!timingPointPositions.containsKey(map)) {
+                calculateTimingPoints(map);
+            }
         }
         else
         {
             bookmarks = null;
             bookmarkRenderPositions.clear();
         }
+    }
+    public void closeMap(EditorBeatmap map) {
+        if (map.equals(currentMap)) {
+            setMap(null);
+        }
+        timingPointPositions.remove(map);
+        visiblePointPositions.remove(map);
     }
 
     public void recalculateBookmarks()
@@ -203,6 +227,139 @@ public class Timeline {
             bookmarkRenderPositions.clear();
             for (int bookmark : bookmarks)
                 bookmarkRenderPositions.add(convertPercent((bookmark / 1000.0) / length));
+        }
+    }
+
+    private void calculateTimingPoints(EditorBeatmap map) {
+        TreeMap<Long, MarkInfo> linePositions = new TreeMap<>();
+        StackingTreeMap.ExtendedStackingTreeMap<Integer, MarkInfo> visible = new StackingTreeMap.ExtendedStackingTreeMap<>();
+        timingPointPositions.put(map, linePositions);
+        visiblePointPositions.put(map, visible);
+        int green, red;
+        MarkInfo info;
+
+        for (Map.Entry<Long, ArrayList<TimingPoint>> stack : map.allPoints.entrySet()) {
+            red = 0;
+            for (TimingPoint p : stack.getValue()) {
+                if (p.uninherited) {
+                    ++red;
+                }
+            }
+            green = stack.getValue().size() - red;
+
+            info = new MarkInfo(convertPercent((stack.getKey() / 1000.0) / length), red, green);
+            linePositions.put(stack.getKey(), info);
+            visible.add(info);
+        }
+    }
+
+    public void updateTimingPoints(EditorBeatmap map,
+                                   Iterable<? extends Map.Entry<Long,? extends List<?>>> added,
+                                   Iterable<? extends Map.Entry<Long,? extends List<?>>> removed) {
+        Map<Long, MarkInfo> mapInfo = timingPointPositions.get(map);
+        MarkInfo info;
+        int red, green;
+
+        if (mapInfo != null) {
+            StackingTreeMap.ExtendedStackingTreeMap<Integer, MarkInfo> visible = visiblePointPositions.get(map);
+
+            if (added != null) {
+                for (Map.Entry<Long, ? extends List<?>> stack : added) {
+                    info = mapInfo.get(stack.getKey());
+                    if (info == null) {
+                        info = new MarkInfo(convertPercent((stack.getKey() / 1000.0) / length), 0, 0);
+                        mapInfo.put(stack.getKey(), info);
+                        visible.add(info);
+                    }
+
+                    red = 0;
+                    for (Object o : stack.getValue()) {
+                        if (((TimingPoint) o).uninherited) {
+                            ++red;
+                        }
+                    }
+                    green = stack.getValue().size() - red;
+
+                    info.add(red, green);
+                }
+            }
+
+            if (removed != null) {
+                for (Map.Entry<Long, ? extends List<?>> stack : removed) {
+                    info = mapInfo.get(stack.getKey());
+                    if (info == null) {
+                        continue;
+                    }
+
+                    red = 0;
+                    for (Object o : stack.getValue()) {
+                        if (((TimingPoint) o).uninherited) {
+                            ++red;
+                        }
+                    }
+                    green = stack.getValue().size() - red;
+
+                    info.remove(red, green);
+
+                    if (info.empty()) {
+                        mapInfo.remove(stack.getKey());
+                        visible.removeObject(info);
+                    }
+                }
+            }
+        }
+    }
+
+    private static class MarkInfo implements Comparable<MarkInfo>, StackingTreeMap.StackableComparable<Integer> {
+        static final int RED = 1, GREEN = 2, YELLOW = 3;
+        final int pos;
+        private int red;
+        private int green;
+        Color c;
+
+        MarkInfo(int pos, int red, int green) {
+            this.pos = pos;
+            this.red = red;
+            this.green = green;
+            updateColor();
+        }
+
+        void add(int red, int green) {
+            this.red += red;
+            this.green += green;
+            updateColor();
+        }
+        void remove(int red, int green) {
+            this.red -= red;
+            this.green -= green;
+            updateColor();
+        }
+        boolean empty() {
+            return red + green <= 0;
+        }
+
+        private void updateColor() {
+            switch ((red > 0 ? RED : 0) | (green > 0 ? GREEN : 0)) {
+                case RED:
+                    c = TimingPoint.RED;
+                    break;
+                case YELLOW:
+                    c = TimingPoint.YELLOW;
+                    break;
+                default:
+                    c = TimingPoint.GREEN;
+                    break;
+            }
+        }
+
+        @Override
+        public int compareTo(MarkInfo o) {
+            return Integer.compare(pos, o.pos);
+        }
+
+        @Override
+        public Integer getKey() {
+            return pos;
         }
     }
 }

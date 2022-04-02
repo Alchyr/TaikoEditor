@@ -10,29 +10,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.function.BiFunction;
 
 public class ObjectAddition extends MapChange {
     private final HitObject added;
     private final boolean singleObject;
     private final NavigableMap<Long, ArrayList<PositionalObject>> addedObjects;
-    private PositionalObjectTreeMap<PositionalObject> replacedObjects = new PositionalObjectTreeMap<>();
+    private final BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace;
+    private final PositionalObjectTreeMap<PositionalObject> replacedObjects = new PositionalObjectTreeMap<>();
 
-    public ObjectAddition(EditorBeatmap map, HitObject addedObject)
+    public ObjectAddition(EditorBeatmap map, HitObject addedObject, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace)
     {
         super(map);
 
         singleObject = true;
         this.added = addedObject;
         addedObjects = null;
+
+        this.shouldReplace = shouldReplace;
     }
 
-    public ObjectAddition(EditorBeatmap map, NavigableMap<Long, ArrayList<PositionalObject>> addedObjects)
+    public ObjectAddition(EditorBeatmap map, NavigableMap<Long, ArrayList<PositionalObject>> addedObjects, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace)
     {
         super(map);
 
         singleObject = false;
         this.added = null;
         this.addedObjects = addedObjects;
+
+        this.shouldReplace = shouldReplace;
     }
 
     @Override
@@ -56,13 +62,14 @@ public class ObjectAddition extends MapChange {
 
     @Override
     public MapChange perform() {
-        if (singleObject)
+        if (singleObject && added != null)
         {
             replacedObjects.clear();
             ArrayList<HitObject> replaced = map.objects.get(added.getPos());
             if (replaced != null) {
                 for (HitObject h : replaced) {
-                    replacedObjects.add(h);
+                    if (shouldReplace.apply(added, h))
+                        replacedObjects.add(h);
                 }
                 map.removeObjects(replacedObjects);
             }
@@ -78,8 +85,14 @@ public class ObjectAddition extends MapChange {
             {
                 ArrayList<HitObject> replaced = map.objects.get(addedStack.getKey());
                 if (replaced != null) {
-                    for (HitObject h : replaced) {
-                        replacedObjects.add(h);
+                    outer: for (HitObject h : replaced) {
+                        for (PositionalObject n : addedStack.getValue()) {
+                            if (shouldReplace.apply(n, h)) {
+                                //If any of the added objects should replace the existing object, replace it
+                                replacedObjects.add(h);
+                                continue outer;
+                            }
+                        }
                     }
                 }
             }

@@ -8,6 +8,8 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.TextureLoader;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
@@ -98,37 +100,49 @@ public class AssetLists implements Json.Serializable {
                                 assetMaster.loadedAssets.put(info.getAssetName(name), info.getFileName());
                                 break;
                             case "truetypefont":
-                                TrueTypeFontGenerator.resetParameters();
-                                if (info.getParams() != null)
-                                {
-                                    params = info.getParams().split(" ");
-                                    for (String parameter : params)
-                                    {
-                                        String[] args = parameter.split("_");
+                                if (info.getFileName().endsWith(".ttf")) {
+                                    FreetypeFontLoader.FreeTypeFontLoaderParameter fontLoaderParams = new FreetypeFontLoader.FreeTypeFontLoaderParameter();
+                                    FreeTypeFontGenerator.FreeTypeFontParameter fontParams = fontLoaderParams.fontParameters;
+                                    fontParams.hinting = FreeTypeFontGenerator.Hinting.Slight;
+                                    fontParams.magFilter = fontParams.minFilter = Texture.TextureFilter.Linear;
+                                    fontParams.size = 32;
+                                    fontLoaderParams.fontFileName = info.getFileName();
 
-                                        switch (args[0])
+                                    if (info.getParams() != null)
+                                    {
+                                        params = info.getParams().split(" ");
+                                        for (String parameter : params)
                                         {
-                                            case "s":
-                                                TrueTypeFontGenerator.getParameters().size = Integer.parseInt(args[1]);
-                                                break;
-                                            case "x":
-                                                TrueTypeFontGenerator.getParameters().spaceX = Integer.parseInt(args[1]);
-                                                break;
-                                            case "y":
-                                                TrueTypeFontGenerator.getParameters().spaceY = Integer.parseInt(args[1]);
-                                                break;
-                                            case "k":
-                                                TrueTypeFontGenerator.getParameters().kerning = Integer.parseInt(args[1]) != 0;
-                                                break;
-                                            case "all":
-                                                TrueTypeFontGenerator.getParameters().characters = TrueTypeFontGenerator.ALL_CHARS;
-                                                break;
+                                            String[] args = parameter.split("_");
+
+                                            switch (args[0])
+                                            {
+                                                case "s":
+                                                    fontParams.size = Integer.parseInt(args[1]);
+                                                    break;
+                                                case "x":
+                                                    fontParams.spaceX = Integer.parseInt(args[1]);
+                                                    break;
+                                                case "y":
+                                                    fontParams.spaceY = Integer.parseInt(args[1]);
+                                                    break;
+                                                case "k":
+                                                    fontParams.kerning = Integer.parseInt(args[1]) != 0;
+                                                    break;
+                                                case "all":
+                                                    fontParams.characters = TrueTypeFontGenerator.ALL_CHARS;
+                                                    break;
+                                            }
                                         }
                                     }
+                                    manager.load(info.getAssetName(name) + ".ttf", BitmapFont.class, fontLoaderParams);
+                                    assetMaster.loadedAssets.put(info.getAssetName(name), info.getAssetName(name) + ".ttf");
                                 }
-                                assetMaster.loadedFonts.put(info.getAssetName(name), TrueTypeFontGenerator.generateFont(Gdx.files.internal(info.getFileName())));
+                                else {
+                                    editorLogger.error("Attempted to load a non .ttf file as a TrueTypeFont.");
+                                }
                                 break;
-                            case "systemtruetypefont": //loads from system fonts.
+                            /*case "systemtruetypefont": //loads from system fonts.
                                 if (info.getParams() != null)
                                 {
                                     params = info.getParams().split(" ");
@@ -154,7 +168,7 @@ public class AssetLists implements Json.Serializable {
                                     }
                                 }
                                 assetMaster.loadedFonts.put(info.getAssetName(name), TrueTypeFontGenerator.generateSystemFont(info.getFileName()));
-                                break;
+                                break;*/
                             case "special":
                                 if (info.getParams() != null)
                                 {

@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.views;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
@@ -25,11 +26,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
-import static alchyr.taikoedit.core.layers.EditorLayer.music;
+import static alchyr.taikoedit.TaikoEditor.music;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class ObjectView extends MapView {
@@ -38,8 +38,8 @@ public class ObjectView extends MapView {
     public static final int SMALL_HEIGHT = 15;
 
     //Selection
-    private static final int MAX_SELECTION_DIST = 70;
-    private static final int SMALL_SELECTION_DIST = 45;
+    private static final int MAX_SELECTION_DIST = 62;
+    private static final int SMALL_SELECTION_DIST = 42;
     private static final int MAX_SELECTION_OFFSET = HEIGHT / 2 - MAX_SELECTION_DIST;
     private static final int SMALL_SELECTION_OFFSET = HEIGHT / 2 - SMALL_SELECTION_DIST;
 
@@ -58,9 +58,9 @@ public class ObjectView extends MapView {
     private int objectY = 0;
     //private int topBigY = 0;
 
-    private double lastSounded;
+    private long lastSounded;
 
-    private SortedMap<Long, Snap> activeSnaps;
+    private SortedMap<Long, Snap> activeSnaps = Collections.emptySortedMap();
 
     public ObjectView(EditorLayer parent, EditorBeatmap beatmap) {
         super(ViewType.OBJECT_VIEW, parent, beatmap, HEIGHT);
@@ -112,7 +112,7 @@ public class ObjectView extends MapView {
             }*/
 
             //To play ALL hitobjects passed.
-            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, (long) time, true).values())
+            for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
                 for (HitObject o : objects)
                 {
@@ -126,7 +126,7 @@ public class ObjectView extends MapView {
     @Override
     public void update(double exactPos, long msPos, float elapsed) {
         super.update(exactPos, msPos, elapsed);
-        activeSnaps = map.getActiveSnaps(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        activeSnaps = map.getActiveSnaps(preciseTime - EditorLayer.viewTime, preciseTime + EditorLayer.viewTime);
     }
 
     @Override
@@ -145,7 +145,7 @@ public class ObjectView extends MapView {
             for (Pair<Long, Long> breakSection : map.getBreaks()) {
                 startColor = endColor = faintBreakColor;
 
-                breakEnd = (breakSection.b - time) * viewScale + SettingsMaster.getMiddle();
+                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddle();
 
                 stack = map.objects.ceilingEntry(breakSection.b);
                 if (stack != null) {
@@ -155,7 +155,7 @@ public class ObjectView extends MapView {
                     if (stack.getKey() - breakSection.b > map.getBreakEndDelay())
                         endColor = fakeBreakColor;
 
-                    end = (stack.getKey() - time) * viewScale + SettingsMaster.getMiddle();
+                    end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddle();
                 }
                 else { //this is a cheaty break with no closing object.
                     end = SettingsMaster.getWidth();
@@ -164,7 +164,7 @@ public class ObjectView extends MapView {
                 if (end < 0)
                     continue;
 
-                breakStart = (breakSection.a - time) * viewScale + SettingsMaster.getMiddle();
+                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddle();
 
                 stack = map.objects.floorEntry(breakSection.a);
                 if (stack != null) {
@@ -174,7 +174,7 @@ public class ObjectView extends MapView {
                     if (breakSection.a - startTime > 200)
                         startColor = fakeBreakColor;
 
-                    start = (startTime - time) * viewScale + SettingsMaster.getMiddle();
+                    start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddle();
                 }
                 else {
                     start = 0;
@@ -203,17 +203,17 @@ public class ObjectView extends MapView {
         //Divisors.
         for (Snap s : activeSnaps.values())
         {
-            s.render(sb, sr, time, viewScale, SettingsMaster.getMiddle(), bottom, HEIGHT);
+            s.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, HEIGHT);
         }
     }
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        o.render(sb, sr, time, viewScale, SettingsMaster.getMiddle(), objectY, alpha);
+        o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY, alpha);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
-        o.renderSelection(sb, sr, time, viewScale, SettingsMaster.getMiddle(), objectY);
+        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY);
     }
 
     @Override
@@ -236,7 +236,7 @@ public class ObjectView extends MapView {
 
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects((int) time - EditorLayer.viewTime, (int) time + EditorLayer.viewTime);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
 
         if (source.isEmpty())
             return null;
@@ -343,7 +343,7 @@ public class ObjectView extends MapView {
             return sb.toString();
         }
 
-        return new EditorTime((int) time) + " - ";
+        return new EditorTime(time) + " - ";
     }
 
     @Override
@@ -508,8 +508,11 @@ public class ObjectView extends MapView {
             higherDist = higher.getKey() - time;
         }
 
+        higherDist *= viewScale;
+        lowerDist *= viewScale;
+
         //Check the closer objects first.
-        if (lowerDist < higherDist)
+        if (lower != null && lowerDist < higherDist)
         {
             ArrayList<HitObject> selectableObjects = lower.getValue();
             if (selectableObjects.isEmpty())
@@ -577,7 +580,7 @@ public class ObjectView extends MapView {
                // }
             }
         }
-        else if (higherDist < lowerDist)
+        else if (higher != null && higherDist < lowerDist)
         {
             ArrayList<HitObject> selectableObjects = higher.getValue();
             if (!selectableObjects.isEmpty() && !(higherDist > MAX_SELECTION_DIST)) {
@@ -673,7 +676,7 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(EditorLayer.music.isPlaying() ? (long) time + 250 : (long) time);
+        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(TaikoEditor.music.isPlaying() ? time + 250 : time);
         if (next == null)
             return null;
         if (next.getKey() - time < 2)
@@ -687,7 +690,7 @@ public class ObjectView extends MapView {
 
     @Override
     public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(EditorLayer.music.isPlaying() ? (long) time - 250 : (long) time);
+        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(TaikoEditor.music.isPlaying() ? time - 250 : time);
         if (previous == null)
             return null;
         if (time - previous.getKey() < 2)
@@ -789,8 +792,8 @@ public class ObjectView extends MapView {
 
         long offset, targetPos;
 
-        Snap closest = getClosestSnap(time, 250);
-        offset = closest == null ? (int) time : (int) closest.pos;
+        Snap closest = getClosestSnap(preciseTime, 250);
+        offset = closest == null ? time : (long) closest.pos;
         offset -= copyObjects.firstKey();
 
         PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
@@ -814,7 +817,7 @@ public class ObjectView extends MapView {
             }
         }
 
-        this.map.paste(placementCopy);
+        this.map.paste(placementCopy, replaceTest);
     }
 
     @Override

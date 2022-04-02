@@ -76,7 +76,11 @@ public class Spinner extends HitObject implements ILongObject {
                         hitSample[n] = Integer.parseInt(samples[n]);
                     }
                     if (samples.length > 4) {
-                        sampleFile = samples[5];
+                        StringBuilder sb = new StringBuilder();
+                        for (int s = 4; s < samples.length; ++s) {
+                            sb.append(samples[s]);
+                        }
+                        sampleFile = sb.toString();
                     }
             }
         }
@@ -138,6 +142,7 @@ public class Spinner extends HitObject implements ILongObject {
         float startX = x + (float) (this.getPos() - pos) * viewScale;
         float endX = x + (float) (this.endPos - pos) * viewScale;
         sb.setColor(spinner);
+        spinner.a = 1;
         if (duration > 0)
         {
             sb.draw(body, startX, y - (CIRCLE_OFFSET * LARGE_SCALE), endX - startX, CIRCLE_SIZE * LARGE_SCALE);

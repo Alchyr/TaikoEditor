@@ -25,9 +25,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -232,12 +229,16 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         return processor;
     }
 
+    private boolean canOpen = true;
     private void chooseMap(MapSelect.MapOpenInfo info)
     {
-        EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulty());
+        if (canOpen) {
+            EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulty());
 
-        TaikoEditor.removeLayer(this);
-        TaikoEditor.addLayer(edit.getLoader());
+            canOpen = false;
+            TaikoEditor.removeLayer(this);
+            TaikoEditor.addLayer(edit.getLoader());
+        }
     }
 
     private void test()
@@ -274,21 +275,18 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer(new String[] {
-                "ui",
-                "font",
-                "background",
-                "menu",
-                "hitsound"
-        }, this, true)
+        return new LoadingLayer()
+                .loadLists("ui", "font", "background", "menu", "editor", "hitsound")
+                .addLayers(true, this)
                 .addTask(MapMaster::load).addTracker(MapMaster::getProgress)
-                .addCallback(TaikoEditor::initialize);
+                .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true);
     }
 
     @Override
     public LoadingLayer getReturnLoader() {
-        return new LoadingLayer(new String[] {
-        }, this, true);
+        return new LoadingLayer()
+                .addLayers(true, this)
+                .addTask(mapSelect::playMusic).addCallback(()->canOpen = true);
     }
 
     @Override
@@ -307,7 +305,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
         public MenuProcessor(MenuLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
             this.sourceLayer = source;
         }
 
@@ -360,6 +358,13 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                     e.printStackTrace();
                 }
             });*/
+
+            bindings.bind("Up", ()->{
+                sourceLayer.mapSelect.scrolled(-20);
+            });
+            bindings.bind("Down", ()->{
+                sourceLayer.mapSelect.scrolled(20);
+            });
 
             bindings.addMouseBind(sourceLayer.settingsButton::contains, sourceLayer.settingsButton::effect);
             bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);

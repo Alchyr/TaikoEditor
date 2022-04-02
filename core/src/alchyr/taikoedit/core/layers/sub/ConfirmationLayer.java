@@ -14,13 +14,11 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.util.function.Consumer;
-
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ConfirmationLayer extends ProgramLayer implements InputLayer {
-    private static ConfirmationLayerProcessor processor;
+    private final ConfirmationLayerProcessor processor;
 
     public boolean active = true;
     public boolean result = false;
@@ -135,12 +133,18 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
         return processor;
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
+    }
+
     private static class ConfirmationLayerProcessor extends TextInputProcessor {
         private final ConfirmationLayer sourceLayer;
 
         public ConfirmationLayerProcessor(ConfirmationLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
             this.sourceLayer = source;
         }
 

@@ -22,9 +22,22 @@ public class LocalizedText {
     {
         return text.get(key);
     }
+    public String get(String key, int index) {
+        return text.get(key)[index];
+    }
+    public String getOrDefault(String key, int index) {
+        return getOrDefault(key, index, key);
+    }
+    public String getOrDefault(String key, int index, String defaultValue) {
+        String[] t = text.get(key);
+        if (t == null || index >= t.length)
+            return defaultValue;
+        return t[index];
+    }
 
     public void put(String key, String[] text)
     {
         this.text.put(key, text);
     }
+
 }

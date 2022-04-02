@@ -37,7 +37,7 @@ public class Button implements UIElement {
 
     public String action = "";
 
-    private boolean useBorderRendering;
+    private boolean useBorderRendering, fullBorderHover;
     public boolean renderBorder;
 
     public Button(float x, float y, float width, float height, Texture image)
@@ -83,6 +83,8 @@ public class Button implements UIElement {
 
         hovered = false;
         renderBorder = false;
+        useBorderRendering = false;
+        fullBorderHover = false;
     }
 
     public Button(float centerX, float centerY, String text, BitmapFont font)
@@ -104,6 +106,8 @@ public class Button implements UIElement {
 
         this.hovered = false;
         this.renderBorder = false;
+        useBorderRendering = false;
+        fullBorderHover = false;
 
         this.back = null;
         this.text = text;
@@ -130,6 +134,23 @@ public class Button implements UIElement {
     {
         this.useBorderRendering = true;
         return this;
+    }
+    public Button useBorderRendering(boolean fullBorderHover)
+    {
+        this.useBorderRendering = true;
+        this.fullBorderHover = fullBorderHover;
+        return this;
+    }
+
+    @Override
+    public void move(float dx, float dy) {
+        x += dx;
+        x2 += dx;
+        centerX += dx;
+
+        y += dy;
+        y2 += dy;
+        centerY += dy;
     }
 
     public boolean contains(int mouseX, int mouseY) {
@@ -179,7 +200,7 @@ public class Button implements UIElement {
             {
                 sb.draw(pixel, this.x, this.y, width, BORDER_THICKNESS);
 
-                if (renderBorder)
+                if (renderBorder || (hovered && fullBorderHover))
                 {
                     sb.draw(pixel, this.x, this.y, BORDER_THICKNESS, height);
                     sb.draw(pixel, this.x, this.y + height - BORDER_THICKNESS, width, BORDER_THICKNESS);
@@ -216,7 +237,7 @@ public class Button implements UIElement {
             {
                 sb.draw(pixel, this.x + x, this.y + y, width, BORDER_THICKNESS);
 
-                if (renderBorder)
+                if (renderBorder || (hovered && fullBorderHover))
                 {
                     sb.draw(pixel, this.x + x, this.y + y, BORDER_THICKNESS, height);
                     sb.draw(pixel, this.x + x, this.y + y + height - BORDER_THICKNESS, width, BORDER_THICKNESS);

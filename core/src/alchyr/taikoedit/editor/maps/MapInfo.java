@@ -140,6 +140,10 @@ public class MapInfo {
         return background;
     }
 
+    public void setBackground(String bgFile) {
+        this.background = bgFile;
+    }
+
     public int getMode() {
         return mode;
     }

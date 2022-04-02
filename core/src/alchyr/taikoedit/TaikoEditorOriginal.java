@@ -5,7 +5,6 @@ import alchyr.taikoedit.audio.mp3.PreloadedMp3;
 import alchyr.taikoedit.audio.ogg.PreloadOgg;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
-import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.FastMenuLayer;
 import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
@@ -122,7 +121,7 @@ public class TaikoEditorOriginal extends ApplicationAdapter {
         //A U D I O
         ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
         ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("ogg", PreloadOgg.class);
-        EditorLayer.music = new MusicWrapper();
+        TaikoEditor.music = new MusicWrapper();
 
 
         hoverText = new CursorHoverText();
@@ -346,7 +345,7 @@ public class TaikoEditorOriginal extends ApplicationAdapter {
     {
         try
         {
-            textRenderer = new TextRenderer(assetMaster.getFont("default"));
+            textRenderer.setFont(assetMaster.getFont("default"));
             hoverText.initialize(assetMaster.getFont("aller small"), 16);
             showCursor();
         }

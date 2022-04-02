@@ -3,12 +3,10 @@ package alchyr.taikoedit.core.layers.sub;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
-import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.ui.*;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
@@ -21,13 +19,12 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class SvFunctionLayer extends ProgramLayer implements InputLayer {
-    private static SvFunctionProcessor processor;
+    private final SvFunctionProcessor processor;
 
     public boolean active = true;
     public SvFunctionProperties result = null; //null = do nothing
@@ -120,9 +117,11 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         formulas.add(new Pair<>(cosIn, "Sin In"));
         formulas.add(new Pair<>(cosOut, "Sin Out"));
 
-        for (Pair<Function<Double, Double>, String> formula : formulas) {
-            generateGraph(formula.a);
-        }
+        TaikoEditor.onMain(()->{
+            for (Pair<Function<Double, Double>, String> formula : formulas) {
+                generateGraph(formula.a);
+            }
+        });
     }
     public static void init() {
 
@@ -155,8 +154,10 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     }
     public static void disposeFunctions() {
         for (Pair<Function<Double, Double>, String> formula : formulas) {
-            formulaTextures.get(formula.a).dispose();
-            formulaHoverTextures.get(formula.a).dispose();
+            if (formulaTextures.containsKey(formula.a))
+                formulaTextures.get(formula.a).dispose();
+            if (formulaHoverTextures.containsKey(formula.a))
+                formulaHoverTextures.get(formula.a).dispose();
         }
     }
 
@@ -409,12 +410,18 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         return processor;
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
+    }
+
     private static class SvFunctionProcessor extends TextInputProcessor {
         private final SvFunctionLayer sourceLayer;
 
         public SvFunctionProcessor(SvFunctionLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
             this.sourceLayer = source;
         }
 

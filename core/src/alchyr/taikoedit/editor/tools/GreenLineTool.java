@@ -72,12 +72,12 @@ public class GreenLineTool extends EditorTool {
                     Snap closest = hovered.getClosestSnap(time, MAX_SNAP_OFFSET);
 
                     previewView = hovered;
-                    renderPreview = true;
+                    renderPreview = hold == null;
                     if (closest == null || BindingGroup.alt()) { //Just go to cursor position
                         placementObject.setPos(Math.floor(time));
                     }
                     else { //Snap to closest snap
-                        placementObject.setPos(closest.pos);
+                        placementObject.setPos((long) closest.pos);
                     }
                 }
                 return;
@@ -133,9 +133,9 @@ public class GreenLineTool extends EditorTool {
     }
 
     @Override
-    public void instantUse(MapView view) {
+    public boolean instantUse(MapView view) {
         if (hold != null)
-            return;
+            return false;
 
         double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
@@ -156,7 +156,7 @@ public class GreenLineTool extends EditorTool {
             p.kiai = BindingGroup.shift();
 
             view.map.registerChange(new LineAddition(view.map, p).perform());
-            return;
+            return true;
         }
         else if (lastEffect == null) {
             lastEffect = lastTiming;
@@ -169,6 +169,7 @@ public class GreenLineTool extends EditorTool {
         }
 
         view.map.registerChange(new LineAddition(view.map, p).perform());
+        return true;
     }
 
     @Override

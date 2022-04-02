@@ -5,7 +5,7 @@ import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
 import alchyr.diffcalc.taiko.difficulty.skills.General;
 import alchyr.diffcalc.taiko.difficulty.skills.Skill;
 import alchyr.diffcalc.taiko.difficulty.skills.Burst;
-import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 
@@ -84,7 +84,7 @@ public class TaikoDifficultyCalculator {
 
         ArrayList<TaikoDifficultyHitObject> difficultyHitObjects = CreateDifficultyHitObjects();
 
-        double sectionLength = SectionLength * EditorLayer.music.getTempo(); //ensures the actual section length is unchanged (map with dt judged same as a map whose objects have been squished)
+        double sectionLength = SectionLength * TaikoEditor.music.getTempo(); //ensures the actual section length is unchanged (map with dt judged same as a map whose objects have been squished)
 
         // The first object doesn't generate a strain, so we begin with an incremented section end
         double currentSectionEnd = Math.ceil(difficultyHitObjects.get(0).baseObject.getPos() / sectionLength) * sectionLength;

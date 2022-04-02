@@ -124,6 +124,18 @@ public class TextField implements UIElement, TextInputReceiver {
         return this;
     }
 
+    @Override
+    public void move(float dx, float dy) {
+        x += dx;
+        x2 += dx;
+        textX += dx;
+        blipX += dx;
+
+        y += dy;
+        y2 += dy;
+        centerY += dy;
+    }
+
     public boolean tryClick(float clickX, float clickY) {
         if (!enabled) {
             disable();

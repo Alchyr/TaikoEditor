@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.tools;
 
+import alchyr.taikoedit.core.input.InputBinding;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.views.EffectView;
@@ -23,7 +24,7 @@ import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
-import static alchyr.taikoedit.core.layers.EditorLayer.music;
+import static alchyr.taikoedit.TaikoEditor.music;
 import static alchyr.taikoedit.core.input.BindingGroup.shift;
 
 //The default tool. Should be included in most toolsets and support pretty much any view other than gameplay.
@@ -134,11 +135,25 @@ public class SelectionTool extends EditorTool {
                 boolean delete = button == Input.Buttons.RIGHT;
                 selectingView = view;
                 dragObject = selectingView.clickObject(x, y);
-                boolean canDrag = true; //this should probably be a single int
+                boolean shift = (modifiers & InputBinding.InputInfo.SHIFT_ID) != 0;
+                boolean canDrag = true;
                 boolean canSelect = false;
                 boolean dragEnd = false;
 
-                if (dragObject != null && (modifiers & 1) == 0)
+                if (shift && view.hasSelection()) {
+                    canDrag = false;
+
+                    long clickTime = (long) selectingView.getTimeFromPosition(x);
+                    long selectionStart = view.getSelection().firstKey(), selectionEnd = view.getSelection().lastKey();
+
+                    if (clickTime < selectionStart) {
+                        selectingView.addSelectionRange(clickTime, selectionStart);
+                    }
+                    else if (clickTime > selectionEnd) {
+                        selectingView.addSelectionRange(selectionEnd, clickTime);
+                    }
+                }
+                else if (dragObject != null && (modifiers & InputBinding.InputInfo.CTRL_ID) == 0)
                 {
                     //ctrl not held
                     if (!dragObject.selected)
@@ -206,8 +221,10 @@ public class SelectionTool extends EditorTool {
                 }
                 else if (dragObject == null)
                 {
+                    //Clicked on nothing
                     if ((modifiers & 1) == 0)
                     {
+                        //Not holding ctrl
                         selectingView.clearSelection();
                     }
                     canDrag = false;
@@ -271,7 +288,7 @@ public class SelectionTool extends EditorTool {
         {
             if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL)
             {
-                selectingView.addSelectionRange((int) clickStartTime, (int) selectingView.getTimeFromPosition(x));
+                selectingView.addSelectionRange((long) clickStartTime, (long) selectingView.getTimeFromPosition(x));
             }
         }
         reset();
@@ -427,11 +444,11 @@ public class SelectionTool extends EditorTool {
             {
                 if (Gdx.input.getX() <= 1)
                 {
-                    music.seekSecond(music.getSecondTime() - elapsed * 6);
+                    music.seekSecond(music.getSecondTime() - (music.isPlaying() ? 0.2 : elapsed * 6));
                 }
                 else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                 {
-                    music.seekSecond(music.getSecondTime() + elapsed * 6);
+                    music.seekSecond(music.getSecondTime() + (music.isPlaying() ? 0.2 : elapsed * 6));
                 }
             }
         }

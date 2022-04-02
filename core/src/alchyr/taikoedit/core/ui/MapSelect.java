@@ -1,5 +1,6 @@
 package alchyr.taikoedit.core.ui;
 
+import alchyr.taikoedit.audio.MusicWrapper;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.MapMaster;
@@ -38,6 +39,8 @@ public class MapSelect {
     private final Texture pix;
     private final Texture arrow;
 
+    private final Texture glow, dots;
+
     private final Color faintHighlight = new Color(1.0f, 1.0f, 1.0f, 0.2f);
     private final Color highlight = new Color(1.0f, 1.0f, 1.0f, 0.4f);
 
@@ -47,6 +50,7 @@ public class MapSelect {
     private final float infoX = divider + 2;
     private final float infoWidth = SettingsMaster.getWidth() - (infoX);
     private final float thumbnailMaxHeight = 0.5625f * infoWidth;
+    private float loadingAngle = 0, loadingAlpha = 0;
 
     private final int top;
     private final float infoCenterX, thumbnailCenterY;
@@ -74,6 +78,9 @@ public class MapSelect {
         this.font = assetMaster.getFont("aller medium");
         pix = assetMaster.get("ui:pixel");
         arrow = assetMaster.get("ui:arrow");
+
+        glow = assetMaster.get("ui:glow");
+        dots = assetMaster.get("ui:dots");
 
         this.top = top;
 
@@ -139,16 +146,40 @@ public class MapSelect {
             scrollBottom = 0;
     }
 
+    private boolean loadingMusic = false;
+    private MusicWrapper.SuccessFailThread musicLoading = null;
     private void setSelected(Mapset set) {
         selected = set;
 
+        musicLoading = music.loadAsync(set.getSongFile(), this::musicLoaded);
+        loadingMusic = true;
         thumbnail = null;
         updateThumbnail = true;
+    }
+    private void musicLoaded(MusicWrapper.SuccessFailThread thread) {
+        if (thread.equals(musicLoading) && thread.success()) {
+            loadingMusic = false;
+            music.play();
+        }
+    }
+    public void playMusic() {
+        loadingMusic = false;
+        if (music.hasMusic()) {
+            music.play();
+        }
     }
 
     public void update(float elapsed) {
         float mouseX = Gdx.input.getX(), mouseY = SettingsMaster.gameY();
         hovering = false;
+
+        loadingAngle = (loadingAngle + elapsed * 180) % 360;
+        if (loadingMusic) {
+            loadingAlpha = Math.min(1, loadingAlpha + elapsed * 3);
+        }
+        else {
+            loadingAlpha = Math.max(0, loadingAlpha - elapsed * 4);
+        }
 
         float y = top + scrollPos;
         firstRender = -1;
@@ -270,6 +301,18 @@ public class MapSelect {
             }
             else {
                 textRenderer.renderTextCentered(sb, "(No Background)", infoCenterX, thumbnailCenterY, Color.WHITE);
+            }
+
+            if (loadingMusic && loadingAlpha > 0) {
+                Color.BLACK.a = loadingAlpha * 0.5f;
+                sb.setColor(Color.BLACK);
+                Color.BLACK.a = 1;
+                sb.draw(glow, infoCenterX - 64, thumbnailCenterY - 64, 128, 128);
+
+                Color.WHITE.a = loadingAlpha;
+                sb.setColor(Color.WHITE);
+                Color.WHITE.a = 1;
+                sb.draw(dots, infoCenterX - 32, thumbnailCenterY - 32, 32, 32, 64, 64, 1, 1, loadingAngle, 0, 0, 64, 64, false, false);
             }
 
             int y = difficultyY;

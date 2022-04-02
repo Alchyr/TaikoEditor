@@ -18,11 +18,16 @@ import java.util.function.Supplier;
 
 public class BindingGroup {
     private final String ID;
+    private final boolean modifiable;
     public String getID() {
         return ID;
     }
+    public boolean isModifiable() {
+        return modifiable;
+    }
 
     private final Map<String, InputBinding> allBindings = new HashMap<>();
+    private final List<InputBinding> orderedBindings = new ArrayList<>();
 
     //Outer key: Modifier key state (ctrl = 1, shift = 2, alt = 4)
     //Inner key: keycode
@@ -38,33 +43,69 @@ public class BindingGroup {
 
     private final InputBinding anyInput = InputBinding.create("any");
 
+    private final List<BindingGroup> copies = new ArrayList<>();
+
     private final ReentrantLock inputLock = new ReentrantLock();
 
-    public BindingGroup(String ID)
+    public BindingGroup(String ID, boolean modifiable)
     {
         this.ID = ID;
+        this.modifiable = modifiable;
         allBindings.put("any", anyInput);
     }
 
     public void addBinding(InputBinding binding)
     {
         allBindings.put(binding.getInputID(), binding);
+        orderedBindings.add(binding);
     }
 
-    public void createInputMap()
+    public void initialize(Map<String, BindingGroup> bindingMap, Map<String, List<InputBinding.InputInfo>> bindingData) {
+        //Load data
+        if (bindingData != null)
+            loadBindings(bindingData);
+
+        //Prep inputs
+        updateInputMap();
+
+        //Register
+        bindingMap.put(getID(), this);
+    }
+    private void loadBindings(Map<String, List<InputBinding.InputInfo>> bindingData) {
+        for (InputBinding binding : orderedBindings) {
+            List<InputBinding.InputInfo> data = bindingData.get(binding.getInputID());
+            if (data != null) {
+                binding.setInputs(data);
+            }
+        }
+    }
+    public void updateInputMap()
     {
         keyInputs.clear();
         for (InputBinding binding : allBindings.values())
         {
             for (InputBinding.InputInfo i : binding.getInputs())
             {
-                int modifiers = i.getModifiers();
-                if (!keyInputs.containsKey(modifiers))
-                    keyInputs.put(modifiers, new HashMap<>());
+                int[] modifiers = i.getModifiers();
+                for (int modifierKey : modifiers) {
+                    if (!keyInputs.containsKey(modifierKey))
+                        keyInputs.put(modifierKey, new HashMap<>());
 
-                keyInputs.get(modifiers).put(i.getCode(), binding);
+                    keyInputs.get(modifierKey).put(i.getCode(), binding);
+                }
             }
         }
+
+        for (BindingGroup copy : copies) {
+            copy.updateInputMap();
+        }
+    }
+
+    public Map<String, InputBinding> getBindings() {
+        return allBindings;
+    }
+    public List<InputBinding> getOrderedBindings() {
+        return orderedBindings;
     }
 
     //Previously used to reset whenever something requests this group
@@ -79,18 +120,23 @@ public class BindingGroup {
             binding.clearBinding();
         }
         mouseInputs.clear();
+        actionQueue.clear();
         return this;
     }
     public BindingGroup copy()
     {
-        BindingGroup copy = new BindingGroup(ID);
+        BindingGroup copy = new BindingGroup(ID, this.modifiable);
 
         for (InputBinding binding : allBindings.values()) {
             copy.addBinding(binding.copy());
         }
 
-        copy.createInputMap();
+        copy.updateInputMap();
+        copies.add(copy);
         return copy;
+    }
+    public void releaseCopy(BindingGroup copy) {
+        copies.remove(copy);
     }
 
     public void bind(String bindingKey, Supplier<VoidMethod> onDown, KeyHoldObject hold)
@@ -105,7 +151,7 @@ public class BindingGroup {
         InputBinding binding = allBindings.get(bindingKey);
 
         if (binding != null)
-            binding.bind(()-> onDown, hold);
+            binding.bind(()->onDown, hold);
     }
     public void bind(String bindingKey, Supplier<VoidMethod> onDown)
     {
@@ -528,14 +574,12 @@ public class BindingGroup {
 
     public static int modifierState()
     {
-        return (ctrl() ? 1 : 0) |
-                (shift() ? 2 : 0) |
-                (alt() ? 4 : 0);
+        return InputBinding.InputInfo.getModifierKey(ctrl(), alt(), shift());
     }
 
     public static boolean ctrl()
     {
-        return Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT);
+        return Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
     }
     public static boolean shift()
     {

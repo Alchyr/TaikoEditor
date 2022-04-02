@@ -130,24 +130,28 @@ public class Tools  {
         }
         return false;
     }
-    public boolean instantUse(int index, MapView view) //selects tool and uses it, *if* tool supports instant use. Otherwise, just selects
+    public boolean instantUse(int index, MapView view) //uses tool *if* tool supports instant use, and maybe selects it. Otherwise, just selects
     {
         if (currentToolset.size() > index)
         {
-            if (currentTool != null && currentTool != currentToolset.getTool(index))
+            EditorTool tool = currentToolset.getTool(index);
+            if (currentTool != null && !currentTool.equals(tool))
             {
                 currentTool.cancel();
-                currentTool = currentToolset.getTool(index);
-                currentTool.onSelected(owner);
-
-                for (int i = 0; i < toolButtons.size(); ++i)
-                {
-                    toolButtons.get(i).renderBorder = i == index;
-                }
             }
 
-            if (currentTool != null && currentTool.supportsView(view))
-                currentTool.instantUse(view);
+            if (tool != null && tool.supportsView(view)) {
+                if (tool.instantUse(view)) {
+                    if (!tool.equals(currentTool)) {
+                        currentTool = tool;
+                        currentTool.onSelected(owner);
+                        for (int i = 0; i < toolButtons.size(); ++i)
+                        {
+                            toolButtons.get(i).renderBorder = i == index;
+                        }
+                    }
+                }
+            }
             return true;
         }
         return false;

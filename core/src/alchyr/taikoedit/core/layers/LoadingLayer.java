@@ -2,6 +2,7 @@ package alchyr.taikoedit.core.layers;
 
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.ProgramLayer;
+import alchyr.taikoedit.management.AssetMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -25,36 +26,58 @@ public class LoadingLayer extends ProgramLayer {
     private float dist;
     private final float TURN_RATE = MathUtils.PI2 * 0.5f; //0.5 rotations per second
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+            60L, TimeUnit.SECONDS,
+            new SynchronousQueue<>()) {
+        @Override
+        protected void afterExecute(Runnable r, Throwable t) {
+            super.afterExecute(r, t);
+            if (t != null) {
+                editorLogger.error(t.getMessage(), t);
+            }
+            if (r instanceof FutureTask) {
+                try {
+                    ((FutureTask<?>) r).get();
+                } catch (Exception e) {
+                    editorLogger.error(e.getMessage(), e);
+                }
+            }
+        }
+    };
 
     private final Queue<ArrayList<Runnable>> tasks = new Queue<>();
-    private final Queue<ArrayList<Supplier<Float>>> trackers = new Queue<>();
+    private final Queue<ArrayList<Tracker>> trackers = new Queue<>();
     private final Queue<ArrayList<Runnable>> callbacks = new Queue<>();
     private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
-    private final ArrayList<Supplier<Float>> activeTrackers = new ArrayList<>();
+    private final ArrayList<Tracker> activeTrackers = new ArrayList<>();
+
     private boolean assetsLoaded;
     private int taskCount;
     private float taskProgress;
 
-    private final ProgramLayer[] replacementLayers;
-    private final boolean addToBottom;
+    protected boolean done;
+    protected boolean addedLayers;
 
-    private boolean complete = false;
+    private String[] assetLists;
+    private List<LoadInfo> extraLoads;
+    private ProgramLayer[] replacementLayers;
+    private boolean addToBottom;
 
     //If addToBottom, the last index in the array will end up on the bottom, first index on top (of the bottom)
     //If not addToBottom, the first index will be on the bottom of the top, and the last index will be on the very top.
-    public LoadingLayer(String[] assetLists, ProgramLayer[] replacementLayers, boolean addToBottom)
+    public LoadingLayer()
     {
-        for (String assetList : assetLists)
-            if (assetList != null)
-                assetMaster.loadList(assetList);
-
-        this.replacementLayers = replacementLayers;
-        this.addToBottom = addToBottom;
+        this.assetLists = null;
+        this.extraLoads = new ArrayList<>();
+        this.replacementLayers = null;
+        this.addToBottom = false;
 
         assetsLoaded = false;
         taskProgress = 0;
         taskCount = 0;
+
+        done = false;
+        addedLayers = false;
 
         circleSize = Math.min(SettingsMaster.getHeight() / 6.0f, 80.0f);
         miniCircleSize = circleSize / 8;
@@ -64,27 +87,20 @@ public class LoadingLayer extends ProgramLayer {
         angleA += rnd;
         angleB += rnd;
     }
-    public LoadingLayer(String assetList, ProgramLayer[] replacementLayers, boolean addToBottom)
-    {
-        this (new String[] { assetList }, replacementLayers, addToBottom);
+    public LoadingLayer addLayers(boolean addToBottom, ProgramLayer... replacementLayers) {
+        this.replacementLayers = replacementLayers;
+        this.addToBottom = addToBottom;
+        return this;
     }
-    public LoadingLayer(String[] assetLists, ProgramLayer replacementLayer, boolean addToBottom)
-    {
-        this(assetLists, new ProgramLayer[] { replacementLayer }, addToBottom);
+    public LoadingLayer loadLists(String... assetLists) {
+        this.assetLists = assetLists;
+        return this;
     }
-    public LoadingLayer(String assetList, ProgramLayer replacementLayer)
-    {
-        this(assetList, new ProgramLayer[] { replacementLayer }, false);
+    public LoadingLayer newSet() {
+        tasks.addFirst(new ArrayList<>());
+        trackers.addFirst(new ArrayList<>());
+        return this;
     }
-    public LoadingLayer(String assetList, ProgramLayer[] replacementLayers)
-    {
-        this(assetList, replacementLayers, false);
-    }
-    public LoadingLayer(String[] assetLists, ProgramLayer[] replacementLayers)
-    {
-        this(assetLists, replacementLayers, false);
-    }
-
     public LoadingLayer addCallback(boolean newSet, Runnable callback)
     {
         if (callbacks.isEmpty() || newSet)
@@ -114,23 +130,42 @@ public class LoadingLayer extends ProgramLayer {
     }
     public LoadingLayer addTracker(Supplier<Float> tracker)
     {
-        trackers.first().add(tracker);
+        return addTracker(tracker, false);
+    }
+    public LoadingLayer addTracker(Supplier<Float> tracker, boolean mustFinish) {
+        return addTracker(tracker, null, mustFinish);
+    }
+    public LoadingLayer addTracker(Supplier<Float> tracker, Supplier<Boolean> confirmation, boolean mustFinish) {
+        if (tasks.isEmpty())
+        {
+            tasks.addFirst(new ArrayList<>());
+            trackers.addFirst(new ArrayList<>());
+        }
+        trackers.first().add(new Tracker(tracker, confirmation, mustFinish));
         return this;
     }
-
     public LoadingLayer loadExtra(String key, String file, Class<?> type)
     {
-        assetMaster.load(key, file, type);
+        extraLoads.add(new LoadInfo(key, file, type));
         return this;
     }
 
+    @Override
+    public void initialize() {
+        if (assetLists != null) {
+            for (String assetList : assetLists)
+                assetMaster.loadList(assetList);
+        }
+        for (LoadInfo info : extraLoads)
+            assetMaster.load(info.key, info.file, info.clazz);
+    }
 
     @Override
     public void update(float elapsed) {
         angleA = (angleA + elapsed * TURN_RATE) % MathUtils.PI2;
         angleB = (angleB + elapsed * TURN_RATE) % MathUtils.PI2;
 
-        if (doneLoading())
+        if (!done && updateLoading())
         {
             //done with current tasks
             activeTasks.clear();
@@ -146,10 +181,32 @@ public class LoadingLayer extends ProgramLayer {
 
                 if (!trackers.isEmpty())
                 {
-                    ArrayList<Supplier<Float>> trackerSet = trackers.removeLast();
+                    ArrayList<Tracker> trackerSet = trackers.removeLast();
                     editorLogger.info("Task set has trackers: " + trackerSet.size());
                     activeTrackers.addAll(trackerSet);
                 }
+                return;
+            }
+
+            done = true;
+        }
+
+        if (addLayers()) {
+            if (replacementLayers != null)
+            {
+                editorLogger.info("Loading complete. Adding replacement layers: " + replacementLayers.length);
+                for (ProgramLayer l : replacementLayers) {
+                    if (addToBottom)
+                    {
+                        TaikoEditor.addLayerToBottom(l);
+                    }
+                    else
+                    {
+                        TaikoEditor.addLayer(l);
+                    }
+                }
+                //use a fancy effect instead later instead of sharp change
+                replacementLayers = null;
                 return;
             }
 
@@ -163,16 +220,15 @@ public class LoadingLayer extends ProgramLayer {
                 return;
             }
 
-            complete = true;
+            addedLayers = true;
+        }
+        if (complete()) {
+            TaikoEditor.removeLayer(this);
         }
     }
 
-    private boolean doneLoading()
+    private boolean updateLoading()
     {
-        /*if (!assetsLoaded)
-        {
-            assetsLoaded = assetMaster.update();
-        }*/
         assetsLoaded = assetMaster.isDoneLoading();
 
         boolean tasksDone = true;
@@ -188,9 +244,11 @@ public class LoadingLayer extends ProgramLayer {
         if (!activeTrackers.isEmpty())
         {
             taskProgress = 1;
-            for (Supplier<Float> tracker : activeTrackers)
+            for (Tracker tracker : activeTrackers)
             {
-                taskProgress *= tracker.get();
+                taskProgress *= tracker.getProgress();
+                if (!tracker.isComplete())
+                    tasksDone = false;
             }
         }
         else if (taskCount > 0)
@@ -199,6 +257,17 @@ public class LoadingLayer extends ProgramLayer {
             taskProgress = 1;
 
         return assetsLoaded && tasksDone;
+    }
+
+    public float getLoadProgress(AssetMaster assetMaster) {
+        return assetMaster.getProgress() * taskProgress;
+    }
+
+    public boolean addLayers() {
+        return done && !addedLayers;
+    }
+    public boolean complete() {
+        return done;
     }
 
     @Override
@@ -232,42 +301,60 @@ public class LoadingLayer extends ProgramLayer {
 
         sr.end();
         sb.begin();
-
-        if (complete) {
-            if (replacementLayers != null && replacementLayers.length != 0)
-            {
-                editorLogger.info("Loading complete. Adding replacement layers: " + replacementLayers.length);
-                for (ProgramLayer l : replacementLayers) {
-                    if (addToBottom)
-                    {
-                        TaikoEditor.addLayerToBottom(l);
-                    }
-                    else
-                    {
-                        TaikoEditor.addLayer(l);
-                    }
-                    l.initialize();
-                }
-                //use a fancy effect instead later instead of sharp change
-            }
-            else
-            {
-                editorLogger.info("Loading complete. No replacement layers.");
-            }
-
-            TaikoEditor.removeLayer(this);
-        }
     }
 
     @Override
     public void dispose() {
         try {
             editorLogger.info("Shutting down LoadingLayer executor.");
-            List<Runnable> unfinished = executor.shutdownNow();
-            if (!unfinished.isEmpty())
-                editorLogger.info(unfinished.size() + " tasks were unfinished.");
-        } finally {
-            editorLogger.info("Executor shut down successfully.");
+            executor.shutdown();
+            if (executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                editorLogger.info("Executor shut down successfully.");
+            }
+            else {
+                if (!executor.isTerminated()) {
+                    editorLogger.error("Tasks were unfinished. Shutting down forcefully.");
+                    executor.shutdownNow();
+                }
+            }
+        }
+        catch (InterruptedException e) {
+            editorLogger.error("Tasks interrupted.");
+        }
+    }
+
+    private static class LoadInfo {
+        final String key;
+        final String file;
+        final Class<?> clazz;
+
+        public LoadInfo(String s, String file, Class<?> clazz) {
+            this.key = s;
+            this.file = file;
+            this.clazz = clazz;
+        }
+    }
+
+    private static class Tracker {
+        private final Supplier<Float> progress;
+        private final Supplier<Boolean> confirmation;
+        private final boolean mustFinish;
+
+        public Tracker(Supplier<Float> progress, Supplier<Boolean> confirmation, boolean mustFinish) {
+            this.progress = progress;
+            this.confirmation = confirmation;
+            this.mustFinish = mustFinish;
+        }
+
+        public float getProgress() {
+            return progress.get();
+        }
+
+        public boolean isComplete() {
+            if (mustFinish) {
+                return confirmation == null ? progress.get() >= 1 : confirmation.get();
+            }
+            return true;
         }
     }
 }

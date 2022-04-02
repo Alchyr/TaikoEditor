@@ -9,6 +9,12 @@ import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class Label implements UIElement {
     private float x, y;
+    public float getX() {
+        return x;
+    }
+    public float getY() {
+        return y;
+    }
 
     private String label;
     private final BitmapFont font;
@@ -36,6 +42,12 @@ public class Label implements UIElement {
 
     public void setText(String s) {
         this.label = s;
+    }
+
+    @Override
+    public void move(float dx, float dy) {
+        x += dx;
+        y += dy;
     }
 
     @Override

@@ -10,7 +10,7 @@ GOOD MENU - IS DONE
 Gradual Volume Change tool - can mostly copy sv tool, though the various curves are probably not too necessary
 Insert Break tool
 
-Way to directly open maps skipping menu
+Way to directly open maps skipping menu - done-ish, requires a different launcher
 
 
 All automatic break checks should depend on a boolean "autoBreaks"
@@ -55,6 +55,7 @@ Snaps may not generate correctly 100% of the time?
 Selection tool shift + click to select all between currently selection and clicked point
 If on left, from left end of selection, on right, from right end of selection (doesn't affect existing selection)
 If in the middle, left middle: Selects from left side. Right middle, selects from right side. (smaller side)
+alt - do nothing if in the middle?
 
 
 Double-click to jump to an object
@@ -87,5 +88,5 @@ As such, snap generation *does not* match live, and thus may result in 1ms unsna
 BUGS:
 Sometimes audio will not play the first time you seek. Seeking again fixes this.
 Changing speed before playing the audio at least once will result in audio issues. Seeking or pausing and playing again will fix this.
-Seems ok?
-When the snap divisor is set to 0 (none) the program is much (?) laggier. May simply be a visual illusion thing.
+Audio - Fixed by loading and playing the music automatically in menu? Could maybe still accomplish the issue by selecting map very fast?
+When the snap divisor is set to 0 (none) the program is much (?) laggier. May simply be a visual illusion thing. - fixed due to dumb snap generation code

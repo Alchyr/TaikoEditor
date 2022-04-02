@@ -50,6 +50,32 @@ public class Slider extends HitObject implements ILongObject {
         edgeSets = null;
     }
 
+    public Slider(long start, double duration)
+    {
+        this.type = HitObjectType.SLIDER;
+
+        super.setPos(start);
+        this.preciseDuration = duration;
+        this.duration = Math.round(this.preciseDuration);
+        this.endPos = start + this.duration;
+        this.x = 0;
+        this.y = 384;
+        this.newCombo = true;
+
+        this.sliderProperties = new SliderProperties();
+
+        colorSkip = 0;
+
+        normal = false;
+        whistle = false;
+        finish = false;
+        clap = false;
+
+        hitSample = null;
+        edgeSounds = null;
+        edgeSets = null;
+    }
+
     public Slider(Slider base)
     {
         this.type = HitObjectType.SLIDER;
@@ -157,7 +183,11 @@ public class Slider extends HitObject implements ILongObject {
                         hitSample[n] = Integer.parseInt(samples[n]);
                     }
                     if (samples.length > 4) {
-                        sampleFile = samples[5];
+                        StringBuilder sb = new StringBuilder();
+                        for (int s = 4; s < samples.length; ++s) {
+                            sb.append(samples[s]);
+                        }
+                        sampleFile = sb.toString();
                     }
             }
         }
@@ -209,14 +239,15 @@ public class Slider extends HitObject implements ILongObject {
         float startX = x + (float) (this.getPos() - pos) * viewScale;
         float endX = x + (float) (this.endPos - pos) * viewScale;
         sb.setColor(slider);
+        slider.a = 1;
         float scale = finish ? LARGE_SCALE : 1.0f;
 
-        if (duration > 0)
+        if ((selected && duration < 0) || duration > 0)
         {
             sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
+            sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                    scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
         }
-        sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
         sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
 

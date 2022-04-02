@@ -1,5 +1,6 @@
 package alchyr.taikoedit.core.input;
 
+import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 
 //Requires update to be called and for bind to be called after everything it references is initialized.
@@ -70,5 +71,9 @@ public abstract class BoundInputProcessor extends AdjustedInputProcessor {
     public void releaseInput(boolean safe)
     {
         bindings.releaseInput(safe);
+    }
+
+    public void dispose() {
+        BindingMaster.releaseCopy(bindings);
     }
 }

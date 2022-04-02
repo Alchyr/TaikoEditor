@@ -7,6 +7,7 @@ import static alchyr.taikoedit.TaikoEditor.editorLogger;
 public class OnionExtension {
     //This is the latest version of the setWindowedMode method, which isn't in the latest available version of libgdx.
     //If an update arrives, this SHOULD be removed.
+    //Its location is for easy access to certain package-private variables.
     public static void setBorderlessFullscreen(Lwjgl3Graphics graphics, int width, int height) {
         Lwjgl3Window window = graphics.getWindow();
 

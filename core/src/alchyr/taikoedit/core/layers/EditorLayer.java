@@ -1,7 +1,6 @@
 package alchyr.taikoedit.core.layers;
 
 import alchyr.taikoedit.TaikoEditor;
-import alchyr.taikoedit.audio.MusicWrapper;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.TextInputProcessor;
@@ -34,6 +33,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -44,13 +44,10 @@ import java.awt.datatransfer.StringSelection;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class EditorLayer extends LoadedLayer implements InputLayer {
-    public static MusicWrapper music; //There shouldn't ever be more than one.
-
     //Return to menu
     private ProgramLayer src;
 
@@ -147,12 +144,15 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         //graphics positions/initialization
         if (backgroundImg != null && !backgroundImg.isEmpty())
         {
-            background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like. assetMaster.get(backgroundImg.toLowerCase());
-            background.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
+            TaikoEditor.onMain(()->{
+                //assetMaster.get(backgroundImg.toLowerCase());
+                background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like, which messes up assetMaster loading.
+                background.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
 
-            float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
-            bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
-            bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+            });
         }
         else if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
         {
@@ -167,6 +167,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         topBarHeight = 40;
         timelineY = SettingsMaster.getHeight() - (topBarHeight + Timeline.HEIGHT);
         topBarY = SettingsMaster.getHeight() - topBarHeight;
+        topBarHeight += 10;
         //Title/top bar
         //float titleOffsetX = 10;
         //float titleOffsetY = 35;
@@ -217,7 +218,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             organizeViews();
         }
 
-        currentPos = getSecondPosition();
+        currentPos = music.getSecondTime();
         long msTime = Math.round(currentPos * 1000);
         //editorLogger.info(pos);
 
@@ -245,6 +246,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
+        if (type == LAYER_TYPE.FULL_STOP) {
+            Gdx.gl.glClearColor(0, 0, 0, 1);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        }
         //Background
         if (background != null)
         {
@@ -255,8 +260,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         //Map views
         for (EditorBeatmap map : activeMaps)
         {
-            if (mapViews.containsKey(map))
-                mapViews.get(map).render(sb, sr);
+            ViewSet set = mapViews.get(map);
+            if (set != null)
+                set.render(sb, sr);
         }
 
         tools.renderCurrentTool(sb, sr);
@@ -293,15 +299,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         /*sb.setColor(Color.WHITE);
         searchInput.render(sb, searchTextOffsetX, SettingsMaster.getHeight() - searchTextOffsetY);*/
-    }
-
-    /*private static double getMillisecondPosition(float elapsed)
-    {
-        return music.getMsTime(elapsed);
-    }*/
-    private static double getSecondPosition()
-    {
-        return music.getSecondTime();
     }
 
     public ViewSet getViewSet(EditorBeatmap map)
@@ -361,16 +358,20 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
     }
 
+    private boolean closed = false;
     private void returnToSrc() {
-        TaikoEditor.removeLayer(this);
-        if (src instanceof LoadedLayer) {
-            TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
-        }
-        else if (src != null) {
-            TaikoEditor.addLayer(src);
-        }
-        else {
-            TaikoEditor.end();
+        if (!closed) {
+            closed = true;
+            TaikoEditor.removeLayer(this);
+            if (src instanceof LoadedLayer) {
+                TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
+            }
+            else if (src != null) {
+                TaikoEditor.addLayer(src);
+            }
+            else {
+                TaikoEditor.end();
+            }
         }
     }
 
@@ -385,50 +386,33 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         for (EditorBeatmap m : activeMaps)
         {
-            mapViews.get(m).dispose();
-            m.dispose();
+            ViewSet set = mapViews.get(m);
+            if (set != null) {
+                set.dispose();
+                m.dispose();
+            }
         }
 
-        music.dispose();
+        activeMaps.clear();
+        mapViews.clear();
+        primaryView = null;
+
+        processor.dispose();
     }
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer(new String[] {
-                "editor",
-                "background"
-        },  this, true)
-                .addTask(this::setMusic)
-                .addTask(true, this::prepMusic).addTracker(music::getProgress)
-                .addCallback(true, HitObject::loadTextures).addCallback(TimingPoint::loadTexture).addCallback(PreviewLine::loadTexture).addCallback(this::loadBeatmap)
-                .addCallback(true, this::initMusic);
+        return new LoadingLayer()
+                .addLayers(true, this)
+                .addTask(this::stopMusic).addTracker(music::getProgress, music::hasMusic, true)
+                .addTask(HitObject::loadTextures).addTask(TimingPoint::loadTexture).addTask(PreviewLine::loadTexture)
+                .addTask(true, this::loadBeatmap).addTask(()->music.seekSecond(0));
     }
 
-    private void setMusic()
+    private void stopMusic()
     {
-        music.setMusic(Gdx.files.absolute(set.getSongFile()));
-    }
-    private void prepMusic() //preloads the music.
-    {
-        music.prep();
-    }
-    private void initMusic() //gets audio source and makes sure music is ready to play
-    {
-        try {
-            editorLogger.info("Attempting to initialize music.");
-            if (music.initialize())
-            {
-                editorLogger.info("Initialized music successfully.");
-            }
-            else
-            {
-                //Failure.
-                editorLogger.info("Failed to initialize music.");
-                music.dispose();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        music.cancelAsyncFollowup();
+        music.pause();
     }
 
     private void loadBeatmap()
@@ -561,8 +545,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             if (!mapViews.containsKey(newView.map))
                 mapViews.put(newView.map, new ViewSet(this, newView.map));
 
-            if (!mapViews.get(newView.map).contains((o)->o.type == newView.type))
+            if (!mapViews.get(newView.map).contains((o)->o.type == newView.type)) {
+                newView.update(currentPos, Math.round(currentPos * 1000), 0);
                 mapViews.get(newView.map).addView(newView);
+            }
         }
     }
     public void removeView(MapView toRemove)
@@ -579,9 +565,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
                                 if (container.isEmpty()) {
                                     container.dispose();
-                                    mapViews.remove(toRemove.map);
-                                    activeMaps.remove(toRemove.map);
-                                    toRemove.map.dispose();
+                                    disposeMap(toRemove.map);
                                 }
                                 if (toRemove.equals(primaryView))
                                 {
@@ -597,9 +581,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
                             if (container.isEmpty()) {
                                 container.dispose();
-                                mapViews.remove(toRemove.map);
-                                activeMaps.remove(toRemove.map);
-                                toRemove.map.dispose();
+                                disposeMap(toRemove.map);
                             }
                             if (toRemove.equals(primaryView))
                             {
@@ -612,9 +594,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
                 if (container.isEmpty()) {
                     container.dispose();
-                    mapViews.remove(toRemove.map);
-                    activeMaps.remove(toRemove.map);
-                    toRemove.map.dispose();
+                    disposeMap(toRemove.map);
                 }
                 if (toRemove.equals(primaryView))
                 {
@@ -624,6 +604,27 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
         organizeViews();
     }
+    public void closeViewSet(MapInfo info) {
+        ViewSet toClose = null;
+        EditorBeatmap map = null;
+        for (Map.Entry<EditorBeatmap, ViewSet> view : mapViews.entrySet()) {
+            if (view.getKey().is(info)) {
+                toClose = view.getValue();
+                map = view.getKey();
+                break;
+            }
+        }
+
+        if (toClose != null) {
+            if (toClose.contains((v)->v.equals(primaryView)))
+            {
+                primaryView = null;
+            }
+            toClose.dispose();
+            disposeMap(map);
+            organizeViews();
+        }
+    }
 
     private void organizeViews()
     {
@@ -631,11 +632,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         for (EditorBeatmap b : activeMaps)
         {
-            y = mapViews.get(b).reposition(y);
+            ViewSet set = mapViews.get(b);
+            if (set != null) {
+                y = set.reposition(y);
 
-            if (primaryView == null)
-            {
-                setPrimaryView(mapViews.get(b).first());
+                if (primaryView == null)
+                {
+                    setPrimaryView(set.first());
+                }
             }
         }
 
@@ -674,6 +678,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
     }
 
+    private void disposeMap(EditorBeatmap map) {
+        mapViews.remove(map);
+        activeMaps.remove(map);
+        timeline.closeMap(map);
+        map.dispose();
+    }
+
     private static void setViewScale(float newScale)
     {
         if (newScale > 0.93f && newScale < 1.07f)
@@ -684,8 +695,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void updateScrollOffset()
     {
-        for (EditorBeatmap b : activeMaps)
-            mapViews.get(b).setOffset(scrollPos);
+        for (EditorBeatmap b : activeMaps) {
+            ViewSet set = mapViews.get(b);
+            if (set != null) {
+                set.setOffset(scrollPos);
+            }
+        }
     }
 
 
@@ -723,7 +738,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 }
                 else
                 {
-                    music.seekMs(s.pos);
+                    music.seekMs((long) s.pos);
                 }
             }
         }
@@ -762,7 +777,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 }
                 else
                 {
-                    music.seekMs(s.pos);
+                    music.seekMs((long) s.pos);
                 }
             }
         }
@@ -853,7 +868,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         public EditorProcessor(EditorLayer source)
         {
-            super(BindingMaster.getBindingGroup("Editor"), true);
+            super(BindingMaster.getBindingGroupCopy("Editor"), true);
             this.sourceLayer = source;
         }
 
@@ -959,8 +974,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                     }
                 });
 
-                bindings.bind("FUCK", () -> {
-                    if (sourceLayer.primaryView != null && sourceLayer.primaryView.hasSelection() && sourceLayer.primaryView.type == MapView.ViewType.EFFECT_VIEW) {
+                bindings.bind("Messy", () -> {
+                    if (sourceLayer.primaryView != null && sourceLayer.primaryView.hasSelection() && sourceLayer.primaryView instanceof EffectView) {
                         releaseMouse(true);
 
                         ((EffectView) sourceLayer.primaryView).fuckSelection();
@@ -1117,7 +1132,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         for (EditorBeatmap m : sourceLayer.activeMaps)
                         {
                             ViewSet set = sourceLayer.mapViews.get(m);
-                            if (set.containsY(p.y))
+                            if (set != null && set.containsY(p.y))
                             {
                                 return set.click(p.x, p.y, button, BindingGroup.modifierState());
                             }

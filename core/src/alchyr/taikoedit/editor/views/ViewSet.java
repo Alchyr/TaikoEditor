@@ -18,7 +18,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
@@ -72,7 +71,7 @@ public class ViewSet {
         for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet()) {
             ArrayList<MapView> views = viewSet.getValue();
             int index; //ensure same types of views are rendered together
-            for (ArrayList<? extends PositionalObject> objects : viewObjects.get(viewSet.getKey()).values()) {
+            for (ArrayList<? extends PositionalObject> objects : viewObjects.getOrDefault(viewSet.getKey(), Collections.emptyNavigableMap()).values()) {
                 for (PositionalObject o : objects) {
                     for (index = 0; index < views.size(); ++index) {
                         views.get(index).renderObject(o, sb, sr);

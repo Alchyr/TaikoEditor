@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.music;
 
 public class SVFunctionTool extends EditorTool {
     private static final int MAX_SNAP_OFFSET = 40;
@@ -137,6 +138,15 @@ public class SVFunctionTool extends EditorTool {
 
                 if (y > viewsTop || y < viewsBottom)
                     return;
+
+                if (Gdx.input.getX() <= 1)
+                {
+                    music.seekSecond(music.getSecondTime() - (music.isPlaying() ? 0.2 : elapsed * 4));
+                }
+                else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
+                {
+                    music.seekSecond(music.getSecondTime() + (music.isPlaying() ? 0.2 : elapsed * 4));
+                }
 
                 if (previewView != null)
                 {

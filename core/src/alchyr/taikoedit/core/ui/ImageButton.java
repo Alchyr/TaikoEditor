@@ -101,6 +101,17 @@ public class ImageButton implements UIElement {
         this.hoveredImage = hover;
     }
 
+    @Override
+    public void move(float dx, float dy) {
+        x += dx;
+        x2 += dx;
+        centerX += dx;
+
+        y += dy;
+        y2 += dy;
+        centerY += dy;
+    }
+
     public boolean contains(int mouseX, int mouseY) {
         return x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy;
     }

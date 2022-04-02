@@ -127,7 +127,7 @@ public class SpinnerTool extends EditorTool {
         {
             if (button == Input.Buttons.LEFT)
             {
-                currentlyPlacing.map.addObject(placementObject);
+                currentlyPlacing.map.addObject(placementObject, currentlyPlacing.replaceTest);
 
                 placementObject = new Spinner(0, 0);
                 renderPreview = false;
@@ -153,6 +153,6 @@ public class SpinnerTool extends EditorTool {
 
     @Override
     public boolean supportsView(MapView view) {
-        return view.type == MapView.ViewType.OBJECT_VIEW;
+        return view.type == MapView.ViewType.OBJECT_VIEW || view.type == MapView.ViewType.GIMMICK_VIEW;
     }
 }

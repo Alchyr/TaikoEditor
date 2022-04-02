@@ -117,7 +117,11 @@ public class Hit extends HitObject {
                         hitSample[n] = Integer.parseInt(samples[n]);
                     }
                     if (samples.length > 4) {
-                        sampleFile = samples[5];
+                        StringBuilder sb = new StringBuilder();
+                        for (int s = 4; s < samples.length; ++s) {
+                            sb.append(samples[s]);
+                        }
+                        sampleFile = sb.toString();
                     }
             }
         }
@@ -138,6 +142,7 @@ public class Hit extends HitObject {
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
         }
+        c.a = 1;
     }
 
     @Override

@@ -4,6 +4,7 @@ import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Queue;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -102,6 +103,19 @@ public class InputBinding {
         return inputs;
     }
 
+    public void setInputs(List<InputInfo> data) {
+        inputs.clear();
+        inputs.addAll(data);
+    }
+
+    public void removeInput(InputInfo info) {
+        inputs.remove(info);
+    }
+
+    public void addInput(InputInfo info) {
+        inputs.add(info);
+    }
+
     public void clearBinding() {
         onDown = notSet;
         onRelease = null;
@@ -188,22 +202,42 @@ public class InputBinding {
 
 
     public static class InputInfo {
-        public int code;
-        public boolean ctrl;
-        public boolean shift;
-        public boolean alt;
+        private static final int CTRL_INDEX = 256, ALT_INDEX = 257, SHIFT_INDEX = 258;
 
-        public InputInfo(int code, boolean ctrl, boolean shift, boolean alt)
-        {
-            this.code = code;
+        public static final int CTRL_ID = 0b1, SHIFT_ID = 0b10, ALT_ID = 0b100;
+
+        public enum Maybe {
+            FALSE,
+            TRUE,
+            MAYBE
+        }
+
+        public int code;
+        private Maybe ctrl;
+        private Maybe shift;
+        private Maybe alt;
+
+        public InputInfo(int code, Maybe ctrl, Maybe alt, Maybe shift) {
+            this.code = code > 255 ? 0 : code;
             this.ctrl = ctrl;
-            this.shift = shift;
             this.alt = alt;
+            this.shift = shift;
+        }
+        public InputInfo(int code, boolean ctrl, boolean alt, boolean shift)
+        {
+            this.code = code > 255 ? 0 : code;
+            this.ctrl = ctrl ? Maybe.TRUE : Maybe.FALSE;
+            this.alt = alt ? Maybe.TRUE : Maybe.FALSE;
+            this.shift = shift ? Maybe.TRUE : Maybe.FALSE;
         }
 
         public InputInfo(int code, boolean ctrl)
         {
             this(code, ctrl, false, false);
+        }
+        public InputInfo(int code, Maybe ctrl)
+        {
+            this(code, ctrl, Maybe.FALSE, Maybe.FALSE);
         }
 
         public InputInfo(int code)
@@ -211,13 +245,95 @@ public class InputBinding {
             this(code, false, false, false);
         }
 
+        public InputInfo(int[] inputSet) {
+            this(inputSet[0], Maybe.values()[inputSet[1]], Maybe.values()[inputSet[2]], Maybe.values()[inputSet[3]]);
+        }
+
+        public void set(int code, boolean ctrl, boolean alt, boolean shift, boolean overrideMaybe) {
+            this.code = code;
+            if (overrideMaybe || this.ctrl != Maybe.MAYBE) {
+                this.ctrl = ctrl ? Maybe.TRUE : Maybe.FALSE;
+            }
+            if (overrideMaybe || this.alt != Maybe.MAYBE) {
+                this.alt = alt ? Maybe.TRUE : Maybe.FALSE;
+            }
+            if (overrideMaybe || this.shift != Maybe.MAYBE) {
+                this.shift = shift ? Maybe.TRUE : Maybe.FALSE;
+            }
+        }
+
         public int getCode()
         {
             return code;
         }
-        public int getModifiers()
-        {
-            return (ctrl ? 1 : 0) | (shift ? 2 : 0) | (alt ? 4 : 0);
+
+        public Maybe getCtrl() {
+            return ctrl;
         }
+        public Maybe getAlt() {
+            return alt;
+        }
+        public Maybe getShift() {
+            return shift;
+        }
+
+        public int[] getModifiers()
+        {
+            int[] modifiers = new int[(ctrl == Maybe.MAYBE ? 2 : 1) * (alt == Maybe.MAYBE ? 2 : 1) * (shift == Maybe.MAYBE ? 2 : 1)];
+            int i = 0;
+            boolean c = ctrl == Maybe.TRUE, a = alt == Maybe.TRUE, s = shift == Maybe.TRUE;
+
+            for (int ci = 0; ci < (ctrl == Maybe.MAYBE ? 2 : 1); ++ci) {
+                for (int ai = 0; ai < (alt == Maybe.MAYBE ? 2 : 1); ++ai) {
+                    for (int si = 0; si < (shift == Maybe.MAYBE ? 2 : 1); ++si) {
+                        modifiers[i] = getModifierKey(c, a, s);
+                        ++i;
+                        s = true;
+                    }
+                    a = true;
+                    s = shift == Maybe.TRUE;
+                }
+                c = true;
+                a = alt == Maybe.TRUE;
+            }
+            return modifiers;
+        }
+
+        public static int getModifierKey(boolean ctrl, boolean alt, boolean shift) {
+            return (ctrl ? CTRL_ID : 0) | (shift ? SHIFT_ID : 0) | (alt ? ALT_ID : 0);
+        }
+
+        public String toString(String[] keyNameArray) {
+            return toString(keyNameArray, code, ctrl == Maybe.TRUE, alt == Maybe.TRUE, shift == Maybe.TRUE);
+        }
+
+        public static String toString(String[] keyNameArray, int code, boolean ctrl, boolean alt, boolean shift) {
+            if (keyNameArray.length < 259 || code >= keyNameArray.length)
+                return "";
+
+            return (ctrl ? keyNameArray[CTRL_INDEX] + " " : "") +
+                    (alt ? keyNameArray[ALT_INDEX] + " " : "") +
+                    (shift ? keyNameArray[SHIFT_INDEX] + " " : "") +
+                    (code >= 0 ? keyNameArray[code] : "");
+        }
+
+        /*
+            An input combination can be represented as:
+            int inCode
+            bool ctrl, alt, shift
+            where a true is input as 0b10 and false is input as 0b01
+
+            A hotkey combination can be represented as:
+            int testCode
+            int ctrl, alt, shift
+            10 = true required, 01 = false required, 11 = doesn't matter
+
+            input is valid if inCode == testCode and
+            ctrl & ctrl != 0
+            alt & alt != 0
+            shift & shift != 0
+
+            This would work, but it requires testing each input, rather than a hashing method which leads directly to the matching input.
+         */
     }
 }

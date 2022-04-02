@@ -7,14 +7,11 @@ import alchyr.taikoedit.core.layers.LoadedLayer;
 import alchyr.taikoedit.core.layers.LoadingLayer;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-
-import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.end;
@@ -56,9 +53,9 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer(new String[] {
-                "ui"
-        }, this, true);
+        return new LoadingLayer()
+                .loadLists("ui")
+                .addLayers(true, this);
     }
 
     @Override
@@ -66,6 +63,11 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
         return processor;
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
+    }
 
     private static class BindingTestProcessor extends BoundInputProcessor
     {
@@ -73,7 +75,7 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
 
         public BindingTestProcessor(BindingTestLayer source)
         {
-            super(BindingMaster.getBindingGroup("test"), true);
+            super(BindingMaster.getBindingGroupCopy("test"), true);
 
             this.source = source;
         }

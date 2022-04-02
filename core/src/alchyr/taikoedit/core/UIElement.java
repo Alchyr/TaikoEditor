@@ -7,4 +7,6 @@ public interface UIElement {
     void update(float elapsed);
     void render(SpriteBatch sb, ShapeRenderer sr);
     void render(SpriteBatch sb, ShapeRenderer sr, float dx, float dy);
+
+    void move(float dx, float dy);
 }

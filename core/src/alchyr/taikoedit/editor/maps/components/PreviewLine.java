@@ -43,6 +43,7 @@ public class PreviewLine extends PositionalObject {
         sb.setColor(c);
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
+        c.a = 1;
     }
 
     @Override

@@ -3,23 +3,19 @@ package alchyr.taikoedit.core.layers.sub;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
-import alchyr.taikoedit.core.input.AdjustedInputProcessor;
 import alchyr.taikoedit.core.input.BoundInputProcessor;
-import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.Button;
-import alchyr.taikoedit.core.ui.TextField;
 import alchyr.taikoedit.editor.maps.FullMapInfo;
 import alchyr.taikoedit.editor.views.GameplayView;
 import alchyr.taikoedit.editor.views.EffectView;
+import alchyr.taikoedit.editor.views.GimmickView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
-import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -33,7 +29,7 @@ import java.util.List;
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
 public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
-    private static DifficultyMenuProcessor processor;
+    private final DifficultyMenuProcessor processor;
 
     //Rendering
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.83f);
@@ -100,6 +96,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         viewOptions.add(new Button(viewOptionX, middleY, "Object Editor", assetMaster.getFont("aller medium")).setAction("objects"));
         viewOptions.add(new Button(viewOptionX, middleY, "Effect Editor", assetMaster.getFont("aller medium")).setAction("sv"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium")).setAction("gameplay"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Gimmick Editor", assetMaster.getFont("aller medium")).setAction("gimmick"));
         viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
 
         openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium")).setClick(this::open);
@@ -127,6 +124,9 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
                     break;
                 case "gameplay":
                     sourceLayer.addView(new GameplayView(sourceLayer, b), true);
+                    break;
+                case "gimmick":
+                    sourceLayer.addView(new GimmickView(sourceLayer, b), true);
                     break;
                 case "NEW":
                     TaikoEditor.addLayer(new CreateDifficultyLayer(sourceLayer, set, b));
@@ -297,12 +297,18 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         return processor;
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
+    }
+
     private static class DifficultyMenuProcessor extends BoundInputProcessor {
         private final DifficultyMenuLayer sourceLayer;
 
         public DifficultyMenuProcessor(DifficultyMenuLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
 
             this.sourceLayer = source;
         }

@@ -59,7 +59,7 @@ public class Snap implements Comparable<Snap> {
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int viewHeight)
     {
         sb.setColor(getDivisorColor(divisor));
-        x = x + (float) (this.pos - pos) * viewScale;
+        x = x + (float) ((long)this.pos - pos) * viewScale; //For visual consistency, rendering position is based on a long value to match objects.
         sb.draw(pix, x, y, 1, getHeight(viewHeight));
         if (divisor != 0) //mirrored line on top
             sb.draw(pix, x, y + viewHeight - getHeight(viewHeight), 1, getHeight(viewHeight));
@@ -68,7 +68,7 @@ public class Snap implements Comparable<Snap> {
     public void halfRender(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int max)
     {
         sb.setColor(getDivisorColor(divisor));
-        x = x + (float) (this.pos - pos) * viewScale;
+        x = x + (float) ((long)this.pos - pos) * viewScale;
         sb.draw(pix, x, y, 1, getHeight(max));
     }
 

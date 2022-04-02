@@ -32,7 +32,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
 import java.text.DecimalFormatSymbols;
@@ -46,13 +45,14 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 310; //x.x.x -> xxx
+    public static final int VERSION = 320; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 
     public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
 
     public static DecimalFormatSymbols osuSafe;
+
     static {
         osuSafe = new DecimalFormatSymbols(Locale.US);
         osuSafe.setDecimalSeparator('.');
@@ -64,6 +64,8 @@ public class TaikoEditor extends ApplicationAdapter {
     public static AssetMaster assetMaster;
     public static AudioMaster audioMaster;
     public static TextRenderer textRenderer;
+
+    public static MusicWrapper music;
 
     public static CursorHoverText hoverText;
 
@@ -141,6 +143,8 @@ public class TaikoEditor extends ApplicationAdapter {
 
         actionQueue.clear();
 
+        textRenderer = new TextRenderer();
+
         //set up input
         input = new InputMultiplexer();
         Gdx.input.setInputProcessor(input);
@@ -148,7 +152,7 @@ public class TaikoEditor extends ApplicationAdapter {
         //A U D I O
         ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("mp3", PreloadedMp3.class);
         ((OpenALLwjgl3Audio) Gdx.audio).registerMusic("ogg", PreloadOgg.class);
-        EditorLayer.music = new MusicWrapper();
+        music = new MusicWrapper();
 
 
         hoverText = new CursorHoverText();
@@ -215,9 +219,9 @@ public class TaikoEditor extends ApplicationAdapter {
                     elapsed = (float)(time - lastTime);
 
                     layerLock.lock();
-                    EditorLayer.music.update(time - lastTime);
-                    renderLayer = gameUpdate(elapsed);
+                    music.update(time - lastTime);
                     updateLayers();
+                    renderLayer = gameUpdate(elapsed);
                     layerLock.unlock();
 
                     lastTime = time;
@@ -363,6 +367,7 @@ public class TaikoEditor extends ApplicationAdapter {
         // Add and remove layers (and input)
         for (ProgramLayer l : addBottomLayers)
         {
+            l.initialize();
             layers.add(0, l);
             editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
@@ -372,6 +377,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
         for (ProgramLayer l : addTopLayers)
         {
+            l.initialize();
             layers.add(l);
             editorLogger.info("Added " + l.getClass().getSimpleName());
             if (l instanceof InputLayer)
@@ -381,7 +387,6 @@ public class TaikoEditor extends ApplicationAdapter {
 
         for (ProgramLayer l : removeLayers)
         {
-            //l.dispose();
             disposeLayers.add(l);
             layers.remove(l);
             editorLogger.info("Removed " + l.getClass().getSimpleName());
@@ -412,6 +417,8 @@ public class TaikoEditor extends ApplicationAdapter {
         addBottomLayers.clear();
         addTopLayers.clear();
         removeLayers.clear();
+
+        music.dispose();
 
         SvFunctionLayer.disposeFunctions();
         assetMaster.dispose();
@@ -546,25 +553,22 @@ public class TaikoEditor extends ApplicationAdapter {
                 }
                 EditorLayer edit = new EditorLayer(null, set, initial); //no source, will close on exit
                 ProgramLayer loader = edit.getLoader();
-                addLayer(new LoadingLayer(new String[] {
-                        "ui",
-                        "font",
-                        "background",
-                        "menu",
-                        "hitsound"
-                }, new LoadingLayer(null, loader).addTask(TaikoEditor::initialize), true));
+                addLayer(new LoadingLayer()
+                        .loadLists("ui", "font", "background", "menu", "hitsound")
+                        .addLayers(true,
+                                new LoadingLayer().addLayers(true, loader).addTask(TaikoEditor::initialize)));
                 return true;
             }
         }
         return false;
     }
 
-    //Callback of MenuLayer. Todo: Allow TextRenderer to be instantiated sooner, and then initialized here to actually load fonts.
+    //Callback of MenuLayer.
     public static void initialize()
     {
         try
         {
-            textRenderer = new TextRenderer(assetMaster.getFont("default"));
+            textRenderer.setFont(assetMaster.getFont("default"));
             hoverText.initialize(assetMaster.getFont("aller small"), 16);
             showCursor();
         }

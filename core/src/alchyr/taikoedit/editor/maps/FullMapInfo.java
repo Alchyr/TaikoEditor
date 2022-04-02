@@ -70,6 +70,11 @@ public class FullMapInfo {
         this.letterboxInBreaks = base.letterboxInBreaks;
         this.widescreenStoryboard = base.widescreenStoryboard;
 
+        this.od = base.od;
+        this.hp = base.hp;
+        this.cs = base.cs;
+        this.ar = base.ar;
+
         this.bookmarks.addAll(base.bookmarks);
         this.distanceSpacing = base.distanceSpacing;
         this.beatDivisor = base.beatDivisor;

@@ -21,10 +21,8 @@ public class FastMenuLayer extends LoadedLayer {
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer(new String[] {
-                "ui",
-                "font",
-                "hitsound"
-        }, this, true);
+        return new LoadingLayer()
+                .loadLists("ui", "font", "hitsound")
+                .addLayers(true, this);
     }
 }

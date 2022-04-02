@@ -1,6 +1,6 @@
 package alchyr.taikoedit.editor;
 
-import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 
@@ -173,7 +173,7 @@ public class BeatDivisors {
 
         if (nextPoint != null)
         {
-            subGenerateSnappings(snappings, subSnaps, divisor, nextPoint.getPos(), nextPoint.value, nextPoint.meter, EditorLayer.music.getMsLength(), nextPoint.omitted);
+            subGenerateSnappings(snappings, subSnaps, divisor, nextPoint.getPos(), nextPoint.value, nextPoint.meter, TaikoEditor.music.getMsLength(), nextPoint.omitted);
         }
 
         divisorSnappings.put(divisor, snappings);

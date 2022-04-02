@@ -89,6 +89,7 @@ public class PreloadedMp3 extends CustomAudio {
 
     public void dispose () {
         super.dispose();
-        bitstream.clear();
+        if (bitstream != null)
+            bitstream.clear();
     }
 }

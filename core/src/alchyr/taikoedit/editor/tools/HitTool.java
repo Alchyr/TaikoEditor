@@ -108,7 +108,7 @@ public class HitTool extends EditorTool {
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
         {
-            view.map.addObject(placementObject);
+            view.map.addObject(placementObject, view.replaceTest);
 
             placementObject = new Hit(0, isRim);
             renderPreview = false;
@@ -119,7 +119,7 @@ public class HitTool extends EditorTool {
     }
 
     @Override
-    public void instantUse(MapView view) {
+    public boolean instantUse(MapView view) {
         if (view.hasSelection()) { //Type is already checked by supportsView
             List<Hit> hits = new ArrayList<>();
 
@@ -132,6 +132,7 @@ public class HitTool extends EditorTool {
             }
 
             view.map.registerChange(new RimChange(view.map, hits, isRim).perform());
+            return false; //Don't swap off of selection tool when modifying selected objects
         }
         else {
             double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
@@ -142,7 +143,8 @@ public class HitTool extends EditorTool {
                 time = closest.pos;
             }
 
-            view.map.addObject(new Hit((long) time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)));
+            view.map.addObject(new Hit((long) time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)), view.replaceTest);
+            return true;
         }
     }
 
@@ -153,6 +155,6 @@ public class HitTool extends EditorTool {
 
     @Override
     public boolean supportsView(MapView view) {
-        return view.type == MapView.ViewType.OBJECT_VIEW;
+        return view.type == MapView.ViewType.OBJECT_VIEW || view.type == MapView.ViewType.GIMMICK_VIEW;
     }
 }

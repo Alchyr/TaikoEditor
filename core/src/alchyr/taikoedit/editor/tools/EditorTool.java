@@ -38,6 +38,8 @@ public abstract class EditorTool {
     {
         return null;
     }
-    public void instantUse(MapView view) {
+    public boolean instantUse(MapView view) {
+        //Return value: Whether or not to swap to the tool
+        return true;
     }
 }

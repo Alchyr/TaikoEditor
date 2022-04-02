@@ -4,6 +4,7 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.changes.ObjectAddition;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
@@ -18,12 +19,15 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
 public abstract class MapView {
     public enum ViewType {
         OBJECT_VIEW,
+        GIMMICK_VIEW,
         TIMING_VIEW,
         EFFECT_VIEW,
         GAMEPLAY_VIEW,
@@ -43,8 +47,9 @@ public abstract class MapView {
 
     protected boolean isPrimary;
 
-    //Position within song.
-    protected double time = 0;
+    //Position within song in milliseconds
+    protected double preciseTime = 0;
+    protected long time = 0;
 
     //Base position values
     public int y;
@@ -62,6 +67,9 @@ public abstract class MapView {
     public int height;
     protected Texture pix = assetMaster.get("ui:pixel");
     //protected Texture overlayEnd = assetMaster.get("editor:overlay end");
+
+    private static final BiFunction<PositionalObject, PositionalObject, Boolean> defaultReplace = (placed, existing)->true;
+    public BiFunction<PositionalObject, PositionalObject, Boolean> replaceTest = defaultReplace;
 
     //Selection
     protected PositionalObjectTreeMap<PositionalObject> selectedObjects;
@@ -93,18 +101,18 @@ public abstract class MapView {
         overlayWidth += b.getWidth();
     }
 
-    public double getTime()
+    public double getPreciseTime()
     {
-        return time;
+        return preciseTime;
     }
     public abstract double getTimeFromPosition(float x); //milliseconds
     protected double getTimeFromPosition(float x, int offset)
     {
-        return (time + (x - offset) / EditorLayer.viewScale);
+        return (preciseTime + (x - offset) / EditorLayer.viewScale);
     }
     public int getPositionFromTime(double time, int offset)
     {
-        return (int) ((time - this.time) * EditorLayer.viewScale + offset);
+        return (int) ((time - this.preciseTime) * EditorLayer.viewScale + offset);
     }
     public float getBasePosition() {
         return SettingsMaster.getMiddle();
@@ -165,7 +173,8 @@ public abstract class MapView {
     }
     public void update(double exactPos, long msPos, float elapsed)
     {
-        time = exactPos * 1000.0f;
+        preciseTime = exactPos * 1000.0f;
+        time = msPos;
         for (ImageButton b : overlayButtons) {
             b.update(elapsed);
             if (b.hovered) {
@@ -325,64 +334,125 @@ public abstract class MapView {
 
     public void resnap()
     {
-        clearSelection();
+        if (hasSelection()) {
+            PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
+            TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
+            int changed = 0;
 
-        PositionalObjectTreeMap<HitObject> resnapped = new PositionalObjectTreeMap<>();
-        TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
-        int changed = 0;
+            map.objects.removeAll(selectedObjects);
 
-        for (Map.Entry<Long, ArrayList<HitObject>> objs : map.objects.entrySet())
-        {
-            if (allSnaps.containsKey(objs.getKey()))
+            for (Map.Entry<Long, ArrayList<PositionalObject>> objs : selectedObjects.entrySet())
             {
-                resnapped.put(objs.getKey(), objs.getValue());
-                continue;
-            }
+                if (allSnaps.containsKey(objs.getKey()))
+                {
+                    resnapped.put(objs.getKey(), objs.getValue());
+                    continue;
+                }
 
-            long newSnap = objs.getKey();
-            if (allSnaps.containsKey(newSnap + 1))
-            {
-                newSnap += 1;
-            }
-            else if (allSnaps.containsKey(newSnap - 1))
-            {
-                newSnap -= 1;
-            }
-            else {
-                Long higherSnap = allSnaps.higherKey(newSnap),
-                        lowerSnap = allSnaps.lowerKey(newSnap);
+                long newSnap = objs.getKey();
+                if (allSnaps.containsKey(newSnap + 1))
+                {
+                    newSnap += 1;
+                }
+                else if (allSnaps.containsKey(newSnap - 1))
+                {
+                    newSnap -= 1;
+                }
+                else {
+                    Long higherSnap = allSnaps.higherKey(newSnap),
+                            lowerSnap = allSnaps.lowerKey(newSnap);
 
-                if (higherSnap != null && lowerSnap != null) {
-                    if (newSnap - lowerSnap < higherSnap - newSnap) {
-                        newSnap = lowerSnap;
+                    if (higherSnap != null && lowerSnap != null) {
+                        if (newSnap - lowerSnap < higherSnap - newSnap) {
+                            newSnap = lowerSnap;
+                        }
+                        else {
+                            newSnap = higherSnap;
+                        }
                     }
-                    else {
+                    else if (higherSnap != null) {
                         newSnap = higherSnap;
                     }
+                    else if (lowerSnap != null) {
+                        newSnap = lowerSnap;
+                    }
                 }
-                else if (higherSnap != null) {
-                    newSnap = higherSnap;
-                }
-                else if (lowerSnap != null) {
-                    newSnap = lowerSnap;
-                }
-            }
 
-            if (newSnap != objs.getKey())
-            {
-                for (HitObject h : objs.getValue())
+                if (newSnap != objs.getKey())
                 {
-                    h.setPos(newSnap);
+                    for (PositionalObject h : objs.getValue())
+                    {
+                        h.setPos(newSnap);
+                    }
+                    changed += objs.getValue().size();
                 }
-                changed += objs.getValue().size();
+
+                resnapped.put(newSnap, objs.getValue());
             }
 
-            resnapped.put(newSnap, objs.getValue());
-        }
+            map.objects.addAll(resnapped);
+            parent.showText("Resnapped " + changed + " objects.");
 
-        map.objects.clear();
-        map.objects.addAll(resnapped);
-        parent.showText("Resnapped " + changed + " objects.");
+            refreshSelection();
+        }
+        else {
+            PositionalObjectTreeMap<HitObject> resnapped = new PositionalObjectTreeMap<>();
+            TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
+            int changed = 0;
+
+            for (Map.Entry<Long, ArrayList<HitObject>> objs : map.objects.entrySet())
+            {
+                if (allSnaps.containsKey(objs.getKey()))
+                {
+                    resnapped.put(objs.getKey(), objs.getValue());
+                    continue;
+                }
+
+                long newSnap = objs.getKey();
+                if (allSnaps.containsKey(newSnap + 1))
+                {
+                    newSnap += 1;
+                }
+                else if (allSnaps.containsKey(newSnap - 1))
+                {
+                    newSnap -= 1;
+                }
+                else {
+                    Long higherSnap = allSnaps.higherKey(newSnap),
+                            lowerSnap = allSnaps.lowerKey(newSnap);
+
+                    if (higherSnap != null && lowerSnap != null) {
+                        if (newSnap - lowerSnap < higherSnap - newSnap) {
+                            newSnap = lowerSnap;
+                        }
+                        else {
+                            newSnap = higherSnap;
+                        }
+                    }
+                    else if (higherSnap != null) {
+                        newSnap = higherSnap;
+                    }
+                    else if (lowerSnap != null) {
+                        newSnap = lowerSnap;
+                    }
+                }
+
+                if (newSnap != objs.getKey())
+                {
+                    for (HitObject h : objs.getValue())
+                    {
+                        h.setPos(newSnap);
+                    }
+                    changed += objs.getValue().size();
+                }
+
+                resnapped.put(newSnap, objs.getValue());
+            }
+
+            map.objects.clear();
+            map.objects.addAll(resnapped);
+            parent.showText("Resnapped " + changed + " objects.");
+        }
     }
 
     public abstract Toolset getToolset();

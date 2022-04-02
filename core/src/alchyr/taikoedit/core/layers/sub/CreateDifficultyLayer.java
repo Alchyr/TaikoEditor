@@ -14,7 +14,6 @@ import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -24,13 +23,12 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.util.GeneralUtils.oneDecimal;
 
 public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
-    private static CreateDifficultyProcessor processor;
+    private final CreateDifficultyProcessor processor;
     private static final int METADATA_LIMIT = 80;
 
     //Rendering
@@ -153,19 +151,14 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
 
             for (MapInfo info : set.getMaps()) {
                 if (info.getDifficultyName().equals(newDiffname)) {
+                    final MapInfo overwrite = info;
                     TaikoEditor.addLayer(new ConfirmationLayer("A difficulty with this name already exists. Create anyways?", "Yes", "No", false)
                             .onConfirm(()->{
-                                /*boolean success = true;
-                                for (EditorBeatmap m : dirtyMaps) {
-                                    if (!m.save()) {
-                                        success = false;
-                                        textOverlay.setText("Failed to save!", 2.0f);
-                                    }
-                                }
-
-                                if (success) {
+                                if (create()) {
+                                    set.getMaps().remove(overwrite);
+                                    sourceLayer.closeViewSet(overwrite);
                                     TaikoEditor.removeLayer(this);
-                                }*/
+                                }
                             }));
                     return;
                 }
@@ -272,10 +265,15 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
         TaikoEditor.removeLayer(this);
     }
 
-
     @Override
     public InputProcessor getProcessor() {
         return processor;
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
     }
 
     private static class CreateDifficultyProcessor extends TextInputProcessor {
@@ -283,7 +281,7 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
 
         public CreateDifficultyProcessor(CreateDifficultyLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
             this.sourceLayer = source;
         }
 

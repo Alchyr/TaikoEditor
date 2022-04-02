@@ -16,6 +16,16 @@
       "class": "Texture"
     },
     {
+      "name": "glow",
+      "file": "taikoedit/images/ui/glow.png",
+      "class": "Texture"
+    },
+    {
+      "name": "dots",
+      "file": "taikoedit/images/ui/dots.png",
+      "class": "Texture"
+    },
+    {
       "name": "toggleoff",
       "file": "taikoedit/images/ui/ToggleDisabled.png",
       "class": "Texture"
@@ -145,6 +155,36 @@
     {
       "name": "breaksh",
       "file": "taikoedit/images/editor/ui/breakshover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "circle",
+      "file": "taikoedit/images/editor/ui/circle.png",
+      "class": "Texture"
+    },
+    {
+      "name": "circleh",
+      "file": "taikoedit/images/editor/ui/circlehover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "slider",
+      "file": "taikoedit/images/editor/ui/slider.png",
+      "class": "Texture"
+    },
+    {
+      "name": "sliderh",
+      "file": "taikoedit/images/editor/ui/sliderhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "spinner",
+      "file": "taikoedit/images/editor/ui/spinner.png",
+      "class": "Texture"
+    },
+    {
+      "name": "spinnerh",
+      "file": "taikoedit/images/editor/ui/spinnerhover.png",
       "class": "Texture"
     },
     {

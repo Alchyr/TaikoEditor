@@ -22,22 +22,16 @@ public class TextRenderer {
         layoutIndex = (layoutIndex + 1) % layouts.length;
     }
 
-    private HashMap<BitmapFont, BitmapFontCache> staticTextCaches;
-    private ArrayList<BitmapFontCache> staticTextCacheList;
+    private final HashMap<BitmapFont, BitmapFontCache> staticTextCaches;
+    private final ArrayList<BitmapFontCache> staticTextCacheList;
 
-    private BitmapFont currentRendering;
+    private BitmapFont currentRendering = null;
     private BitmapFontCache currentCache;
 
-    public TextRenderer(BitmapFont initialFont)
+    public TextRenderer()
     {
         staticTextCaches = new HashMap<>();
         staticTextCacheList = new ArrayList<>();
-
-        currentRendering = initialFont;
-        currentCache = new BitmapFontCache(initialFont);
-
-        staticTextCacheList.add(currentCache);
-        staticTextCaches.put(currentRendering, currentCache);
     }
 
     public TextRenderer setFont(BitmapFont font)
@@ -68,7 +62,7 @@ public class TextRenderer {
         currentRendering.draw(sb, s, x, y);
         return this;
     }
-    public TextRenderer renderText(SpriteBatch sb, Color c, String s, float x, float y)
+    public TextRenderer renderText(SpriteBatch sb, String s, float x, float y, Color c)
     {
         sb.setColor(c);
         currentRendering.draw(sb, s, x, y);
@@ -104,7 +98,6 @@ public class TextRenderer {
 
         return this;
     }
-
 
     public void render(SpriteBatch sb)
     {

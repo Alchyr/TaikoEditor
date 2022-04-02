@@ -3,6 +3,7 @@ package alchyr.taikoedit.editor.maps;
 import alchyr.taikoedit.editor.BeatDivisors;
 import alchyr.taikoedit.editor.DivisorOptions;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.Timeline;
 import alchyr.taikoedit.editor.changes.*;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.maps.components.HitObject;
@@ -14,12 +15,12 @@ import alchyr.taikoedit.util.assets.FileHelper;
 import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Queue;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.BiFunction;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
@@ -59,7 +60,9 @@ public class EditorBeatmap {
     //This should also be used to ensure that if sameSong is true, timing changes will be kept synced with the other difficulties.
     //Not necessary, timing will never be implemented for offset reasons.
 
-    private EffectView effectView;
+    //Not the most "ideal" method, but it's quick and easy.
+    private EffectView effectView = null;
+    private Timeline timeline = null;
 
 
     //Loading map from file
@@ -204,6 +207,9 @@ public class EditorBeatmap {
                 }
             }
         }
+        else {
+            fullMapInfo.breakPeriods.clear();
+        }
 
         if (volumeMap.isEmpty()) {
             volumeMap.put(Long.MAX_VALUE, 60);
@@ -244,10 +250,10 @@ public class EditorBeatmap {
         return false;
     }
 
-    public void addObject(HitObject o)
+    public void addObject(HitObject o, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace)
     {
         dirty = true;
-        undoQueue.addLast(new ObjectAddition(this, o).perform());
+        undoQueue.addLast(new ObjectAddition(this, o, shouldReplace).perform());
         redoQueue.clear();
     }
     public void delete(MapChange.ChangeType type, NavigableMap<Long, ArrayList<PositionalObject>> deletion)
@@ -262,9 +268,9 @@ public class EditorBeatmap {
         undoQueue.addLast(new Deletion(this, type, o).perform());
         redoQueue.clear();
     }
-    public void paste(PositionalObjectTreeMap<PositionalObject> pasteObjects) {
+    public void paste(PositionalObjectTreeMap<PositionalObject> pasteObjects, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace) {
         dirty = true;
-        undoQueue.addLast(new ObjectAddition(this, pasteObjects).perform());
+        undoQueue.addLast(new ObjectAddition(this, pasteObjects, shouldReplace).perform());
         redoQueue.clear();
     }
     public void pasteLines(PositionalObjectTreeMap<PositionalObject> pasteLines) {
@@ -1343,9 +1349,13 @@ public class EditorBeatmap {
                 }
             }
         }
+        if (timeline != null) {
+            timeline.updateTimingPoints(this, added, removed);
+        }
         updatePositions.clear();
     }
 
+    //Used when only values of green lines are adjusted
     public void updateSv() {
         if (effectView != null) {
             effectView.recheckSvLimits();
@@ -1392,6 +1402,9 @@ public class EditorBeatmap {
         {
             this.effectView = null;
         }
+    }
+    public void setTimeline(Timeline line) {
+        this.timeline = line;
     }
 
     //Timing
@@ -1682,6 +1695,20 @@ public class EditorBeatmap {
                         }
                         //The rest
                         else if (eventSection == 0) { //Background and Video events
+                            if (!line.startsWith("//")) {
+                                String[] parts = line.split(",");
+
+                                if (parts.length == 5) {
+                                    if (parts[2].startsWith("\"") && parts[2].endsWith("\"")) {
+                                        parts[2] = parts[2].substring(1, parts[2].length() - 1);
+                                    }
+                                    if (FileHelper.isImageFilename(parts[2])) {
+                                        String bgFile = FileHelper.concat(map.getMapFile().getParent(), parts[2]);
+                                        map.setBackground(bgFile);
+                                        set.background = bgFile;
+                                    }
+                                }
+                            }
                             fullMapInfo.backgroundEvents.add(line.split(","));
                         } else {
                             fullMapInfo.fullStoryboard.add(line);

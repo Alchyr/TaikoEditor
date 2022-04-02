@@ -13,9 +13,9 @@ import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.osuSafe;
 
 public class TimingPoint extends PositionalObject {
-    private static final Color red = Color.RED.cpy();
-    private static final Color green = new Color(0.25f, 0.75f, 0.0f, 1.0f);
-    private static final Color yellow = new Color(0.8f, 0.8f, 0.0f, 1.0f);
+    public static final Color RED = Color.RED.cpy();
+    public static final Color GREEN = new Color(0.25f, 0.75f, 0.0f, 1.0f);
+    public static final Color YELLOW = new Color(0.8f, 0.8f, 0.0f, 1.0f);
 
     private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
 
@@ -146,11 +146,12 @@ public class TimingPoint extends PositionalObject {
             renderSelection(sb, sr, pos, viewScale, x, y);
         }
 
-        Color c = uninherited ? red : green;
+        Color c = uninherited ? RED : GREEN;
         c.a = alpha;
         sb.setColor(c);
+        c.a = 1;
 
-        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
+        sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
     }
 
     public void renderColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c, float alpha) {
@@ -163,6 +164,7 @@ public class TimingPoint extends PositionalObject {
         sb.setColor(c);
 
         sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
+        c.a = 1;
     }
 
     @Override

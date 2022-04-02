@@ -11,7 +11,6 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -21,13 +20,12 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.util.GeneralUtils.oneDecimal;
 
 public class DifficultySettingsLayer extends ProgramLayer implements InputLayer {
-    private static DifficultySettingsProcessor processor;
+    private final DifficultySettingsProcessor processor;
     private static final int METADATA_LIMIT = 80;
 
     //Rendering
@@ -38,7 +36,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
     private final Texture pix;
 
     //Positions
-    private final int middleY = SettingsMaster.getHeight() / 2;
+    //private final int middleY = SettingsMaster.getHeight() / 2;
     //private final int minRenderY = -(middleY + 30);
 
     //For smoothness
@@ -92,7 +90,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
 
         //left half for mapset settings, right half for difficulty settings
-        float leftX = 70, rightX = SettingsMaster.getMiddle() + leftX, leftCenter = SettingsMaster.getWidth() / 4, rightCenter = SettingsMaster.getMiddle() + leftCenter;
+        float leftX = 70, rightX = SettingsMaster.getMiddle() + leftX, leftCenter = SettingsMaster.getWidth() / 4.0f, rightCenter = SettingsMaster.getMiddle() + leftCenter;
 
 
         //Metadata stuff
@@ -248,12 +246,18 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         return processor;
     }
 
+    @Override
+    public void dispose() {
+        super.dispose();
+        processor.dispose();
+    }
+
     private static class DifficultySettingsProcessor extends TextInputProcessor {
         private final DifficultySettingsLayer sourceLayer;
 
         public DifficultySettingsProcessor(DifficultySettingsLayer source)
         {
-            super(BindingMaster.getBindingGroup("Basic"), true);
+            super(BindingMaster.getBindingGroupCopy("Basic"), true);
             this.sourceLayer = source;
         }
 

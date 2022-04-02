@@ -34,7 +34,6 @@ public class MapMaster {
         return BeatmapDatabase.progress;
     }
 
-    //TODO: Good search. Progress - partial?
     //Add tag searching?
     //Would mean adding tags to set information.
     //For search, use multiple search fields?

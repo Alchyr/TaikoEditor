@@ -83,6 +83,10 @@ public abstract class CustomAudio extends OpenALMusic {
         this.audio = audio;
     }
 
+    public FileHandle getFile() {
+        return file;
+    }
+
     public abstract void preload();
 
     public void stop() {
@@ -327,8 +331,7 @@ public abstract class CustomAudio extends OpenALMusic {
         if (isPlaying) snapOffset = 0; else return;
 
         boolean end = false;
-        int buffers = alGetSourcei(sourceID, AL_BUFFERS_PROCESSED);
-        while (buffers-- > 0) {
+        while (alGetSourcei(sourceID, AL_BUFFERS_PROCESSED) > 0) {
             int bufferID = alSourceUnqueueBuffers(sourceID);
             if (bufferID == AL_INVALID_VALUE) break;
             //TaikoEditor.editorLogger.info("Unenqueued buffer " + bufferID);

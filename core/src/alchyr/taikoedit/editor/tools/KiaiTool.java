@@ -173,7 +173,7 @@ public class KiaiTool extends EditorTool {
     }
 
     @Override
-    public void instantUse(MapView view) {
+    public boolean instantUse(MapView view) {
         if (view.hasSelection()) { //Type is already checked by supportsView
             boolean toKiai = false;
             List<TimingPoint> swapping = new ArrayList<>();
@@ -198,6 +198,7 @@ public class KiaiTool extends EditorTool {
                 view.map.registerChange(new KiaiChange(view.map, new ArrayList<>(stack.getValue()), !GeneralUtils.listLast(stack.getValue()).kiai).perform());
             }
         }
+        return true;
     }
 
     @Override

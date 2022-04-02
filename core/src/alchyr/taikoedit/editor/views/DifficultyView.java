@@ -76,7 +76,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time) //might have skipped backwards
+        if (isPrimary && isPlaying && lastSounded < preciseTime) //might have skipped backwards
         {
             //Play only the most recently passed HitObject list. This avoids spamming a bunch of sounds if fps is too low.
             /*Map.Entry<Integer, ArrayList<HitObject>> entry = map.getEditObjects().higherEntry(currentPos);
@@ -87,7 +87,7 @@ public class DifficultyView extends MapView {
             }*/
 
             //To play ALL hitobjects passed.
-            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, (long) time, true).values())
+            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, time, true).values())
             {
                 for (HitObject o : objects)
                 {
@@ -95,7 +95,7 @@ public class DifficultyView extends MapView {
                 }
             }
         }
-        lastSounded = time;
+        lastSounded = preciseTime;
     }
 
     @Override
@@ -108,12 +108,12 @@ public class DifficultyView extends MapView {
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 250);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 200);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 150);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 100);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY + 50);
-        textRenderer.renderText(sb, Color.WHITE, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - time) * viewScale, textY);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 250, Color.WHITE);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 200);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 150);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 100);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 50);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
@@ -140,7 +140,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects((long) time - EditorLayer.viewTime, (long) time + EditorLayer.viewTime);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
 
         if (source.isEmpty())
             return null;
@@ -247,7 +247,7 @@ public class DifficultyView extends MapView {
             return sb.toString();
         }
 
-        return new EditorTime((int) time) + " - ";
+        return new EditorTime(time) + " - ";
     }
 
     @Override
@@ -300,7 +300,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(EditorLayer.music.isPlaying() ? (long) time + 250 : (long) time);
+        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(music.isPlaying() ? time + 250 : time);
         if (next == null)
             return null;
         if (next.getKey() - time < 2)
@@ -314,7 +314,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(EditorLayer.music.isPlaying() ? (long) time - 250 : (long) time);
+        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(music.isPlaying() ? time - 250 : time);
         if (previous == null)
             return null;
         if (time - previous.getKey() < 2)
@@ -385,48 +385,10 @@ public class DifficultyView extends MapView {
 
     @Override
     public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
-        //This should overwrite existing objects.
-
-        //Make copies of the hitobjects (add a copy() method to the HitObject class) and shift their position appropriately
-        //Find closest (1 ms before or after limit) snap (of any existing snap, not just the active one) and put objects at that position
-
-        long offset, targetPos;
-
-        Snap closest = getClosestSnap(time, 250);
-        offset = closest == null ? (int) time : (int) closest.pos;
-        offset -= copyObjects.firstKey();
-
-        PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
-        TreeMap<Long, Snap> snaps = map.getAllSnaps();
-
-        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : copyObjects.entrySet())
-        {
-            targetPos = entry.getKey() + offset;
-
-            closest = snaps.get(targetPos);
-            if (closest == null)
-                closest = snaps.get(targetPos + 1);
-            if (closest == null)
-                closest = snaps.get(targetPos - 1);
-            if (closest != null)
-                targetPos = (int) closest.pos;
-
-            for (PositionalObject o : entry.getValue())
-            {
-                placementCopy.add(o.shiftedCopy(targetPos));
-            }
-        }
-
-        this.map.paste(placementCopy);
     }
 
     @Override
     public void reverse() {
-        if (!hasSelection())
-            return;
-
-        this.map.reverse(MapChange.ChangeType.OBJECTS, true, selectedObjects);
-        refreshSelection();
     }
 
     @Override

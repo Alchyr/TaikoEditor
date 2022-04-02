@@ -21,7 +21,8 @@ public class ToggleButton implements UIElement {
     private static final float BUFFER = 4;
 
     private float x, y, toggleY, width, height, x2, y2, dx, dy;
-    private final int centerY, textCenter;
+    private int centerY;
+    private final int textCenter; //Offset from x
 
     private final Texture off = assetMaster.get("ui:toggleoff");
     private final Texture on = assetMaster.get("ui:toggleon");
@@ -43,7 +44,7 @@ public class ToggleButton implements UIElement {
         height = Math.max(textRenderer.getHeight(text) + BUFFER, toggleSize + BUFFER);
 
         x = leftX;
-        textCenter = MathUtils.floor(x + (TOGGLE_SIZE * SettingsMaster.SCALE * TOGGLE_SCALE) + EXTRA_SPACING + textRenderer.setFont(font).getWidth(text) * 0.5f);
+        textCenter = MathUtils.floor((TOGGLE_SIZE * SettingsMaster.SCALE * TOGGLE_SCALE) + EXTRA_SPACING + textRenderer.setFont(font).getWidth(text) * 0.5f);
         y = centerY - height / 2.0f;
         toggleY = centerY - toggleSize / 2.0f;
         this.centerY = MathUtils.floor(centerY);
@@ -65,6 +66,17 @@ public class ToggleButton implements UIElement {
     {
         this.action = action;
         return this;
+    }
+
+    @Override
+    public void move(float dx, float dy) {
+        x += dx;
+        x2 += dx;
+
+        y += dy;
+        y2 += dy;
+        toggleY += dy;
+        this.centerY = MathUtils.floor((y + y2) / 2.0f);
     }
 
     public boolean click(float mouseX, float mouseY, int button)
@@ -104,7 +116,7 @@ public class ToggleButton implements UIElement {
         }
         if (text != null)
         {
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.textCenter, this.centerY);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.x + this.textCenter, this.centerY);
         }
     }
 
@@ -129,7 +141,7 @@ public class ToggleButton implements UIElement {
         }
         if (text != null)
         {
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.textCenter + x, this.centerY + y);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, this.x + this.textCenter + x, this.centerY + y);
         }
     }
 

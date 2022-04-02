@@ -1,6 +1,6 @@
 package alchyr.diffcalc;
 
-import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 
 public abstract class DifficultyHitObject {
@@ -29,7 +29,7 @@ public abstract class DifficultyHitObject {
         this.baseObject = current;
         this.lastObject = previous;
 
-        this.deltaTime = (baseObject.getPos() - lastObject.getPos()) / EditorLayer.music.getTempo();
+        this.deltaTime = (baseObject.getPos() - lastObject.getPos()) / TaikoEditor.music.getTempo();
     }
 }
 

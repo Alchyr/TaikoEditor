@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.views;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
@@ -17,6 +18,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
 
 import java.util.*;
 
@@ -272,12 +274,12 @@ public class GameplayView extends MapView {
     }
 
 
-    private double lastSounded; //purely for audio in primaryUpdate
+    private long lastSounded; //purely for audio in primaryUpdate
     @Override
     public void primaryUpdate(boolean isPlaying) {
         if (isPrimary && isPlaying && lastSounded < time) //might have skipped backwards
         {
-            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, (long) time, true).values())
+            for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
                 for (HitObject o : objects)
                 {
@@ -305,7 +307,7 @@ public class GameplayView extends MapView {
         for (Snap s : barlines)
         {
             s.render(sb, sr, s.pos, viewScale, //Very Beautiful type casting here for the purpose of limiting positioning to whole values, to mimic rendering of game. This makes certain barline gimmicks work.
-                    HIT_AREA_X + Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float)((double)((long)time - barlineStartMap.get(s)) / ((long)s.pos - barlineStartMap.get(s)))), bottom,
+                    HIT_AREA_X + Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float)((double)(time - barlineStartMap.get(s)) / ((long)s.pos - barlineStartMap.get(s)))), bottom,
                     HEIGHT);
         }
     }
@@ -323,7 +325,11 @@ public class GameplayView extends MapView {
         //time = start time, progress is 0
         //remaining time * speed = distance from hit zone
         //end time is always pos, the start time of the object.
-        h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((time - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
+        if (h.type == HitObject.HitObjectType.SPINNER && h.getGameplayEndPos() - h.gameplayStart > 5000)
+            //Dunno osu's logic to decide when to fade sliders in, this is merely an approximation for convenience
+            alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 750) / 250.0, 0.0, 1.0);
+
+        h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
@@ -386,7 +392,7 @@ public class GameplayView extends MapView {
 
     @Override
     public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(EditorLayer.music.isPlaying() ? (long) time + 250 : (long) time);
+        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(TaikoEditor.music.isPlaying() ? time + 250 : time);
         if (next == null)
             return null;
         if (next.getKey() - time < 2)
@@ -400,7 +406,7 @@ public class GameplayView extends MapView {
 
     @Override
     public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(EditorLayer.music.isPlaying() ? (long) time - 250 : (long) time);
+        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(TaikoEditor.music.isPlaying() ? time - 250 : time);
         if (previous == null)
             return null;
         if (time - previous.getKey() < 2)

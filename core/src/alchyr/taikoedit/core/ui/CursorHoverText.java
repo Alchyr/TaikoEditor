@@ -21,7 +21,7 @@ public class CursorHoverText {
     private final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.0f);
 
     private Texture pix;
-    private BitmapFont font;
+    private BitmapFont font = null;
 
     private String text = "";
     private float fadeDelay = 0.0f;
@@ -65,7 +65,7 @@ public class CursorHoverText {
 
     public void render(SpriteBatch sb, ShapeRenderer sr)
     {
-        if (textColor.a > 0) {
+        if (font != null && textColor.a > 0) {
             float x = Gdx.input.getX() + (Gdx.input.getX() > SettingsMaster.getMiddle() ? -(width + TEXT_OFFSET) : TEXT_OFFSET);
             float y = SettingsMaster.screenToGameY(Gdx.input.getY());
             y += (y > centerY ? -TEXT_OFFSET : TEXT_OFFSET);
