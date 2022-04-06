@@ -1,4 +1,4 @@
-package alchyr.taikoedit.util.assets;
+package alchyr.taikoedit.management.assets;
 
 import alchyr.taikoedit.management.AssetMaster;
 

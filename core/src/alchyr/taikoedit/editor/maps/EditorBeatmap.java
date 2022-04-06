@@ -11,7 +11,7 @@ import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.util.GeneralUtils;
-import alchyr.taikoedit.util.assets.FileHelper;
+import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;

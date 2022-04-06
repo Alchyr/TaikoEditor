@@ -90,7 +90,7 @@ public class GetHotkeyLayer extends ProgramLayer implements InputLayer {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(backColor);
-        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
+        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
         textRenderer.renderTextCentered(sb, hotkeyText, SettingsMaster.getMiddle(), MIDDLE_Y, Color.WHITE);
 

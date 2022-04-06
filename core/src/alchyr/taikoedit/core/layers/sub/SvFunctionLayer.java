@@ -321,7 +321,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         }
 
         sb.setColor(backColor);
-        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
+        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
         initialSv.render(sb, sr);
         finalSv.render(sb, sr);

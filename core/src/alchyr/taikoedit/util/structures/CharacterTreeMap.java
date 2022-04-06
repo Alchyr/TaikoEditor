@@ -16,6 +16,8 @@ public class CharacterTreeMap<T> {
         Map<T, Float> results = new HashMap<>();
         float max = 0, valueMul;
         for (String key : keys) {
+            if (key.isEmpty())
+                continue;
             ArrayList<CharacterTreeNode> startPoints = starting.get(key.charAt(0));
             if (startPoints != null) {
                 valueMul = Math.min(1, (key.length() / 5.0f)*(key.length() / 5.0f)); //Search term weight increases as length increases

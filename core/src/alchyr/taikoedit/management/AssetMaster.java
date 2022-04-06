@@ -1,20 +1,18 @@
 package alchyr.taikoedit.management;
 
 
+import alchyr.taikoedit.management.assets.RenderComponent;
+import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.util.GeneralUtils;
-import alchyr.taikoedit.util.assets.AssetLists;
-import alchyr.taikoedit.util.assets.SpecialLoader;
-import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.management.assets.AssetLists;
+import alchyr.taikoedit.management.assets.SpecialLoader;
 import alchyr.taikoedit.util.structures.Pair;
-import alchyr.taikoedit.util.assets.RegionInfo;
+import alchyr.taikoedit.management.assets.RegionInfo;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetErrorListener;
-import com.badlogic.gdx.assets.AssetLoaderParameters;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.FileHandleResolver;
-import com.badlogic.gdx.assets.loaders.TextureLoader;
-import com.badlogic.gdx.assets.loaders.resolvers.AbsoluteFileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -28,7 +26,7 @@ import com.badlogic.gdx.utils.Json;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
@@ -41,6 +39,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     public ArrayList<Pair<String, RegionInfo>> loadingRegions = new ArrayList<>();
     public HashMap<String, TextureAtlas.AtlasRegion> loadedRegions = new HashMap<>();
     public HashMap<String, ArrayList<String>> textureRegions = new HashMap<>(); //for unloading regions. Texture file and region names
+    public HashMap<String, RenderComponent<?>> renderComponents = new HashMap<>();
 
     public HashMap<String, SpecialLoader> specialLoaders = new HashMap<>();
 
@@ -133,6 +132,22 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
             editorLogger.error("Attempted to use \"" + name + "\" while it had not been loaded!");
         return super.get(name);
     }
+    @SuppressWarnings("unchecked")
+    public <T> RenderComponent<T> getRenderComponent(String name, Class<T> base) {
+        name = name.toLowerCase();
+        if (renderComponents.containsKey(name)) {
+            return (RenderComponent<T>) renderComponents.get(name);
+        }
+        else {
+            T obj = get(name);
+            if (obj != null) {
+                RenderComponent<T> component = new RenderComponent<>(obj, base);
+                renderComponents.put(name, component);
+                return component;
+            }
+        }
+        return null;
+    }
 
     public TextureAtlas.AtlasRegion getRegion(String name)
     {
@@ -154,27 +169,38 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
         return get(name);
     }
 
+    public void markLoading() {
+        doneLoading = false;
+    }
     public void load(String key, String filename, Class<?> type)
     {
+        filename = filename.replace('\\', '/'); //gdx dumb
+        key = key.toLowerCase();
+        doneLoading = false;
         loadedAssets.put(key, filename);
         super.load(filename, type);
     }
 
     public void loadList(String assetList)
     {
+        doneLoading = false;
         assetLists.loadList(assetList, this);
     }
 
     @Override
     public void unload(String name)
     {
-        if (loadedAssets.containsKey(name))
-        {
-            super.unload(loadedAssets.remove(name));
-        }
-        else
-        {
-            if (loadedAssets.containsValue(name))
+        try {
+            String lowerName = name.toLowerCase();
+            renderComponents.remove(lowerName);
+            if (loadedAssets.containsKey(lowerName))
+            {
+                super.unload(loadedAssets.remove(lowerName));
+            }
+            else if (loadedAssets.containsKey(name)) {
+                super.unload(loadedAssets.remove(name));
+            }
+            else
             {
                 String remove = null;
                 for (String s : loadedAssets.keySet())
@@ -187,12 +213,20 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
                 }
                 if (remove != null)
                     loadedAssets.remove(remove);
+
+                if (super.isLoaded(name))
+                    super.unload(name);
             }
-            super.unload(name);
+        }
+        catch (GdxRuntimeException e) {
+            editorLogger.error(e.getMessage());
+            GeneralUtils.logStackTrace(editorLogger, e);
         }
     }
+    //case sensitive
     public void unloadAbs(String name)
     {
+        renderComponents.remove(name);
         if (loadedAssets.containsKey(name))
         {
             super.unload(loadedAssets.remove(name));

@@ -157,7 +157,7 @@ public class TextField implements UIElement, TextInputReceiver {
             return false;
         }
 
-        if (this.x + dx < clickX && y + dy < clickY && clickX < x2 + dx && clickY < y2 + dy)
+        if (x + dx < clickX && y + dy < clickY && clickX < x2 + dx && clickY < y2 + dy)
         {
             activate(processor);
             return true;

@@ -1,5 +1,6 @@
 package alchyr.taikoedit.core.input.sub;
 
+import alchyr.taikoedit.core.input.BindingGroup;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -26,13 +27,18 @@ public class TextInput {
 
     public String text = "";
     public BitmapFont font;
+    public boolean ctrlBackspace;
 
     private Function<String, Boolean> onPushEnter;
 
-    public TextInput(int cap, BitmapFont font)
-    {
+    public TextInput(int cap, BitmapFont font, boolean ctrlBackspace) {
         this.cap = cap;
         this.font = font;
+        this.ctrlBackspace = ctrlBackspace;
+    }
+    public TextInput(int cap, BitmapFont font)
+    {
+        this(cap, font, false);
     }
 
     public void render(SpriteBatch sb, float x, float y)
@@ -75,17 +81,26 @@ public class TextInput {
 
         if (backspace && text.length() > 1) {
             lastTyped = BACKSPACE;
-            text = text.substring(0, text.length() - 1);
+            if (ctrlBackspace && BindingGroup.ctrl()) {
+                int gap = text.lastIndexOf(' ');
+                if (gap == -1)
+                    text = "";
+                else
+                    text = text.substring(0, gap);
+            }
+            else {
+                text = text.substring(0, text.length() - 1);
+            }
             //scheduleKeyRepeatTask()
             return true;
         }
-        else if (backspace && text.length() > 0)
+        else if (backspace)
         {
             lastTyped = BACKSPACE;
             text = "";
             return true;
         }
-        if (add && !backspace) {
+        if (add) {
             if (text.length() < cap)
             {
                 lastTyped = character;

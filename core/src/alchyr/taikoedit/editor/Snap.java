@@ -36,13 +36,15 @@ public class Snap implements Comparable<Snap> {
     private Texture pix;
 
     public final int divisor; //1 = 1/1, 2 = 1/2, 3 = 1/3, etc.
-    public final double pos;
+    private final double precisePos;
+    public final long pos;
 
     private int hash;
 
     public Snap(double pos, int divisor)
     {
-        this.pos = pos;
+        this.precisePos = pos;
+        this.pos = Math.round(precisePos);
         this.divisor = divisor;
         this.hash = 0;
 
@@ -52,14 +54,15 @@ public class Snap implements Comparable<Snap> {
     //DUMMY CONSTRUCTOR
     public Snap(double pos)
     {
-        this.pos = pos;
+        this.precisePos = pos;
+        this.pos = Math.round(precisePos);
         this.divisor = 0;
     }
 
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int viewHeight)
     {
         sb.setColor(getDivisorColor(divisor));
-        x = x + (float) ((long)this.pos - pos) * viewScale; //For visual consistency, rendering position is based on a long value to match objects.
+        x = x + (float) (this.pos - pos) * viewScale; //For visual consistency, rendering position is based on a long value to match objects.
         sb.draw(pix, x, y, 1, getHeight(viewHeight));
         if (divisor != 0) //mirrored line on top
             sb.draw(pix, x, y + viewHeight - getHeight(viewHeight), 1, getHeight(viewHeight));
@@ -68,7 +71,7 @@ public class Snap implements Comparable<Snap> {
     public void halfRender(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, int max)
     {
         sb.setColor(getDivisorColor(divisor));
-        x = x + (float) ((long)this.pos - pos) * viewScale;
+        x = x + (float) (this.pos - pos) * viewScale;
         sb.draw(pix, x, y, 1, getHeight(max));
     }
 
@@ -104,6 +107,6 @@ public class Snap implements Comparable<Snap> {
 
     @Override
     public int compareTo(Snap o) {
-        return Double.compare(this.pos, o.pos);
+        return Long.compare(this.pos, o.pos);
     }
 }

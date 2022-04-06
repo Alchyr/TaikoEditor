@@ -108,7 +108,7 @@ public class Reverse extends MapChange {
                 if (closest == null)
                     closest = snaps.get(newPos - 1);
                 if (closest != null)
-                    newPos = (long) closest.pos;
+                    newPos = closest.pos;
             }
 
             for (PositionalObject o : entry.getValue())

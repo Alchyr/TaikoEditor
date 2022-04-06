@@ -4,6 +4,7 @@ import alchyr.networking.p2p.ConnectionHost;
 import alchyr.networking.p2p.ConnectionSub;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
+import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.BoundInputProcessor;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.input.sub.TextInput;
@@ -12,10 +13,12 @@ import alchyr.taikoedit.core.layers.sub.UpdatingLayer;
 import alchyr.taikoedit.core.layers.tests.BindingTestLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.MapSelect;
+import alchyr.taikoedit.core.ui.Scrollable;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.management.assets.skins.Skins;
+import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -108,7 +111,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
             mapSelect = new MapSelect(searchY + 1);
 
-            searchInput = new TextInput(128, font);
+            searchInput = new TextInput(128, font, true);
 
             exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::quit);
             settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
@@ -169,7 +172,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     public void update(float elapsed) {
         processor.update(elapsed);
 
-        if (updateMaps) {
+        if (MapMaster.loading) {
+            updateMaps = true;
+        }
+        else if (updateMaps) {
             updateMaps = false;
             if (searchInput.text.isEmpty()) {
                 mapSelect.refreshMaps();
@@ -192,6 +198,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         }
         if (settingsButton.hovered) {
             hoverText.setText("Settings");
+        }
+        else if (exitButton.hovered) {
+            hoverText.setText("Exit");
         }
     }
 
@@ -276,15 +285,34 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     @Override
     public LoadingLayer getLoader() {
         return new LoadingLayer()
-                .loadLists("ui", "font", "background", "menu", "editor", "hitsound")
-                .addLayers(true, this)
-                .addTask(MapMaster::load).addTracker(MapMaster::getProgress)
-                .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true);
+                .loadLists("base")
+                .addLayers(true,
+                        new EditorLoadingLayer()
+                            .loadLists("ui", "font", "background", "menu", "editor", "hitsound")
+                            .addTask(MapMaster::load).addTracker(MapMaster::getProgress).addTask(Skins::load)
+                            .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)
+                            .addLayers(true,
+                                    ()->{
+                                        if (Skins.currentSkin == null) {
+                                            return new ProgramLayer[] { this };
+                                        }
+                                        else {
+                                            LoadingLayer loader = Skins.currentSkin.getLoader(this);
+                                            if (loader != null) {
+                                                return new ProgramLayer[] { loader };
+                                            }
+                                            else {
+                                                return new ProgramLayer[] { this };
+                                            }
+                                        }
+                                    }
+                            )
+                );
     }
 
     @Override
     public LoadingLayer getReturnLoader() {
-        return new LoadingLayer()
+        return new EditorLoadingLayer()
                 .addLayers(true, this)
                 .addTask(mapSelect::playMusic).addCallback(()->canOpen = true);
     }
@@ -360,11 +388,13 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             });*/
 
             bindings.bind("Up", ()->{
-                sourceLayer.mapSelect.scrolled(-20);
-            });
+                sourceLayer.mapSelect.scroll(-5);
+            }, new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, -25));
             bindings.bind("Down", ()->{
-                sourceLayer.mapSelect.scrolled(20);
-            });
+                sourceLayer.mapSelect.scroll(5);
+            }, new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, 25));
+
+            bindings.bind("Refresh", ()->sourceLayer.mapSelect.reloadDatabase());
 
             bindings.addMouseBind(sourceLayer.settingsButton::contains, sourceLayer.settingsButton::effect);
             bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);
@@ -398,7 +428,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
         @Override
         public boolean scrolled(float amountX, float amountY) {
-            sourceLayer.mapSelect.scrolled(amountY);
+            sourceLayer.mapSelect.scroll(amountY * 3);
 
             return true;
         }

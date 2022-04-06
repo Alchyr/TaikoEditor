@@ -328,12 +328,13 @@ public class DifficultyView extends MapView {
 
     @Override
     public Snap getClosestSnap(double time, float limit) {
-        if (map.getCurrentSnaps().containsKey((long) time))
-            return map.getCurrentSnaps().get((long) time);
+        long rounded = Math.round(time);
+        if (map.getCurrentSnaps().containsKey(rounded))
+            return map.getCurrentSnaps().get(rounded);
 
         Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry((long) time);
-        higher = map.getCurrentSnaps().higherEntry((long) time);
+        lower = map.getCurrentSnaps().lowerEntry(rounded);
+        higher = map.getCurrentSnaps().higherEntry(rounded);
 
         if (lower == null && higher == null)
         {

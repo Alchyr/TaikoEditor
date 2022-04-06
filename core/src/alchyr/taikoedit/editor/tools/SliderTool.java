@@ -57,11 +57,11 @@ public class SliderTool extends EditorTool {
 
             if (closest != null && closest.pos > placementObject.getPos())
             {
-                placementObject.setDuration((int) closest.pos - placementObject.getPos());
+                placementObject.setDuration(closest.pos - placementObject.getPos());
             }
             else if (time > placementObject.getPos())
             {
-                placementObject.setDuration((int) time - placementObject.getPos());
+                placementObject.setDuration((long) time - placementObject.getPos());
             }
         }
         else
@@ -88,7 +88,7 @@ public class SliderTool extends EditorTool {
                         if (closest != null) {
                             previewView = hovered;
                             renderPreview = true;
-                            placementObject.setPos((int) closest.pos);
+                            placementObject.setPos(closest.pos);
                         }
                     }
                     return;

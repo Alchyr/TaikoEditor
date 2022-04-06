@@ -1,10 +1,8 @@
-package alchyr.taikoedit.util.assets;
+package alchyr.taikoedit.management.assets;
 
 import alchyr.taikoedit.management.AssetMaster;
 import alchyr.taikoedit.util.TrueTypeFontGenerator;
 import alchyr.taikoedit.util.structures.Pair;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.TextureLoader;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;

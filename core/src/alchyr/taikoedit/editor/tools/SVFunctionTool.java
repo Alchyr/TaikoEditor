@@ -121,10 +121,10 @@ public class SVFunctionTool extends EditorTool {
                             previewView = hovered;
                             renderPreview = true;
                             if (closest == null || BindingGroup.alt()) { //Just go to cursor position
-                                start.setPos((int) time);
+                                start.setPos((long) time);
                             }
                             else { //Snap to closest snap
-                                start.setPos((int) closest.pos);
+                                start.setPos(closest.pos);
                             }
                         }
                         return;
@@ -157,11 +157,11 @@ public class SVFunctionTool extends EditorTool {
 
                     if (closest == null || BindingGroup.alt())
                     {
-                        end.setPos((int) time);
+                        end.setPos((long) time);
                     }
                     else
                     {
-                        end.setPos((int) closest.pos);
+                        end.setPos(closest.pos);
                     }
                 }
                 break;
@@ -353,7 +353,7 @@ public class SVFunctionTool extends EditorTool {
                     for (Snap s : map.getSnaps(1))
                     {
                         if (s.divisor == 0 && s.pos >= start && s.pos <= end)
-                            positions.add((long) s.pos);
+                            positions.add(s.pos);
                     }
                 }
             }

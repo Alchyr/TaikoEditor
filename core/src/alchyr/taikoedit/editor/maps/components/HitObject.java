@@ -3,22 +3,21 @@ package alchyr.taikoedit.editor.maps.components;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Spinner;
+import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.util.structures.PositionalObject;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 
 public abstract class HitObject extends PositionalObject {
     protected final static int CIRCLE_SIZE = 100;
     protected final static int CIRCLE_OFFSET = CIRCLE_SIZE / 2;
-    protected final static float LARGE_SCALE = 1.5f;
+    //protected final static float LARGE_SCALE = 1.5f;
 
-    protected static Texture circle;
-    protected static Texture selection;
-    protected static Texture body;
+    //protected static Texture circle;
+    //protected static Texture selection;
+    //protected static Texture body;
 
 
     /*
@@ -92,22 +91,22 @@ public abstract class HitObject extends PositionalObject {
         this.finish = finish;
     }
 
-    public static void loadTextures()
+    /*public static void loadTextures()
     {
-        circle = assetMaster.get("editor:hit");
+        circle = assetMaster.get();
         selection = assetMaster.get("editor:selection");
         body = assetMaster.get("editor:body");
-    }
+    }*/
 
     public void playSound()
     {
         if (finish)
         {
-            audioMaster.playSfx("hitsound:don finish", this.volume, true);
+            audioMaster.playSfx(Skins.currentSkin.sfxDonFinish, this.volume, true);
         }
         else
         {
-            audioMaster.playSfx("hitsound:don", this.volume, true);
+            audioMaster.playSfx(Skins.currentSkin.sfxDon, this.volume, true);
         }
     }
 

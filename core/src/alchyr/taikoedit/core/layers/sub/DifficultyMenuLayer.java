@@ -240,7 +240,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(backColor);
-        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
+        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
         int index = 0;
         for (float y = optionY; y > minRenderY && index < difficultyOptions.size(); y -= 30)

@@ -15,22 +15,20 @@ import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.management.BindingMaster;
+import alchyr.taikoedit.management.LocalizationMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.core.input.BindingGroup;
-import alchyr.taikoedit.core.input.InputBinding;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.editor.maps.components.PreviewLine;
-import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.util.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.management.localization.LocalizedText;
+import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.core.input.KeyHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -90,6 +88,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     //Tools
     public Tools tools;
 
+    //Data
+    private LocalizedText keyNames;
 
     /* * * * * * Beatmap Stuff * * * * * */
     private final ArrayList<EditorBeatmap> activeMaps;
@@ -140,6 +140,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         //input
         finisherLock = false;
+
+        keyNames = LocalizationMaster.getLocalizedText("keys", "names");
 
         //graphics positions/initialization
         if (backgroundImg != null && !backgroundImg.isEmpty())
@@ -237,10 +239,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         settingsButton.update(elapsed);
 
         if (openButton.hovered) {
-            hoverText.setText("Open New View");
+            String input = processor.getBindingInput(keyNames.get(""), "OpenView");
+            hoverText.setText(input == null ? "Open New View" : "Open New View (" + input + ")");
         }
         else if (settingsButton.hovered) {
             hoverText.setText("Settings");
+        }
+        else if (exitButton.hovered) {
+            hoverText.setText("Exit");
         }
     }
 
@@ -402,11 +408,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer()
+        return new EditorLoadingLayer()
                 .addLayers(true, this)
-                .addTask(this::stopMusic).addTracker(music::getProgress, music::hasMusic, true)
-                .addTask(HitObject::loadTextures).addTask(TimingPoint::loadTexture).addTask(PreviewLine::loadTexture)
-                .addTask(true, this::loadBeatmap).addTask(()->music.seekSecond(0));
+                .addTask(this::stopMusic)
+                .newSet().addTracker(music::getProgress, music::hasMusic, true)
+                .addTask(true, this::loadBeatmap)
+                .addTask(true, ()->{ music.play(); music.pause(); })
+                .addTask(true, ()->music.seekSecond(0));
     }
 
     private void stopMusic()
@@ -738,7 +746,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 }
                 else
                 {
-                    music.seekMs((long) s.pos);
+                    music.seekMs(s.pos);
                 }
             }
         }
@@ -777,7 +785,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 }
                 else
                 {
-                    music.seekMs((long) s.pos);
+                    music.seekMs(s.pos);
                 }
             }
         }
@@ -876,18 +884,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         public void bind() {
             //Arrows
             {
-                KeyHoldObject left = new KeyHoldObject(Input.Keys.LEFT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekLeft());
-                KeyHoldObject right = new KeyHoldObject(Input.Keys.RIGHT, NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, (i) -> sourceLayer.seekRight());
+                KeyHoldObject left = new KeyHoldObject(NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, sourceLayer::seekLeft);
+                KeyHoldObject right = new KeyHoldObject(NORMAL_FIRST_DELAY, NORMAL_REPEAT_DELAY, sourceLayer::seekRight);
 
                 bindings.bind("SeekRight", sourceLayer::seekRight, right);
                 bindings.bind("SeekLeft", sourceLayer::seekLeft, left);
-
-                for (InputBinding.InputInfo input : bindings.bindingInputs("SeekLeft"))
-                    right.addConflictingKey(input.getCode());
-
-                for (InputBinding.InputInfo input : bindings.bindingInputs("SeekRight"))
-                    left.addConflictingKey(input.getCode());
-
 
                 bindings.bind("RateUp", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(0.05f)), 1.0f));
                 bindings.bind("RateDown", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(-0.05f)), 1.0f));

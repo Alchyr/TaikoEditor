@@ -26,13 +26,14 @@ import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 import static alchyr.taikoedit.TaikoEditor.music;
 import static alchyr.taikoedit.core.input.BindingGroup.shift;
+import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 //The default tool. Should be included in most toolsets and support pretty much any view other than gameplay.
 
 //Honestly I should probably have split this into a separate selection tool for objects vs timing points but whatever
 //Too lazy to fix at this point
 public class SelectionTool extends EditorTool {
-    private static final int MIN_DRAG_DIST = 5;
+    private static final int MIN_DRAG_DIST = 7;
     private static final int MIN_VERTICAL_DRAG_DIST = 10;
     private static final Color selectionColor = new Color(0.8f, 0.8f, 0.8f, 0.35f);
 
@@ -477,7 +478,7 @@ public class SelectionTool extends EditorTool {
 
                 verticalChange *= (shift() ? 0.01 : 0.05);
 
-                if (dragMode == DragMode.HORIZONTAL || (dragMode == DragMode.NONE && (horizontalChange > MIN_DRAG_DIST || horizontalChange < -MIN_DRAG_DIST)))
+                if (dragMode == DragMode.HORIZONTAL || (dragMode == DragMode.NONE && (horizontalChange * viewScale > MIN_DRAG_DIST || horizontalChange * viewScale < -MIN_DRAG_DIST)))
                 {
                     Snap closest = selectingView.getClosestSnap(dragObjStartPos + horizontalChange, 500);
 
@@ -488,7 +489,7 @@ public class SelectionTool extends EditorTool {
                         horizontalChange = newPosition - dragObject.getPos();
                     }
                     else {
-                        horizontalChange = (long) closest.pos - dragObject.getPos();
+                        horizontalChange = closest.pos - dragObject.getPos();
                     }
 
                     if (horizontalChange != 0) {
@@ -577,7 +578,7 @@ public class SelectionTool extends EditorTool {
                 long offsetChange = (long) (newPosition - clickStartTime); //different from current time and start time
                 //Find closest snap to this new offset
 
-                if (dragMode == DragMode.HORIZONTAL || offsetChange > MIN_DRAG_DIST || offsetChange < -MIN_DRAG_DIST) {
+                if (dragMode == DragMode.HORIZONTAL || offsetChange * viewScale > MIN_DRAG_DIST || offsetChange * viewScale < -MIN_DRAG_DIST) {
                     dragMode = DragMode.HORIZONTAL;
 
                     //In this case, dragObjStartPos
@@ -588,7 +589,7 @@ public class SelectionTool extends EditorTool {
                         offsetChange = (long) newPosition - ((ILongObject) dragObject).getEndPos();
                     }
                     else { //Snap to closest snap
-                        offsetChange = (long) closest.pos - ((ILongObject) dragObject).getEndPos();
+                        offsetChange = closest.pos - ((ILongObject) dragObject).getEndPos();
                     }
 
                     long newEnd = ((ILongObject) dragObject).getEndPos() + offsetChange;

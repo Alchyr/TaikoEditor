@@ -1,6 +1,6 @@
 package alchyr.taikoedit.editor.maps;
 
-import alchyr.taikoedit.util.assets.FileHelper;
+import alchyr.taikoedit.management.assets.FileHelper;
 
 import java.io.File;
 import java.util.List;

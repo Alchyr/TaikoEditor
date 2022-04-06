@@ -7,7 +7,7 @@ import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.FastMenuLayer;
-import alchyr.taikoedit.core.layers.LoadingLayer;
+import alchyr.taikoedit.core.layers.EditorLoadingLayer;
 import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.CursorHoverText;
@@ -553,10 +553,10 @@ public class TaikoEditor extends ApplicationAdapter {
                 }
                 EditorLayer edit = new EditorLayer(null, set, initial); //no source, will close on exit
                 ProgramLayer loader = edit.getLoader();
-                addLayer(new LoadingLayer()
+                addLayer(new EditorLoadingLayer()
                         .loadLists("ui", "font", "background", "menu", "hitsound")
                         .addLayers(true,
-                                new LoadingLayer().addLayers(true, loader).addTask(TaikoEditor::initialize)));
+                                new EditorLoadingLayer().addLayers(true, loader).addTask(TaikoEditor::initialize)));
                 return true;
             }
         }

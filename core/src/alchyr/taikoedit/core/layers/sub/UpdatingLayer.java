@@ -5,9 +5,10 @@ import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.AdjustedInputProcessor;
 import alchyr.taikoedit.management.SettingsMaster;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -34,9 +35,6 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
     //Rendering
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
 
-    //Textures
-    private final Texture pix;
-
     //Positions
     private final int middleY = SettingsMaster.getHeight() / 2;
 
@@ -52,8 +50,6 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
 
     public UpdatingLayer(String id, String location) {
         this.type = LAYER_TYPE.FULL_STOP;
-
-        pix = assetMaster.get("ui:pixel");
 
         processor = new UpdatingLayerProcessor(this);
 
@@ -126,8 +122,8 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
-        sb.setColor(backColor);
-        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
+        Gdx.gl.glClearColor(backColor.r, backColor.g, backColor.b, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         textRenderer.renderTextCentered(sb, text, SettingsMaster.getMiddle(), middleY, Color.WHITE);
     }

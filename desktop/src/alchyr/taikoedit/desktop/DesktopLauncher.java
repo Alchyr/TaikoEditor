@@ -5,7 +5,7 @@ import alchyr.taikoedit.desktop.config.ConfigMenu;
 import alchyr.taikoedit.desktop.config.ProgramConfig;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.SystemUtils;
-import alchyr.taikoedit.util.assets.FileHelper;
+import alchyr.taikoedit.management.assets.FileHelper;
 import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;

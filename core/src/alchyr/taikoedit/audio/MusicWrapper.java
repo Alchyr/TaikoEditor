@@ -300,11 +300,13 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
             if (playing)
             {
-                totalElapsed += elapsed * (catchup + 1); //Keep track of passing time
-                baseElapsed += elapsed;
-                //editorLogger.info("Total elapsed time: " + baseElapsed);
+                if (elapsed < 0.5f) {
+                    totalElapsed += elapsed * (catchup + 1); //Keep track of passing time
+                    baseElapsed += elapsed;
+                    //editorLogger.info("Total elapsed time: " + baseElapsed);
 
-                precise = Math.max(last + totalElapsed * music.tempo, minimum);
+                    precise = Math.max(last + totalElapsed * music.tempo, minimum);
+                }
                 if (time == last) //Music has not updated position, but the song is playing
                 {
                     return false;

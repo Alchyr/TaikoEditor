@@ -1,6 +1,6 @@
 package alchyr.taikoedit.management;
 
-import alchyr.taikoedit.util.assets.FilePathInfo;
+import alchyr.taikoedit.management.assets.FilePathInfo;
 import alchyr.taikoedit.management.localization.LocalizedText;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Json;
@@ -12,7 +12,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static alchyr.taikoedit.util.assets.FileHelper.withSeparator;
+import static alchyr.taikoedit.management.assets.FileHelper.withSeparator;
 
 public class LocalizationMaster {
     private static final Logger logger = LogManager.getLogger("Localization");

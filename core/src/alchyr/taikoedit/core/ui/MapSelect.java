@@ -5,6 +5,7 @@ import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.AlphabeticComparer;
 import alchyr.taikoedit.util.Hitbox;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -18,7 +19,7 @@ import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
-public class MapSelect {
+public class MapSelect implements Scrollable {
     //Hashed map of mapper name to "group"
     //Arraylist of groups that will be rendered
     //Each group is a list of maps by a single mapper
@@ -37,16 +38,22 @@ public class MapSelect {
     private final BitmapFont font;
 
     private final Texture pix;
-    private final Texture arrow;
+    private final Texture flatArrow;
 
     private final Texture glow, dots;
 
+    private final Color shadow = new Color(0.0f, 0.0f, 0.0f, 0.6f);
     private final Color faintHighlight = new Color(1.0f, 1.0f, 1.0f, 0.2f);
     private final Color highlight = new Color(1.0f, 1.0f, 1.0f, 0.4f);
+    private final Color leftSidebarColor = Color.WHITE.cpy();
 
     //Positions
     private static final int LINE_GAP = 22;
+    private static final int LEFT_SIDEBAR = 30;
+    private static final int SELECT_START_X = 32;
     private final float divider = SettingsMaster.getWidth() * 0.75f;
+    private final float selectWidth = divider - SELECT_START_X;
+    private final float selectCenterX = SELECT_START_X + (selectWidth / 2.0f);
     private final float infoX = divider + 2;
     private final float infoWidth = SettingsMaster.getWidth() - (infoX);
     private final float thumbnailMaxHeight = 0.5625f * infoWidth;
@@ -57,10 +64,28 @@ public class MapSelect {
     private final int infoDivider1, difficultyTitleY, difficultyY;
     private float scrollPos = -10, targetScrollPos = -10, scrollBottom = 0;
 
+    //Left Sidebar
+    private final ImageButton refresh;
+
+    private final ImageButton mapperSorting;
+    private final Texture arrow;
+    private boolean mapperSortAscending = true;
+    private float mapperSortRotation = 0;
+
+    private final ImageButton mapSorting;
+    private final Texture bigArrow;
+    private boolean mapsSortAscending = true;
+    private float mapSortRotation = 0;
+
+    private final ImageButton mapSortingType;
+    private boolean artistSort = true;
+
     //Song Select
     private final List<MapperGroup> activeGroups = new ArrayList<>();
+    private boolean sortingEnabled = true;
     private int firstRender = -1;
     private Mapset selected = null;
+    private float mapLoadingAlpha = 0;
 
     //map info
     private Texture thumbnail;
@@ -77,13 +102,46 @@ public class MapSelect {
     public MapSelect(int top) {
         this.font = assetMaster.getFont("aller medium");
         pix = assetMaster.get("ui:pixel");
-        arrow = assetMaster.get("ui:arrow");
+        flatArrow = assetMaster.get("ui:flat_arrow");
+
+        arrow = assetMaster.get("ui:small_pointy_arrow");
+        bigArrow = assetMaster.get("ui:big_arrow");
 
         glow = assetMaster.get("ui:glow");
         dots = assetMaster.get("ui:dots");
 
         this.top = top;
 
+        //Left bar
+        refresh = new ImageButton(0, top - 30, assetMaster.get("editor:refresh"), (Texture) assetMaster.get("ui:refresh_hover"));
+        refresh.setClick(this::reloadDatabase);
+
+        mapperSorting = new ImageButton(0, top - 60, assetMaster.get("ui:mapper_sort"), (Texture) assetMaster.get("ui:mapper_sort_hover"));
+        mapperSorting.setClick(()->{
+            mapperSortAscending = !mapperSortAscending;
+            sort();
+        });
+
+        mapSorting = new ImageButton(0, top - 90, assetMaster.get("ui:blank_button"), (Texture) assetMaster.get("ui:blank_button_hover"));
+        mapSorting.setClick(()->{
+            mapsSortAscending = !mapsSortAscending;
+            sort();
+        });
+
+        mapSortingType = new ImageButton(0, top - 120, assetMaster.get("ui:a"), (Texture) assetMaster.get("ui:a_hover"));
+        mapSortingType.setClick(()->{
+            if (artistSort) {
+                artistSort = false;
+                mapSortingType.setTextures(assetMaster.get("ui:t"), assetMaster.get("ui:t_hover"));
+            }
+            else {
+                artistSort = true;
+                mapSortingType.setTextures(assetMaster.get("ui:a"), assetMaster.get("ui:a_hover"));
+            }
+            sort();
+        });
+
+        //Info section
         infoCenterX = infoX + infoWidth / 2.0f;
         thumbnailCenterY = top - thumbnailMaxHeight / 2.0f;
         infoDivider1 = (int) (top - thumbnailMaxHeight);
@@ -93,8 +151,23 @@ public class MapSelect {
         refreshMaps();
     }
 
+    public void reloadDatabase() {
+        if (!MapMaster.loading) {
+            setSelected(null);
+            activeGroups.clear();
+            allMappers.clear();
+
+
+            Thread mapLoading = new Thread(MapMaster::load);
+            mapLoading.setName("Maps Reloading");
+            mapLoading.setDaemon(true);
+            mapLoading.start();
+        }
+    }
+
+    //Reloads all maps from database.
     public void refreshMaps() {
-        //Reloads all maps from database.
+        sortingEnabled = true;
         targetScrollPos = scrollPos = -10;
         scrollBottom = top * -0.8f;
         activeGroups.clear();
@@ -118,13 +191,28 @@ public class MapSelect {
         if (scrollBottom < 0)
             scrollBottom = 0;
 
-        activeGroups.sort(Comparator.comparing((u)->u.mapper));
-        for (MapperGroup mapperGroup : activeGroups) {
-            mapperGroup.sort();
+        sort();
+    }
+    public void sort() {
+        if (sortingEnabled) {
+            Comparator<String> comparer = new AlphabeticComparer();
+            if (mapperSortAscending) {
+                activeGroups.sort(Comparator.comparing((u)->u.mapper, comparer));
+            }
+            else {
+                activeGroups.sort(Comparator.comparing((u)->u.mapper, comparer.reversed()));
+            }
+
+            if (!mapsSortAscending)
+                comparer = comparer.reversed();
+            for (MapperGroup mapperGroup : activeGroups) {
+                mapperGroup.sort(comparer);
+            }
         }
     }
     //Sets to a specific list of maps, which will be displayed in order.
     public void setMaps(List<Mapset> maps) {
+        sortingEnabled = false;
         targetScrollPos = scrollPos = -10;
         scrollBottom = top * -0.9f;
         activeGroups.clear();
@@ -151,8 +239,15 @@ public class MapSelect {
     private void setSelected(Mapset set) {
         selected = set;
 
-        musicLoading = music.loadAsync(set.getSongFile(), this::musicLoaded);
-        loadingMusic = true;
+        if (selected != null) {
+            musicLoading = music.loadAsync(set.getSongFile(), this::musicLoaded);
+            loadingMusic = true;
+        }
+        else {
+            music.dispose(); //Dispose current music if already loaded
+            music.cancelAsyncFollowup(); //Cancel playback of currently loading music
+            loadingMusic = false;
+        }
         thumbnail = null;
         updateThumbnail = true;
     }
@@ -180,6 +275,52 @@ public class MapSelect {
         else {
             loadingAlpha = Math.max(0, loadingAlpha - elapsed * 4);
         }
+        if (MapMaster.loading) {
+            mapLoadingAlpha = Math.min(1, mapLoadingAlpha + elapsed * 3);
+        }
+        else {
+            mapLoadingAlpha = Math.max(0, mapLoadingAlpha - elapsed * 4);
+        }
+
+        if (mapperSortAscending) {
+            if (mapperSortRotation != 0) {
+                mapperSortRotation = Math.min(360, mapperSortRotation + elapsed * 720) % 360;
+            }
+        }
+        else {
+            if (mapperSortRotation < 180) {
+                mapperSortRotation = Math.min(180, mapperSortRotation + elapsed * 720) % 360;
+            }
+            else if (mapperSortRotation > 180) {
+                mapperSortRotation = Math.min(540, mapperSortRotation + elapsed * 720) % 360;
+            }
+        }
+        if (mapsSortAscending) {
+            if (mapSortRotation != 0) {
+                mapSortRotation = Math.min(360, mapSortRotation + elapsed * 720) % 360;
+            }
+        }
+        else {
+            if (mapSortRotation < 180) {
+                mapSortRotation = Math.min(180, mapSortRotation + elapsed * 720) % 360;
+            }
+            else if (mapSortRotation > 180) {
+                mapSortRotation = Math.min(540, mapSortRotation + elapsed * 720) % 360;
+            }
+        }
+        refresh.update(elapsed);
+        mapperSorting.update(elapsed);
+        mapSorting.update(elapsed);
+        mapSortingType.update(elapsed);
+        if (mapperSorting.hovered) {
+            hoverText.setText("Mappers Sorted " + (mapperSortAscending ? "Ascending" : "Descending"));
+        }
+        else if (mapSorting.hovered) {
+            hoverText.setText("Maps Sorted " + (mapsSortAscending ? "Ascending" : "Descending"));
+        }
+        else if (mapSortingType.hovered) {
+            hoverText.setText("Maps Sorted by " + (artistSort ? "Artist" : "Title"));
+        }
 
         float y = top + scrollPos;
         firstRender = -1;
@@ -191,16 +332,16 @@ public class MapSelect {
                 if (firstRender == -1)
                     firstRender = i;
                 
-                if (!hovering && mouseX < divider && group.hb.y2() >= mouseY) { //cursor could be within this group
+                if (!hovering && mouseX >= SELECT_START_X && mouseX < divider && group.hb.y2() >= mouseY) { //cursor could be within this group
                     if (group.hb.y() - 2.5f < mouseY) {
                         hovering = true;
-                        hovered.set(group.hb.x(), group.hb.y() - 1, group.hb.getWidth(), group.hb.getHeight() + 2);
+                        hovered.set(group.hb.x(), group.hb.y() - 1, group.hb.getWidth(), LINE_GAP);
                     }
                     else if (y - 2.5f < mouseY && group.expandPos > 0) {
                         int index = (int) (((mouseY - (group.hb.y() - 2.5f)) * -1) / (LINE_GAP * group.expandPos));
                         if (index >= 0 && index < group.sets.size() || (index-- == group.sets.size() && ((int)(((mouseY - (group.hb.y() - 2.5f)) * -1) / (LINE_GAP * group.expandPos)) % (int)(LINE_GAP * group.expandPos)) < 3)) {
                             hovering = true;
-                            hovered.set(0, group.hb.y2() - 30 - ((index * LINE_GAP + 13) * group.expandPos) + (9 * (1.0f - group.expandPos)), divider, LINE_GAP);
+                            hovered.set(group.hb.x(), group.hb.y2() - 30 - ((index * LINE_GAP + 13) * group.expandPos) + (9 * (1.0f - group.expandPos)), group.hb.getWidth(), LINE_GAP);
                         }
                     }
                 }
@@ -289,13 +430,38 @@ public class MapSelect {
             }
         }
 
+        if (mapLoadingAlpha > 0) {
+            Color.BLACK.a = mapLoadingAlpha * 0.5f;
+            sb.setColor(Color.BLACK);
+            Color.BLACK.a = 1;
+            sb.draw(glow, selectCenterX - 64, top / 2f - 64, 128, 128);
+
+            Color.WHITE.a = mapLoadingAlpha;
+            sb.setColor(Color.WHITE);
+            Color.WHITE.a = 1;
+            sb.draw(dots, selectCenterX - 32, top / 2f - 32, 32, 32, 64, 64, 1, 1, loadingAngle, 0, 0, 64, 64, false, false);
+        }
+
+        //render left sidebar
+        leftSidebarColor.a = sortingEnabled ? 1 : 0.4f;
+        sb.setColor(shadow);
+        sb.draw(pix, 0, 0, LEFT_SIDEBAR, top);
+
+        refresh.render(sb, sr); //not affected by sorting prevention
+
+        mapperSorting.render(sb, sr, leftSidebarColor);
+        sb.draw(arrow, 7, mapperSorting.getY() + 1, 8, 8, 16, 16, 1, 1, mapperSortRotation, 0, 0, 16, 16, false, false);
+
+        mapSorting.render(sb, sr, leftSidebarColor);
+        sb.draw(bigArrow, 0, mapSorting.getY(), 15, 15, 30, 30, 1, 1, mapSortRotation, 0, 0, 30, 30, false, false);
+
+        mapSortingType.render(sb, sr, leftSidebarColor);
+
         //render info area
-        sb.setColor(Color.WHITE);
-        //bg thumbnail
-        //set info
+        textRenderer.setFont(font);
         textRenderer.renderTextCentered(sb, "Difficulties:", infoCenterX, difficultyTitleY, Color.WHITE);
-        //difficulties
         if (selected != null) {
+            //bg thumbnail
             if (thumbnail != null) {
                 sb.draw(thumbnail, thumbnailX, thumbnailY, thumbnailOffsetX, thumbnailOffsetY, thumbnailWidth, thumbnailHeight, 1, 1, 0, thumbnailSrcOffsetX, thumbnailSrcOffsetY, thumbnailSrcWidth, thumbnailSrcHeight, false, false);
             }
@@ -331,10 +497,19 @@ public class MapSelect {
         sb.setColor(Color.WHITE);
         sb.draw(pix, divider, 0, 2, top);
         sb.draw(pix, infoX, infoDivider1, infoWidth, 2);
+        sb.draw(pix, LEFT_SIDEBAR, 0, 2, top);
     }
 
     public MapOpenInfo click(float gameX, float gameY) {
-        if (gameX < divider) {
+        if (gameX < SELECT_START_X) {
+            if (refresh.click(gameX, gameY, 0) ||
+                mapperSorting.click(gameX, gameY, 0) ||
+                mapSorting.click(gameX, gameY, 0) ||
+                mapSortingType.click(gameX, gameY, 0)) {
+                return null;
+            }
+        }
+        else if (gameX < divider) {
             if (firstRender > -1) { //map select area
                 MapperGroup group;
                 MapOpenInfo info = null;
@@ -361,7 +536,8 @@ public class MapSelect {
         return null;
     }
 
-    public void scrolled(float amount) {
+    @Override
+    public void scroll(float amount) {
         float bonus = 0;
         if (targetScrollPos != scrollPos) {
             bonus = MathUtils.log2(Math.abs(targetScrollPos - scrollPos));
@@ -374,11 +550,11 @@ public class MapSelect {
 
     //22 pixels per line.
     private class MapperGroup {
-        static final float setX = 50;
-        static final float mapperX = 35;
+        static final float setX = LEFT_SIDEBAR + 50;
+        static final float mapperX = LEFT_SIDEBAR + 35;
         static final float arrowX = mapperX - 25;
 
-        float setWidth = divider - setX;
+        final float setTextWidth = divider - setX;
 
         Hitbox hb;
 
@@ -397,15 +573,16 @@ public class MapSelect {
             this.displayName = this.mapper = mapper;
             this.sets = new ArrayList<>();
 
-            hb = new Hitbox(0, 0, divider - 1, 20);
+            hb = new Hitbox(SELECT_START_X, 0, selectWidth, 20);
             float width = textRenderer.setFont(font).getWidth(displayName);
+            float mapperTextWidth = divider - mapperX;
 
-            if (width >= divider && mapper.length() > 102) { //avoid excessive looping if name is for some reason excessively long
+            if (width >= mapperTextWidth && mapper.length() > 102) { //avoid excessive looping if name is for some reason excessively long
                 displayName = mapper.substring(0, 100) + "...";
                 width = textRenderer.getWidth(displayName);
             }
 
-            if (width >= divider) {
+            if (width >= mapperTextWidth) {
                 int len = mapper.length() - 2;
 
                 do
@@ -416,7 +593,7 @@ public class MapSelect {
                     --len;
                     if (mapper.charAt(len - 1) == ' ')
                         --len;
-                } while (width >= divider);
+                } while (width >= mapperTextWidth);
             }
         }
 
@@ -443,16 +620,16 @@ public class MapSelect {
             for (Mapset set : sets) {
                 if (set == selected) {
                     sb.setColor(highlight);
-                    sb.draw(pix, 0, y - ((i * LINE_GAP + 13) * expandPos) + (9 * (1.0f - expandPos)), divider, LINE_GAP);
+                    sb.draw(pix, SELECT_START_X, y - ((i * LINE_GAP + 13) * expandPos) + (9 * (1.0f - expandPos)), selectWidth, LINE_GAP);
                 }
                 if (expandPos > 0)
-                    textRenderer.renderTextYCentered(sb, setColor, set.songMeta(font, setWidth), setX, y - (i * LINE_GAP * expandPos));
+                    textRenderer.renderTextYCentered(sb, setColor, set.songMeta(font, setTextWidth), setX, y - (i * LINE_GAP * expandPos));
                 ++i;
             }
 
             //render mapper
             sb.setColor(Color.WHITE);
-            sb.draw(arrow, arrowX, hb.y(), 10, 10, 20, 20, 1, 1, arrowAngle, 0, 0, 20, 20, false, false);
+            sb.draw(flatArrow, arrowX, hb.y(), 10, 10, 20, 20, 1, 1, arrowAngle, 0, 0, 20, 20, false, false);
             textRenderer.renderTextYCentered(sb, Color.WHITE, displayName, mapperX, hb.y2() - 9);
 
             /*sb.setColor(Color.RED);
@@ -499,8 +676,15 @@ public class MapSelect {
         public void add(Mapset set) {
             sets.add(set);
         }
-        public void sort() {
-            sets.sort(Comparator.comparing(Mapset::getArtist));
+        public void sort(Comparator<String> comparator) {
+            if (artistSort) {
+                sets.sort(Comparator.comparing(Mapset::getArtist, comparator)
+                        .thenComparing(Mapset::getTitle, comparator));
+            }
+            else {
+                sets.sort(Comparator.comparing(Mapset::getTitle, comparator)
+                        .thenComparing(Mapset::getArtist, comparator));
+            }
         }
     }
 

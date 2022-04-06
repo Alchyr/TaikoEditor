@@ -9,11 +9,14 @@ public abstract class TextInputProcessor extends BoundInputProcessor {
     private TextInputReceiver activeReceiver;
     private boolean hasReceiver;
 
-    public TextInputProcessor(BindingGroup bindings, boolean defaultReturn) {
+    public TextInputProcessor(BindingGroup bindings, boolean defaultReturn, boolean ctrlBackspace) {
         super(bindings, defaultReturn);
 
-        inputReader = new TextInput(0, null);
+        inputReader = new TextInput(0, null, ctrlBackspace);
         hasReceiver = false;
+    }
+    public TextInputProcessor(BindingGroup bindings, boolean defaultReturn) {
+        this(bindings, defaultReturn, true);
     }
 
     @Override

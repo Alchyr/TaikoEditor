@@ -76,4 +76,13 @@ public abstract class BoundInputProcessor extends AdjustedInputProcessor {
     public void dispose() {
         BindingMaster.releaseCopy(bindings);
     }
+
+    public String getBindingInput(String[] keyNameArray, String key) {
+        if (bindings == null)
+            return null;
+        InputBinding input = bindings.getBindings().get(key);
+        if (input == null || input.getInputs().isEmpty())
+            return null;
+        return input.getInputs().get(0).toString(keyNameArray);
+    }
 }

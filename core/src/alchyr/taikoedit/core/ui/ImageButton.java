@@ -149,7 +149,10 @@ public class ImageButton implements UIElement {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
-        sb.setColor(Color.WHITE.cpy());
+        render(sb, sr, Color.WHITE);
+    }
+    public void render(SpriteBatch sb, ShapeRenderer sr, Color c) {
+        sb.setColor(c);
         if (hovered) {
             sb.draw(hoveredImage, x, y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, flipX, flipY);
         }

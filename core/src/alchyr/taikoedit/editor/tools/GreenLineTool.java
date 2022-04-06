@@ -77,7 +77,7 @@ public class GreenLineTool extends EditorTool {
                         placementObject.setPos(Math.floor(time));
                     }
                     else { //Snap to closest snap
-                        placementObject.setPos((long) closest.pos);
+                        placementObject.setPos(closest.pos);
                     }
                 }
                 return;
@@ -137,7 +137,7 @@ public class GreenLineTool extends EditorTool {
         if (hold != null)
             return false;
 
-        double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
+        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
         if (closest != null)
@@ -146,13 +146,13 @@ public class GreenLineTool extends EditorTool {
         }
 
         //Generate an inherited copy of the closest previous timing point
-        Map.Entry<Long, ArrayList<TimingPoint>> lastEffect = view.map.effectPoints.floorEntry((long) time);
-        Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = view.map.timingPoints.floorEntry((long) time);
+        Map.Entry<Long, ArrayList<TimingPoint>> lastEffect = view.map.effectPoints.floorEntry(time);
+        Map.Entry<Long, ArrayList<TimingPoint>> lastTiming = view.map.timingPoints.floorEntry(time);
 
         if (lastTiming == null && lastEffect == null)
         {
             //No previous point, just use default values
-            TimingPoint p = ((TimingPoint) placementObject.shiftedCopy((long) time)).inherit();
+            TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(time)).inherit();
             p.kiai = BindingGroup.shift();
 
             view.map.registerChange(new LineAddition(view.map, p).perform());

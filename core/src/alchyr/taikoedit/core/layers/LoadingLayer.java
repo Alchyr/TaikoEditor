@@ -1,12 +1,9 @@
 package alchyr.taikoedit.core.layers;
 
-import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
-import alchyr.taikoedit.management.AssetMaster;
-import alchyr.taikoedit.management.SettingsMaster;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import alchyr.taikoedit.core.input.AdjustedInputProcessor;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Queue;
 
@@ -15,20 +12,13 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.editorLogger;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 //add on top of layer list when loading assets
-public class LoadingLayer extends ProgramLayer {
-    private final float circleSize, miniCircleSize, miniCircleDistance;
-    private float angleA = 0;
-    private float angleB = MathUtils.PI;
-    private float dist;
-    private final float TURN_RATE = MathUtils.PI2 * 0.5f; //0.5 rotations per second
-
+public class LoadingLayer extends ProgramLayer implements InputLayer {
     private final ExecutorService executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<>()) {
+                                      60L, TimeUnit.SECONDS,
+                                      new SynchronousQueue<>()) {
         @Override
         protected void afterExecute(Runnable r, Throwable t) {
             super.afterExecute(r, t);
@@ -60,13 +50,17 @@ public class LoadingLayer extends ProgramLayer {
 
     private String[] assetLists;
     private List<LoadInfo> extraLoads;
-    private ProgramLayer[] replacementLayers;
+    private Supplier<ProgramLayer[]> replacementLayers;
     private boolean addToBottom;
+
+    private LoadingInputProcessor processor;
 
     //If addToBottom, the last index in the array will end up on the bottom, first index on top (of the bottom)
     //If not addToBottom, the first index will be on the bottom of the top, and the last index will be on the very top.
     public LoadingLayer()
     {
+        this.type = LAYER_TYPE.NORMAL;
+
         this.assetLists = null;
         this.extraLoads = new ArrayList<>();
         this.replacementLayers = null;
@@ -78,27 +72,19 @@ public class LoadingLayer extends ProgramLayer {
 
         done = false;
         addedLayers = false;
-
-        circleSize = Math.min(SettingsMaster.getHeight() / 6.0f, 80.0f);
-        miniCircleSize = circleSize / 8;
-        miniCircleDistance = circleSize - miniCircleSize;
-
-        float rnd = MathUtils.random(MathUtils.PI);
-        angleA += rnd;
-        angleB += rnd;
     }
     public LoadingLayer addLayers(boolean addToBottom, ProgramLayer... replacementLayers) {
+        this.replacementLayers = ()->replacementLayers;
+        this.addToBottom = addToBottom;
+        return this;
+    }
+    public LoadingLayer addLayers(boolean addToBottom, Supplier<ProgramLayer[]> replacementLayers) {
         this.replacementLayers = replacementLayers;
         this.addToBottom = addToBottom;
         return this;
     }
     public LoadingLayer loadLists(String... assetLists) {
         this.assetLists = assetLists;
-        return this;
-    }
-    public LoadingLayer newSet() {
-        tasks.addFirst(new ArrayList<>());
-        trackers.addFirst(new ArrayList<>());
         return this;
     }
     public LoadingLayer addCallback(boolean newSet, Runnable callback)
@@ -114,6 +100,11 @@ public class LoadingLayer extends ProgramLayer {
     {
         return addCallback(false, callback);
     }
+    public LoadingLayer newSet() {
+        tasks.addFirst(new ArrayList<>());
+        trackers.addFirst(new ArrayList<>());
+        return this;
+    }
     public LoadingLayer addTask(boolean newSet, Runnable runnable)
     {
         if (tasks.isEmpty() || newSet)
@@ -127,6 +118,14 @@ public class LoadingLayer extends ProgramLayer {
     public LoadingLayer addTask(Runnable runnable)
     {
         return addTask(false, runnable);
+    }
+    public LoadingLayer addWait(float time) {
+        return addTask(()->{
+            try {
+                Thread.sleep((long) (time * 1000));
+            } catch (InterruptedException ignored) {
+            }
+        });
     }
     public LoadingLayer addTracker(Supplier<Float> tracker)
     {
@@ -144,10 +143,19 @@ public class LoadingLayer extends ProgramLayer {
         trackers.first().add(new Tracker(tracker, confirmation, mustFinish));
         return this;
     }
+
     public LoadingLayer loadExtra(String key, String file, Class<?> type)
     {
         extraLoads.add(new LoadInfo(key, file, type));
         return this;
+    }
+
+    @Override
+    public InputProcessor getProcessor() {
+        if (processor == null) {
+            processor = new LoadingInputProcessor(type == LAYER_TYPE.UPDATE_STOP || type == LAYER_TYPE.FULL_STOP);
+        }
+        return processor;
     }
 
     @Override
@@ -162,9 +170,6 @@ public class LoadingLayer extends ProgramLayer {
 
     @Override
     public void update(float elapsed) {
-        angleA = (angleA + elapsed * TURN_RATE) % MathUtils.PI2;
-        angleB = (angleB + elapsed * TURN_RATE) % MathUtils.PI2;
-
         if (!done && updateLoading())
         {
             //done with current tasks
@@ -194,19 +199,23 @@ public class LoadingLayer extends ProgramLayer {
         if (addLayers()) {
             if (replacementLayers != null)
             {
-                editorLogger.info("Loading complete. Adding replacement layers: " + replacementLayers.length);
-                for (ProgramLayer l : replacementLayers) {
-                    if (addToBottom)
-                    {
-                        TaikoEditor.addLayerToBottom(l);
-                    }
-                    else
-                    {
-                        TaikoEditor.addLayer(l);
+                ProgramLayer[] layers = replacementLayers.get();
+                editorLogger.info("Loading complete. Adding replacement layers: " + layers.length);
+                for (ProgramLayer l : layers) {
+                    if (l != null) {
+                        if (addToBottom)
+                        {
+                            addLayerToBottom(l);
+                        }
+                        else
+                        {
+                            addLayer(l);
+                        }
                     }
                 }
                 //use a fancy effect instead later instead of sharp change
                 replacementLayers = null;
+                addedLayers = true;
                 return;
             }
 
@@ -219,11 +228,9 @@ public class LoadingLayer extends ProgramLayer {
                     activeTasks.add(executor.submit(task));
                 return;
             }
-
-            addedLayers = true;
         }
         if (complete()) {
-            TaikoEditor.removeLayer(this);
+            removeLayer(this);
         }
     }
 
@@ -259,48 +266,15 @@ public class LoadingLayer extends ProgramLayer {
         return assetsLoaded && tasksDone;
     }
 
-    public float getLoadProgress(AssetMaster assetMaster) {
-        return assetMaster.getProgress() * taskProgress;
+    public float getLoadProgress() {
+        return MathUtils.clamp(assetMaster.getProgress() * taskProgress, 0f, 1f);
     }
 
     public boolean addLayers() {
-        return done && !addedLayers;
+        return done;
     }
     public boolean complete() {
         return done;
-    }
-
-    @Override
-    public void render(SpriteBatch sb, ShapeRenderer sr) {
-        //progress float from 0 to 1 is assetMaster.getProgress() * taskProgress
-        float progress = assetMaster.getProgress() * taskProgress;
-
-        //render a nice relaxing loading screen?
-        sb.end();
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-
-        if (progress <= 1)
-        {
-            float offset = progress * circleSize * 2;
-
-            sr.setColor(Color.WHITE);
-            sr.circle(SettingsMaster.getMiddle(), SettingsMaster.getHeight() / 2.0f, circleSize);
-            sr.setColor(Color.BLACK);
-            sr.circle(SettingsMaster.getMiddle() + offset - circleSize * 2, SettingsMaster.getHeight() / 2.0f, circleSize);
-        }
-
-        float xOffset = MathUtils.cos(angleA) * miniCircleDistance;
-        float yOffset = MathUtils.sin(angleA) * miniCircleDistance;
-        sr.setColor(Color.WHITE);
-        sr.circle(SettingsMaster.getMiddle() + xOffset, SettingsMaster.getHeight() / 2.0f + yOffset, miniCircleSize);
-
-        xOffset = MathUtils.cos(angleB) * miniCircleDistance;
-        yOffset = MathUtils.sin(angleB) * miniCircleDistance;
-        sr.setColor(Color.BLACK);
-        sr.circle(SettingsMaster.getMiddle() + xOffset, SettingsMaster.getHeight() / 2.0f + yOffset, miniCircleSize);
-
-        sr.end();
-        sb.begin();
     }
 
     @Override
@@ -355,6 +329,56 @@ public class LoadingLayer extends ProgramLayer {
                 return confirmation == null ? progress.get() >= 1 : confirmation.get();
             }
             return true;
+        }
+    }
+
+    private static class LoadingInputProcessor extends AdjustedInputProcessor {
+        private final boolean blocking;
+
+        public LoadingInputProcessor(boolean blocking) {
+            super();
+
+            this.blocking = blocking;
+        }
+
+        @Override
+        public boolean keyDown(int keycode) {
+            return blocking;
+        }
+
+        @Override
+        public boolean keyUp(int keycode) {
+            return blocking;
+        }
+
+        @Override
+        public boolean keyTyped(char character) {
+            return blocking;
+        }
+
+        @Override
+        public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
+            return blocking;
+        }
+
+        @Override
+        public boolean onTouchDragged(int gameX, int gameY, int pointer) {
+            return blocking;
+        }
+
+        @Override
+        public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {
+            return blocking;
+        }
+
+        @Override
+        public boolean onMouseMoved(int gameX, int gameY) {
+            return blocking;
+        }
+
+        @Override
+        public boolean scrolled(float amountX, float amountY) {
+            return blocking;
         }
     }
 }

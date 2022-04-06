@@ -1,19 +1,17 @@
-package alchyr.taikoedit.util.assets.loaders;
+package alchyr.taikoedit.management.assets.loaders;
 
 import alchyr.taikoedit.management.AssetMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.assets.AssetInfo;
-import alchyr.taikoedit.util.assets.FileHelper;
-import alchyr.taikoedit.util.assets.SpecialLoader;
-import com.badlogic.gdx.assets.AssetManager;
+import alchyr.taikoedit.management.assets.AssetInfo;
+import alchyr.taikoedit.management.assets.FileHelper;
+import alchyr.taikoedit.management.assets.SpecialLoader;
 import com.badlogic.gdx.graphics.Texture;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.util.ArrayList;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.util.assets.AssetLists.mipmaps;
+import static alchyr.taikoedit.management.assets.AssetLists.mipmaps;
 
 public class OsuBackgroundLoader implements SpecialLoader {
     public static final String KEY = "osu_background";
@@ -46,7 +44,7 @@ public class OsuBackgroundLoader implements SpecialLoader {
     @Override
     public void unload(String name, AssetInfo info, String[] params) {
         for (String s : loadedBackgrounds) {
-            assetMaster.unloadAbs(s);
+            assetMaster.unload(s); //unloadAbs
         }
 
         loadedBackgrounds.clear();

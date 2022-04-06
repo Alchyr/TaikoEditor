@@ -74,7 +74,7 @@ public class FakeSliderTool extends EditorTool {
                     {
                         previewView = hovered;
                         renderPreview = true;
-                        placementObject.setPos((long) closest.pos);
+                        placementObject.setPos(closest.pos);
                     }
                 }
                 return;
@@ -108,7 +108,7 @@ public class FakeSliderTool extends EditorTool {
 
     @Override
     public boolean instantUse(MapView view) {
-        double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
+        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
         if (closest != null)
@@ -116,7 +116,7 @@ public class FakeSliderTool extends EditorTool {
             time = closest.pos;
         }
 
-        Slider s = new Slider((long) time, -.01);
+        Slider s = new Slider(time, -.01);
         if (finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
             s.setIsFinish(true);
         }

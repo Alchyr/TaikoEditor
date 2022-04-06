@@ -6,6 +6,7 @@ import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALMusic;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,7 +42,7 @@ public class AudioMaster {
 
     }
 
-    public void addSfx(String key, String file)
+    public void addSfx(String key, String file) throws GdxRuntimeException
     {
         map.put(key, new Sfx(file));
     }

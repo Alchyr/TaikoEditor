@@ -213,10 +213,10 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(backColor);
-        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight());
+        sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
         sb.setColor(dividerColor);
-        sb.draw(pix, SettingsMaster.getMiddle(), 0, 1, SettingsMaster.getHeight());
+        sb.draw(pix, SettingsMaster.getMiddle(), 0, 1, SettingsMaster.getHeight() + 5);
 
         for (Label l : labels)
             l.render(sb, sr);

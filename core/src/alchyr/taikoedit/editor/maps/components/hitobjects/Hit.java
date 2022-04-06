@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
+import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 public class Hit extends HitObject {
     public static final Color don = new Color(245 / 255.0f, 55 / 255.0f, 40 / 255.0f, 1.0f);
@@ -131,12 +132,16 @@ public class Hit extends HitObject {
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
         Color c = isRim ? kat : don;
         c.a = alpha;
-        sb.setColor(c);
+        //sb.setColor(c);
 
-        float scale = finish ? LARGE_SCALE : 1.0f;
-
-        sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        if (finish) {
+            currentSkin.finisher.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
+        }
+        else {
+            currentSkin.hit.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.normalScale, c);
+        }
+        /*sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
 
         if (selected)
         {
@@ -147,12 +152,13 @@ public class Hit extends HitObject {
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
-        sb.setColor(Color.WHITE);
+        //sb.setColor(Color.WHITE);
 
-        float scale = finish ? LARGE_SCALE : 1.0f;
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
-        sb.draw(selection, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale);
+        /*sb.draw(currentSkin.selection, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
     }
 
     @Override
@@ -162,22 +168,22 @@ public class Hit extends HitObject {
         {
             if (isRim)
             {
-                audioMaster.playSfx("hitsound:kat finish", this.volume, true);
+                audioMaster.playSfx(currentSkin.sfxKatFinish, this.volume, true);
             }
             else
             {
-                audioMaster.playSfx("hitsound:don finish", this.volume, true);
+                audioMaster.playSfx(currentSkin.sfxDonFinish, this.volume, true);
             }
         }
         else
         {
             if (isRim)
             {
-                audioMaster.playSfx("hitsound:kat", this.volume, true);
+                audioMaster.playSfx(currentSkin.sfxKat, this.volume, true);
             }
             else
             {
-                audioMaster.playSfx("hitsound:don", this.volume, true);
+                audioMaster.playSfx(currentSkin.sfxDon, this.volume, true);
             }
         }
     }

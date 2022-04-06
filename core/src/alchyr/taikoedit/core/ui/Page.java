@@ -14,14 +14,17 @@ import java.util.List;
 import java.util.function.Supplier;
 
 //Contains a set of things that can be rendered and scrolled
-public class Page extends TextInputProcessor {
+public class Page extends TextInputProcessor implements Scrollable {
     private static final float MIN_SCROLL = 0;
     private float baseMaximumScroll = 0, maximumScroll = 0, currentScroll = 0, targetScroll = 0;
 
     private final List<Label> labels = new ArrayList<>();
     private final List<Button> buttons = new ArrayList<>();
+    private final List<Dropdown<?>> dropdowns = new ArrayList<>();
     private final List<TextField> textFields = new ArrayList<>();
     private final List<UIElement> general = new ArrayList<>();
+
+    private Scrollable subScrollable = null;
 
     private final Supplier<VoidMethod> exitMethod;
 
@@ -31,6 +34,13 @@ public class Page extends TextInputProcessor {
         this.exitMethod = exitMethod;
 
         bind();
+    }
+
+    public void hidden() {
+        for (TextField f : textFields)
+            f.disable();
+        for (Dropdown<?> d : dropdowns)
+            d.cancel();
     }
 
     public void setMaximumScroll(float maxScroll) {
@@ -48,47 +58,6 @@ public class Page extends TextInputProcessor {
 
         return true;
     }
-    @Override
-    public void bind() {
-        if (exitMethod != null)
-            bindings.bind("Exit", exitMethod);
-
-        bindings.bind("Up", ()->{
-            scroll(-10);
-        });
-        bindings.bind("Down", ()->{
-            scroll(10);
-        });
-
-        bindings.addMouseBind((x, y, b)-> {
-                    for (Button button : buttons) {
-                        if (button.contains(x, y))
-                            return true;
-                    }
-
-                    for (TextField f : textFields) {
-                        if (f.tryClick(x, y))
-                            return true;
-                    }
-                    return false;
-                },
-                (p, b)->{
-                    boolean fieldClicked = false;
-                    for (TextField f : textFields) {
-                        if (f.click(p.x, p.y, this))
-                            fieldClicked = true;
-                    }
-
-                    if (fieldClicked)
-                        return null;
-
-                    for (Button button : buttons) {
-                        if (button.click(p.x, p.y, b))
-                            return null;
-                    }
-                    return null;
-                });
-    }
 
     public Label addLabel(float x, float y, BitmapFont font, String text) {
         return add(new Label(x, y, font, text));
@@ -104,6 +73,10 @@ public class Page extends TextInputProcessor {
     public Button add(Button b) {
         buttons.add(b);
         return b;
+    }
+    public <T> Dropdown<T> add(Dropdown<T> d) {
+        dropdowns.add(d);
+        return d;
     }
     public UIElement addUIElement(UIElement thing) {
         general.add(thing);
@@ -124,6 +97,9 @@ public class Page extends TextInputProcessor {
     @Override
     public void update(float elapsed) {
         super.update(elapsed);
+
+        for (Dropdown<?> d : dropdowns)
+            d.update(elapsed);
 
         for (Button b : buttons)
             b.update(elapsed);
@@ -154,8 +130,8 @@ public class Page extends TextInputProcessor {
         }
     }
     public void render(SpriteBatch sb, ShapeRenderer sr) {
-        for (Button b : buttons)
-            b.render(sb, sr, 0, currentScroll);
+        for (UIElement thing : general)
+            thing.render(sb, sr, 0, currentScroll);
 
         for (Label l : labels)
             l.render(sb, sr, 0, currentScroll);
@@ -163,18 +139,89 @@ public class Page extends TextInputProcessor {
         for (TextField f : textFields)
             f.render(sb, sr, 0, currentScroll);
 
-        for (UIElement thing : general)
-            thing.render(sb, sr, 0, currentScroll);
+        for (Button b : buttons)
+            b.render(sb, sr, 0, currentScroll);
+
+        for (Dropdown<?> d : dropdowns)
+            d.render(sb, sr, 0, currentScroll);
     }
 
+    @Override
     public void scroll(float amount) {
-        float bonus = 0;
-        if (targetScroll != currentScroll) {
-            bonus = MathUtils.log2(Math.abs(targetScroll - currentScroll));
-            if (bonus < 0) {
-                bonus = 0;
-            }
+        if (subScrollable != null) {
+            subScrollable.scroll(amount);
+            return;
         }
-        targetScroll += amount * (25.0f + bonus);
+
+        if (maximumScroll != MIN_SCROLL) {
+            amount *= 3;
+            float bonus = 0;
+            if (targetScroll != currentScroll) {
+                bonus = MathUtils.log2(Math.abs(targetScroll - currentScroll));
+                if (bonus < 0) {
+                    bonus = 0;
+                }
+            }
+            targetScroll += amount * (25.0f + bonus);
+        }
+    }
+    @Override
+    public void bind() {
+        if (exitMethod != null)
+            bindings.bind("Exit", exitMethod);
+
+        bindings.bind("Up", ()->{
+            scroll(-5);
+        }, new ScrollKeyHold(this, -20));
+        bindings.bind("Down", ()->{
+            scroll(5);
+        }, new ScrollKeyHold(this, 20));
+
+        bindings.addMouseBind((x, y, b)-> {
+                    for (Dropdown<?> dropdown : dropdowns) {
+                        if (dropdown.tryClick(x, y))
+                            return true;
+                    }
+
+                    for (TextField f : textFields) {
+                        if (f.tryClick(x, y))
+                            return true;
+                    }
+
+                    for (Button button : buttons) {
+                        if (button.contains(x, y))
+                            return true;
+                    }
+                    return false;
+                },
+                (p, b)->{
+                    boolean clickConsumed = false;
+                    subScrollable = null;
+                    for (Dropdown<?> dropdown : dropdowns) {
+                        if (clickConsumed)
+                            dropdown.cancel();
+                        else if (dropdown.click(p.x, p.y)) {
+                            if (dropdown.isOpen())
+                                subScrollable = dropdown;
+                            clickConsumed = true;
+                        }
+                    }
+
+                    for (TextField f : textFields) {
+                        if (clickConsumed)
+                            f.disable();
+                        else if (f.click(p.x, p.y, this))
+                            clickConsumed = true;
+                    }
+
+                    if (clickConsumed)
+                        return null;
+
+                    for (Button button : buttons) {
+                        if (button.click(p.x, p.y, b))
+                            return null;
+                    }
+                    return null;
+                });
     }
 }

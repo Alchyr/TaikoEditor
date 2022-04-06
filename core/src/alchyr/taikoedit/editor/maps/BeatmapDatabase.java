@@ -140,7 +140,7 @@ public class BeatmapDatabase {
 
             executor.shutdownNow();
 
-            logger.info("Read mapset data. Adding tracking data.");
+            logger.info("Collecting processed mapsets.");
 
             completeCount = 0;
             progress = 0;
@@ -160,7 +160,7 @@ public class BeatmapDatabase {
         else
         {
             executor.shutdownNow();
-            logger.error("Failed to read Song folder. Incorrect osu! folder path provided?");
+            logger.error("Failed to read Songs folder. Incorrect osu! folder path provided?");
         }
         subLists.clear();
         processed.clear();
@@ -230,7 +230,7 @@ public class BeatmapDatabase {
             }
             executor.shutdownNow();
 
-            logger.info("Read mapset data. Adding tracking data.");
+            logger.info("Collecting processed mapsets.");
 
             completeCount = 0;
             progress = 0;
@@ -250,7 +250,7 @@ public class BeatmapDatabase {
         else
         {
             executor.shutdownNow();
-            logger.error("Failed to read Song folder. Incorrect osu! folder path provided?");
+            logger.error("Failed to read Songs folder. Incorrect osu! folder path provided?");
         }
         subLists.clear();
         processed.clear();
@@ -281,16 +281,16 @@ public class BeatmapDatabase {
                 if (!set.isEmpty())
                 {
                     processed.get(storeIndex).add(set);
-                    logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
+                    //logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
                 }
-                else
+                /*else
                 {
                     logger.info("Mapset " + folder.getName() + " has no taiko maps.");
-                }
+                }*/
             }
             else
             {
-                logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
+                //logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
 
                 for (File f : folders)
                     readFolder(f, storeIndex, false);
@@ -333,16 +333,16 @@ public class BeatmapDatabase {
                 if (!set.isEmpty())
                 {
                     processed.get(storeIndex).add(set);
-                    logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
+                    //logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
                 }
-                else
+                /*else
                 {
                     logger.info("Mapset " + folder.getName() + " has no taiko maps.");
-                }
+                }*/
             }
             else
             {
-                logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
+                //logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
 
                 for (File f : folders)
                     updateFolder(oldData, f, storeIndex, false);
@@ -362,7 +362,7 @@ public class BeatmapDatabase {
     private void updateFolder(HashMap<String, Mapset> oldData, File folder, int storeIndex, boolean count) {
         Mapset old = oldData.get(folder.getAbsolutePath());
         if (old == null) {
-            logger.info("Set not found in database: " + folder.getAbsolutePath());
+            //logger.info("Set not found in database: " + folder.getAbsolutePath());
             readFolder(oldData, folder, storeIndex, count);
             return;
         }

@@ -2,6 +2,7 @@ package alchyr.taikoedit.editor.maps.components.hitobjects;
 
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.graphics.Color;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 public class Slider extends HitObject implements ILongObject {
     private static final Color slider = Color.GOLDENROD.cpy();
@@ -236,20 +238,24 @@ public class Slider extends HitObject implements ILongObject {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
         slider.a = alpha;
-        float startX = x + (float) (this.getPos() - pos) * viewScale;
-        float endX = x + (float) (this.endPos - pos) * viewScale;
+        float startX = 1 + x + (float) (this.getPos() - pos) * viewScale;
+        float endX = 1 + x + (float) (this.endPos - pos) * viewScale;
         sb.setColor(slider);
         slider.a = 1;
-        float scale = finish ? LARGE_SCALE : 1.0f;
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
         if ((selected && duration < 0) || duration > 0)
         {
-            sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
-            sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                    scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+            float bodyStart = Math.max(0, startX), bodyEnd = Math.min(SettingsMaster.getWidth(), endX);
+            currentSkin.body.renderC(sb, sr, (bodyStart + bodyEnd) / 2f, y, (bodyEnd - bodyStart) / currentSkin.body.getWidth(), scale, 0, slider);
+            //sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
+            currentSkin.end.renderC(sb, sr, endX, y, scale, slider);
+            /*sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                    scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
         }
-        sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        currentSkin.hit.renderC(sb, sr, startX, y, scale, slider);
+        /*sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
 
         if (selected)
         {
@@ -262,19 +268,23 @@ public class Slider extends HitObject implements ILongObject {
         x += baseX;
 
         slider.a = alpha;
-        float startX = x;
-        float endX = x + (float) (this.endPos - getPos()) * sv;
+        float startX = 1 + x;
+        float endX = 1 + x + (float) (this.endPos - getPos()) * sv;
         sb.setColor(slider);
-        float scale = finish ? LARGE_SCALE : 1.0f;
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
         if (duration > 0)
         {
-            sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
+            float bodyStart = Math.max(0, startX), bodyEnd = Math.min(SettingsMaster.getWidth(), endX);
+            currentSkin.body.renderC(sb, sr, (bodyStart + bodyEnd) / 2f, y, (bodyEnd - bodyStart) / currentSkin.body.getWidth(), scale, 0, slider);
+            //sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
         }
-        sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+        currentSkin.end.renderC(sb, sr, endX, y, scale, slider);
+        currentSkin.hit.renderC(sb, sr, startX, y, scale, slider);
+        /*sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
         sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
 
         if (selected)
         {
@@ -285,12 +295,14 @@ public class Slider extends HitObject implements ILongObject {
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
         sb.setColor(Color.WHITE);
-        float scale = finish ? LARGE_SCALE : 1.0f;
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
-        sb.draw(selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        sb.draw(selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.endPos - pos) * viewScale, y, scale);
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale);
+        /*sb.draw(currentSkin.selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+        /*sb.draw(currentSkin.selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
     }
 
     @Override

@@ -1,4 +1,16 @@
 {
+  "base": [
+    {
+      "name": "load_area",
+      "file": "taikoedit/images/ui/load_area.png",
+      "class": "Texture"
+    },
+    {
+      "name": "load_bar",
+      "file": "taikoedit/images/ui/load_bar.png",
+      "class": "Texture"
+    }
+  ],
   "ui": [
     {
       "name": "pixel",
@@ -6,7 +18,17 @@
       "class": "Texture"
     },
     {
-      "name": "arrow",
+      "name": "flat_arrow",
+      "file": "taikoedit/images/ui/flat_arrow.png",
+      "class": "Texture"
+    },
+    {
+      "name": "small_arrow",
+      "file": "taikoedit/images/ui/small_arrow.png",
+      "class": "Texture"
+    },
+    {
+      "name": "small_pointy_arrow",
       "file": "taikoedit/images/ui/arrow.png",
       "class": "Texture"
     },
@@ -43,6 +65,56 @@
     {
       "name": "toggledisable",
       "file": "taikoedit/images/ui/ToggleRelease.png",
+      "class": "Texture"
+    },
+    {
+      "name": "blank_button",
+      "file": "taikoedit/images/ui/blank_button.png",
+      "class": "Texture"
+    },
+    {
+      "name": "blank_button_hover",
+      "file": "taikoedit/images/ui/blank_hover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "mapper_sort",
+      "file": "taikoedit/images/ui/mapper_sort.png",
+      "class": "Texture"
+    },
+    {
+      "name": "mapper_sort_hover",
+      "file": "taikoedit/images/ui/mapper_sort_hover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "big_arrow",
+      "file": "taikoedit/images/ui/big_arrow.png",
+      "class": "Texture"
+    },
+    {
+      "name": "a",
+      "file": "taikoedit/images/ui/a.png",
+      "class": "Texture"
+    },
+    {
+      "name": "a_hover",
+      "file": "taikoedit/images/ui/a_hover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "t",
+      "file": "taikoedit/images/ui/t.png",
+      "class": "Texture"
+    },
+    {
+      "name": "t_hover",
+      "file": "taikoedit/images/ui/t_hover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "refresh_hover",
+      "file": "taikoedit/images/ui/refresh_hover.png",
       "class": "Texture"
     },
     {
@@ -97,6 +169,12 @@
     {
       "name": "hit",
       "file": "taikoedit/images/editor/objects/hit.png",
+      "class": "Texture",
+      "params": "Linear"
+    },
+    {
+      "name": "overlay",
+      "file": "taikoedit/images/editor/objects/overlay.png",
       "class": "Texture",
       "params": "Linear"
     },

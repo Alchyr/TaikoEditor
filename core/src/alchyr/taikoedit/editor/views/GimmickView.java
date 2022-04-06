@@ -757,12 +757,13 @@ public class GimmickView extends MapView {
 
     @Override
     public Snap getClosestSnap(double time, float limit) {
-        if (map.getCurrentSnaps().containsKey((long) time))
-            return map.getCurrentSnaps().get((long) time);
+        long rounded = Math.round(time);
+        if (map.getCurrentSnaps().containsKey(rounded))
+            return map.getCurrentSnaps().get(rounded);
 
         Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry((long) time);
-        higher = map.getCurrentSnaps().higherEntry((long) time);
+        lower = map.getCurrentSnaps().lowerEntry(rounded);
+        higher = map.getCurrentSnaps().higherEntry(rounded);
 
         if (lower == null && higher == null)
         {
@@ -889,7 +890,7 @@ public class GimmickView extends MapView {
         long offset, targetPos;
 
         Snap closest = getClosestSnap(preciseTime, 250);
-        offset = closest == null ? time : (long) closest.pos;
+        offset = closest == null ? time : closest.pos;
         offset -= copyObjects.firstKey();
 
         PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
@@ -905,7 +906,7 @@ public class GimmickView extends MapView {
             if (closest == null)
                 closest = snaps.get(targetPos - 1);
             if (closest != null)
-                targetPos = (int) closest.pos;
+                targetPos = closest.pos;
 
             for (PositionalObject o : entry.getValue())
             {
@@ -1004,7 +1005,7 @@ public class GimmickView extends MapView {
 
             //Just go to cursor position
             if (closest != null && !BindingGroup.alt()) { //Snap to closest snap unless alt is held
-                offsetChange = (long) closest.pos - initialPosition;
+                offsetChange = closest.pos - initialPosition;
             }
             else {
                 offsetChange = (long) parent.getTimeFromPosition(Gdx.input.getX()) - initialPosition;

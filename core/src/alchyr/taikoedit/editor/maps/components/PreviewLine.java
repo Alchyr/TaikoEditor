@@ -14,17 +14,17 @@ public class PreviewLine extends PositionalObject {
 
     private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
 
-    private static Texture pix;
+    private static Texture pix = assetMaster.get("ui:pixel");
 
     public PreviewLine(long pos)
     {
         setPos(pos);
     }
 
-    public static void loadTexture()
+    /*public static void loadTexture()
     {
         pix = assetMaster.get("ui:pixel");
-    }
+    }*/
 
     @Override
     public String toString()

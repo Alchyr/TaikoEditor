@@ -40,6 +40,10 @@ public class Label implements UIElement {
         align = alignment;
     }
 
+    public float getWidth() {
+        return textRenderer.setFont(font).getWidth(label);
+    }
+
     public void setText(String s) {
         this.label = s;
     }

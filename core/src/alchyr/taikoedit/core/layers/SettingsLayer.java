@@ -11,6 +11,8 @@ import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.LocalizationMaster;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.management.assets.skins.SkinProvider;
+import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.management.localization.LocalizedText;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
@@ -54,19 +56,20 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
     //editor settings
     //divided into 5 columns, one of which is wider than the others. 1/6 1/6 1/6 2/6 1/6
-    private static final int SMALL_SECTION_WIDTH, LARGE_SECTION_WIDTH, X_1, X_2, X_3, X_4, X_5, X_CENTER, LABEL_Y_START, HOTKEY_Y_START;
+    private static final int SMALL_SECTION_WIDTH, LARGE_SECTION_WIDTH, X_1, X_2, X_3, X_4, X_5, X_6, X_CENTER, LABEL_Y_START, HOTKEY_Y_START;
     private static final int LABEL_Y_SPACING = 50;
     private static final int HOTKEY_SPACING = 40;
 
     static {
         float displayAreaWidth = SettingsMaster.getWidth() - BUTTON_WIDTH - 20;
-        SMALL_SECTION_WIDTH = Math.min((int) (displayAreaWidth / 6), 150);
+        SMALL_SECTION_WIDTH = Math.min((int) (displayAreaWidth / 8), 99999); // 150);
         LARGE_SECTION_WIDTH = SMALL_SECTION_WIDTH * 2;
         X_1 = BUTTON_WIDTH + 10;
         X_2 = X_1 + SMALL_SECTION_WIDTH;
         X_3 = X_2 + SMALL_SECTION_WIDTH;
         X_4 = X_3 + SMALL_SECTION_WIDTH;
         X_5 = X_4 + LARGE_SECTION_WIDTH;
+        X_6 = X_5 + SMALL_SECTION_WIDTH;
 
         X_CENTER = (int) (X_1 + displayAreaWidth / 2);
 
@@ -78,10 +81,10 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
     private SettingsProcessor mainProcessor;
     private BoundInputMultiplexer processor;
 
-    private Texture pixel;
-
     private Page[] pages;
     private Button[] pageButtons;
+
+    public TextOverlay textOverlay;
 
     private ImageButton exitButton;
 
@@ -104,6 +107,8 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::close);
 
+        textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
+
         pages = new Page[2];
         pageButtons = new Button[2];
 
@@ -118,12 +123,12 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         swapPages(currentPage);
 
-        pixel = assetMaster.get("ui:pixel");
-
         mainProcessor.bind();
     }
 
     private void close() {
+        pages[currentPage].releaseInput(false);
+        pages[currentPage].hidden();
         TaikoEditor.removeLayer(this);
 
         for (BindingGroup group : adjustedGroups) {
@@ -138,6 +143,10 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             pageButtons[i].renderBorder = i == page;
         }
         if (page >= 0 && page < pages.length) {
+            if (page != currentPage) {
+                pages[currentPage].releaseInput(false);
+                pages[currentPage].hidden();
+            }
             currentPage = page;
             processor.setProcessors(pages[currentPage], mainProcessor);
         }
@@ -180,6 +189,11 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             b.update(elapsed);
 
         exitButton.update(elapsed);
+        if (exitButton.hovered) {
+            hoverText.setText("Exit");
+        }
+
+        textOverlay.update(elapsed);
     }
 
     @Override
@@ -193,6 +207,8 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             b.render(sb, sr);
 
         exitButton.render(sb, sr);
+
+        textOverlay.render(sb, sr);
     }
 
     @Override
@@ -310,6 +326,36 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         editorSettings.add(musicVolume);
         editorSettings.add(effectVolume);
+
+        y = LABEL_Y_START;
+        Label skinLabel = editorSettings.addLabel(X_6, y, font, "Skin: ");
+        Dropdown<SkinProvider> skinSelect = new Dropdown<>(X_6 + skinLabel.getWidth() + 6, y, 1.5f * SMALL_SECTION_WIDTH, SettingsMaster.getHeight() * 0.5f, Skins.skins, font)
+                .setOption(Skins.currentSkin);
+        skinSelect.setOnSelect((old, current)->{
+                    if (!current.equals(old)) {
+                        LoadingLayer followup = new LoadingLayer();
+                        followup.addTask(()->{
+                            if (current.state == SkinProvider.LoadState.LOADED) {
+                                Skins.currentSkin = current;
+                                TaikoEditor.onMain(old::unload);
+                                SettingsMaster.save();
+                            }
+                            else {
+                                skinSelect.setOption(old);
+                                skinSelect.removeOption(current);
+                                TaikoEditor.onMain(current::unload);
+                                if (current.failMsg != null && !current.failMsg.isEmpty())
+                                    textOverlay.setText(current.failMsg, 3.0f);
+                            }
+                        });
+                        followup.type = LAYER_TYPE.UPDATE_STOP;
+                        LoadingLayer skinLoader = current.getLoader(followup);
+                        skinLoader.type = LAYER_TYPE.UPDATE_STOP;
+                        addLayer(skinLoader);
+                    }
+                });
+
+        editorSettings.add(skinSelect);
 
         positioningButtons.add(don);
         editorSettings.add(don);

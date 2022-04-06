@@ -21,7 +21,7 @@ public class BeatDivisors {
     private TreeMap<Long, Snap> allSnaps;
     private TreeMap<Long, Snap> barlineSnaps;
 
-    private int lastStart, lastEnd;
+    private double lastStart, lastEnd;
     private NavigableMap<Long, Snap> activeSnaps;
 
     //When initially generated, construct all standard divisors. If timing is changed or another custom divisor is desired, they will be generated on-demand.
@@ -58,6 +58,9 @@ public class BeatDivisors {
 
         if (startPos != lastStart || endPos != lastEnd)
         {
+            lastStart = startPos; //testing
+            lastEnd = endPos;
+
             Long start = combinedSnaps.floorKey((long) startPos);
             Long end = combinedSnaps.ceilingKey((long) endPos);
 
@@ -101,11 +104,11 @@ public class BeatDivisors {
     {
         for (int divisor : divisorOptions.activeSnappings)
             for (Snap s : getSnappings(divisor))
-                combinedSnaps.put((long) s.pos, s);
+                combinedSnaps.put(s.pos, s);
 
         for (int divisor : divisorOptions.snappingOptions)
             for (Snap s : getSnappings(divisor)) {
-                allSnaps.put((long) s.pos, s);
+                allSnaps.put(s.pos, s);
             }
     }
 
@@ -150,7 +153,7 @@ public class BeatDivisors {
             if (divisor % snaps.getKey() == 0) //This snap is a sub-snap of the currently generating one, skip them
             {
                 for (Snap snap : snaps.getValue())
-                    subSnaps.add((long) snap.pos); //rounded to avoid issues when comparing doubles
+                    subSnaps.add(snap.pos); //rounded to avoid issues when comparing doubles
             }
         }
 
@@ -209,7 +212,7 @@ public class BeatDivisors {
             if (beatSegment == 0)
                 ++beat;
 
-            pos = (long) t;
+            pos = Math.round(t);
 
             beat = beat % meter;
 
@@ -221,7 +224,7 @@ public class BeatDivisors {
                 if (!skipLine)
                 {
                     Snap barline = new Snap(t, 0);
-                    barlineSnaps.put((long) barline.pos, barline);
+                    barlineSnaps.put(barline.pos, barline);
                     snapList.add(barline);
                     continue;
                 }
@@ -249,14 +252,14 @@ public class BeatDivisors {
                 --beat;
             }
 
-            pos = (long) t;
+            pos = Math.round(t);
 
             if (ignoreSnaps.contains(pos) || ignoreSnaps.contains(pos + 1) || ignoreSnaps.contains(pos - 1))
                 continue;
 
             if (beat == 0) {
                 Snap barline = new Snap(t, 0);
-                barlineSnaps.put((long) barline.pos, barline);
+                barlineSnaps.put(barline.pos, barline);
                 snapList.add(barline);
             }
             else {

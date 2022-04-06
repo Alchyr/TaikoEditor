@@ -1,43 +1,36 @@
 package alchyr.taikoedit.core.input;
 
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
+
 import java.util.HashSet;
-import java.util.function.Consumer;
 
 public class KeyHoldObject {
-    public HashSet<Integer> conflictingKeys = new HashSet<>();
-
-    public final int keycode;
-
-    private final Consumer<Integer> onRepeat;
+    private VoidMethod onRepeat;
 
     private final float firstRepeatDelay;
     private final float repeatDelay;
     private float delay;
 
-    public KeyHoldObject(int keycode, float firstRepeatDelay, float repeatDelay, Consumer<Integer> onRepeat)
+    public KeyHoldObject(float firstRepeatDelay, float repeatDelay, VoidMethod onRepeat)
     {
-        this.keycode = keycode;
-
         this.onRepeat = onRepeat;
 
         this.delay = this.firstRepeatDelay = firstRepeatDelay;
         this.repeatDelay = repeatDelay;
     }
 
-    public KeyHoldObject(int keycode, float repeatDelay, Consumer<Integer> onRepeat)
+    public KeyHoldObject(float repeatDelay, VoidMethod onRepeat)
     {
-        this(keycode, repeatDelay, repeatDelay, onRepeat);
+        this(repeatDelay, repeatDelay, onRepeat);
+    }
+
+    public void setOnRepeat(VoidMethod onRepeat) {
+        this.onRepeat = onRepeat;
     }
 
     public void reset()
     {
         this.delay = firstRepeatDelay;
-    }
-
-    public KeyHoldObject addConflictingKey(int keycode)
-    {
-        conflictingKeys.add(keycode);
-        return this;
     }
 
     //Should be called each frame.
@@ -53,6 +46,6 @@ public class KeyHoldObject {
     private void onRepeat()
     {
         if (onRepeat != null)
-            onRepeat.accept(keycode);
+            onRepeat.run();
     }
 }

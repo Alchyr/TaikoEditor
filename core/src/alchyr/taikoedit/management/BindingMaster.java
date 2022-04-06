@@ -32,9 +32,14 @@ public class BindingMaster {
     public static void initialize()
     {
         FileHandle h = Gdx.files.local(hotkeyFile);
+        createGroups(h, load(h));
+    }
 
-        Map<String, Map<String, List<InputBinding.InputInfo>>> loadedData = load(h);
+    public static void reset() {
+        createGroups(Gdx.files.local(hotkeyFile), Collections.emptyMap());
+    }
 
+    private static void createGroups(FileHandle h, Map<String, Map<String, List<InputBinding.InputInfo>>> loadedData) {
         BindingGroup creating;
 
         //Main Menu
@@ -60,8 +65,10 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("TJASave", new InputBinding.InputInfo(Input.Keys.S, true, true, true)));
 
         creating.addBinding(InputBinding.create("TogglePlayback", new InputBinding.InputInfo(Input.Keys.SPACE)));
-        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.X, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.Z, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.X, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE))
+                .setConflicts((id)->id.equals("SeekLeft"), InputBinding.ConflictType.CANCELLING));
+        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.Z, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE))
+                .setConflicts((id)->id.equals("SeekRight"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("RateUp", new InputBinding.InputInfo(Input.Keys.UP)));
         creating.addBinding(InputBinding.create("RateDown", new InputBinding.InputInfo(Input.Keys.DOWN)));
         creating.addBinding(InputBinding.create("ZoomIn", new InputBinding.InputInfo(Input.Keys.UP, false, false, true)));
@@ -124,8 +131,15 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9)));
         creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0)));
         creating.addBinding(InputBinding.create("TAB", new InputBinding.InputInfo(Input.Keys.TAB)));
-        creating.addBinding(InputBinding.create("Up", new InputBinding.InputInfo(Input.Keys.UP)));
-        creating.addBinding(InputBinding.create("Down", new InputBinding.InputInfo(Input.Keys.DOWN)));
+        creating.addBinding(InputBinding.create("Up",
+                new InputBinding.InputInfo(Input.Keys.UP, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.PAGE_UP, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE))
+                .setConflicts((id)->id.equals("Down"), InputBinding.ConflictType.CANCELLING));
+        creating.addBinding(InputBinding.create("Down",
+                new InputBinding.InputInfo(Input.Keys.DOWN, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.PAGE_DOWN, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE))
+                .setConflicts((id)->id.equals("Up"), InputBinding.ConflictType.CANCELLING));
+        creating.addBinding(InputBinding.create("Refresh", new InputBinding.InputInfo(Input.Keys.F5)));
 
         creating.initialize(bindingGroups, loadedData.get(creating.getID()));
 

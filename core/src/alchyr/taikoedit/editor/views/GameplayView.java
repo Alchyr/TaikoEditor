@@ -24,6 +24,7 @@ import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
+import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 
 /* TODO LIST
@@ -51,20 +52,17 @@ public class GameplayView extends MapView {
     private static final float VISIBLE_LENGTH = SettingsMaster.getWidth() * 1.5f;
 
     private static final int HIT_AREA_X = 200;
-    private static final int HIT_AREA_DRAW_X = HIT_AREA_X - HIT_AREA_HALF;
+    private static final int HIT_AREA_DRAW_X = HIT_AREA_X + 1;
 
     private static final float SCROLL_SPEED_SCALE = 240;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.9f); //more opacity than other types of view
-    private static final Color hitAreaColor = new Color(1.0f, 1.0f, 1.0f, 0.6f);
-    protected Texture hitArea = assetMaster.get("editor:hitarea");
 
     //Base position values
     private int baseObjectY = 0;
 
     //Offset
     private int objectY = 0;
-    private int hitAreaY = 0;
 
     public GameplayView(EditorLayer parent, EditorBeatmap beatmap) {
         super(MapView.ViewType.GAMEPLAY_VIEW, parent, beatmap, HEIGHT);
@@ -300,14 +298,14 @@ public class GameplayView extends MapView {
         sb.setColor(backColor);
         sb.draw(pix, 0, bottom, SettingsMaster.getWidth(), height);
 
-        sb.setColor(hitAreaColor);
-        sb.draw(hitArea, HIT_AREA_DRAW_X, hitAreaY);
+        sb.setColor(currentSkin.gameplayHitAreaColor);
+        currentSkin.hitArea.renderC(sb, sr, HIT_AREA_DRAW_X, objectY, currentSkin.normalScale, currentSkin.gameplayHitAreaColor);
 
         //Divisors.
         for (Snap s : barlines)
         {
             s.render(sb, sr, s.pos, viewScale, //Very Beautiful type casting here for the purpose of limiting positioning to whole values, to mimic rendering of game. This makes certain barline gimmicks work.
-                    HIT_AREA_X + Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float)((double)(time - barlineStartMap.get(s)) / ((long)s.pos - barlineStartMap.get(s)))), bottom,
+                    HIT_AREA_X + Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float)((double)(time - barlineStartMap.get(s)) / (s.pos - barlineStartMap.get(s)))), bottom,
                     HEIGHT);
         }
     }
@@ -420,12 +418,13 @@ public class GameplayView extends MapView {
 
     @Override
     public Snap getClosestSnap(double time, float limit) {
-        if (map.getCurrentSnaps().containsKey((long) time))
-            return map.getCurrentSnaps().get((long) time);
+        long rounded = Math.round(time);
+        if (map.getCurrentSnaps().containsKey(rounded))
+            return map.getCurrentSnaps().get(rounded);
 
         Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry((long) time);
-        higher = map.getCurrentSnaps().higherEntry((long) time);
+        lower = map.getCurrentSnaps().lowerEntry(rounded);
+        higher = map.getCurrentSnaps().higherEntry(rounded);
 
         if (lower == null && higher == null)
         {
@@ -477,7 +476,6 @@ public class GameplayView extends MapView {
         super.setOffset(offset);
 
         objectY = baseObjectY + yOffset;
-        hitAreaY = baseObjectY + yOffset - HIT_AREA_HALF;
     }
 
     @Override

@@ -44,8 +44,7 @@ public class TimingPoint extends PositionalObject {
     public static final int KIAI = 1;
     public static final int OMITTED = 8;
 
-    private static Texture pix;
-
+    private static final Texture pix = assetMaster.get("ui:pixel");
 
     public TimingPoint(long pos)
     {
@@ -115,10 +114,10 @@ public class TimingPoint extends PositionalObject {
         this.omitted = base.omitted;
     }
 
-    public static void loadTexture()
+    /*public static void loadTexture()
     {
-        pix = assetMaster.get("ui:pixel");
-    }
+        //pix;
+    }*/
 
     public double getBPM()
     {

@@ -1,5 +1,6 @@
 package alchyr.taikoedit.management;
 
+import alchyr.taikoedit.management.assets.skins.Skins;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
@@ -110,6 +111,9 @@ public class SettingsMaster {
                         case 9:
                             bigKatY = Integer.parseInt(params[i]);
                             break;
+                        case 10:
+                            Skins.loadedSkin = params[i].replace("](}", ":");
+                            break;
                     }
                 }
             }
@@ -150,6 +154,7 @@ public class SettingsMaster {
                 donX + ":" + donY + ":" +
                 katX + ":" + katY + ":" +
                 bigDonX + ":" + bigDonY + ":" +
-                bigKatX + ":" + bigKatY;
+                bigKatX + ":" + bigKatY + ":" +
+                Skins.currentSkin.toString().replace(":", "](}");
     }
 }

@@ -4,6 +4,7 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.input.BoundInputProcessor;
 import alchyr.taikoedit.core.layers.LoadedLayer;
+import alchyr.taikoedit.core.layers.EditorLoadingLayer;
 import alchyr.taikoedit.core.layers.LoadingLayer;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -53,7 +54,7 @@ public class BindingTestLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public LoadingLayer getLoader() {
-        return new LoadingLayer()
+        return new EditorLoadingLayer()
                 .loadLists("ui")
                 .addLayers(true, this);
     }

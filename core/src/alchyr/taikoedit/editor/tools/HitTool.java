@@ -135,7 +135,7 @@ public class HitTool extends EditorTool {
             return false; //Don't swap off of selection tool when modifying selected objects
         }
         else {
-            double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
+            long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
             Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
             if (closest != null)
@@ -143,7 +143,7 @@ public class HitTool extends EditorTool {
                 time = closest.pos;
             }
 
-            view.map.addObject(new Hit((long) time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)), view.replaceTest);
+            view.map.addObject(new Hit(time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)), view.replaceTest);
             return true;
         }
     }
