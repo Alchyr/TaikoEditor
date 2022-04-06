@@ -45,7 +45,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 320; //x.x.x -> xxx
+    public static final int VERSION = 321; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 
