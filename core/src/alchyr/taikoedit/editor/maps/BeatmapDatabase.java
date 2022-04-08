@@ -551,9 +551,9 @@ public class BeatmapDatabase {
     }
 
     private void index(Mapset set) {
-        indexedMapsets.put(set.getCreator().toLowerCase().split(" "), set, 1.5f); //mappers get bonus weight in the search.
-        indexedMapsets.put(set.getArtist().toLowerCase().split(" "), set, 1.0f);
-        indexedMapsets.put(set.getTitle().toLowerCase().split(" "), set, 1.0f);
+        indexedMapsets.put(set.getCreator().toLowerCase(Locale.ROOT).split(" "), set, 1.5f); //mappers get bonus weight in the search.
+        indexedMapsets.put(set.getArtist().toLowerCase(Locale.ROOT).split(" "), set, 1.0f);
+        indexedMapsets.put(set.getTitle().toLowerCase(Locale.ROOT).split(" "), set, 1.0f);
     }
     public List<Mapset> search(String[] terms) {
         return indexedMapsets.search(terms, 0.3f);

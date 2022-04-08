@@ -34,6 +34,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 
 import static alchyr.taikoedit.TaikoEditor.*;
+import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 public class MenuLayer extends LoadedLayer implements InputLayer {
     private boolean initialized;
@@ -43,7 +44,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     private MapSelect mapSelect;
     private boolean updateMaps = false;
 
-    private Texture background;
+    private boolean useOsuBackground = false;
+    private Texture osuBackground = null;
     private int bgWidth, bgHeight;
 
     private BitmapFont font;
@@ -76,21 +78,22 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public void initialize() {
+        useOsuBackground = !OsuBackgroundLoader.loadedBackgrounds.isEmpty() && MathUtils.randomBoolean();
+        if (useOsuBackground) {
+            osuBackground = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
+
+            float bgScale = Math.max((float) SettingsMaster.getWidth() / osuBackground.getWidth(), (float) SettingsMaster.getHeight() / osuBackground.getHeight());
+            bgWidth = (int) Math.ceil(osuBackground.getWidth() * bgScale);
+            bgHeight = (int) Math.ceil(osuBackground.getHeight() * bgScale);
+        }
+        else {
+            float bgScale = Math.max((float) SettingsMaster.getWidth() / currentSkin.background.getWidth(), (float) SettingsMaster.getHeight() / currentSkin.background.getHeight());
+            bgWidth = (int) Math.ceil(currentSkin.background.getWidth() * bgScale);
+            bgHeight = (int) Math.ceil(currentSkin.background.getHeight() * bgScale);
+        }
+
         if (!initialized)
         {
-            if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
-            {
-                background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
-            }
-            else
-            {
-                background = assetMaster.get("menu:background");
-            }
-
-            float bgScale = Math.max((float) SettingsMaster.getWidth()/ background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
-            bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
-            bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
-
             font = assetMaster.getFont("default");
             pixel = assetMaster.get("ui:pixel");
             searchHeight = 40;
@@ -207,7 +210,12 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(bgColor);
-        sb.draw(background, 0, 0, bgWidth, bgHeight);
+        if (useOsuBackground) {
+            sb.draw(osuBackground, 0, 0, bgWidth, bgHeight);
+        }
+        else {
+            sb.draw(currentSkin.background, 0, 0, bgWidth, bgHeight);
+        }
 
         mapSelect.render(sb, sr);
 
@@ -293,11 +301,11 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                             .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)
                             .addLayers(true,
                                     ()->{
-                                        if (Skins.currentSkin == null) {
+                                        if (currentSkin == null) {
                                             return new ProgramLayer[] { this };
                                         }
                                         else {
-                                            LoadingLayer loader = Skins.currentSkin.getLoader(this);
+                                            LoadingLayer loader = currentSkin.getLoader(this);
                                             if (loader != null) {
                                                 return new ProgramLayer[] { loader };
                                             }

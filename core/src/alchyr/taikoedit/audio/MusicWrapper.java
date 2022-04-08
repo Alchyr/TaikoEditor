@@ -9,10 +9,7 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -198,7 +195,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
             editorLogger.info("Prepping music.");
             try
             {
-                switch (musicFile.extension().toLowerCase()) {
+                switch (musicFile.extension().toLowerCase(Locale.ROOT)) {
                     case "mp3":
                         activeOffset = mp3Offset;
                         this.music = (PreloadedMp3) Gdx.audio.newMusic(musicFile);

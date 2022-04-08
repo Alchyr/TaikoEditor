@@ -463,6 +463,7 @@ public class MapSelect implements Scrollable {
         if (selected != null) {
             //bg thumbnail
             if (thumbnail != null) {
+                sb.setColor(Color.WHITE);
                 sb.draw(thumbnail, thumbnailX, thumbnailY, thumbnailOffsetX, thumbnailOffsetY, thumbnailWidth, thumbnailHeight, 1, 1, 0, thumbnailSrcOffsetX, thumbnailSrcOffsetY, thumbnailSrcWidth, thumbnailSrcHeight, false, false);
             }
             else {

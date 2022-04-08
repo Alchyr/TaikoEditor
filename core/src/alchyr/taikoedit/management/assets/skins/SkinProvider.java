@@ -15,6 +15,8 @@ public abstract class SkinProvider {
 
     public float largeScale = 1.5f, normalScale = 1, gameplaySpinnerScale = 1.25f;
 
+    public Texture background;
+
     public RenderComponent<?> hit;
     public RenderComponent<?> finisher;
     private Texture selectionTexture; //Gotta Dispose

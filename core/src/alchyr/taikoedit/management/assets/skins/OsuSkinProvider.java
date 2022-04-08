@@ -7,6 +7,7 @@ import alchyr.taikoedit.management.assets.AssetLists;
 import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.assets.RenderComponent;
 import alchyr.taikoedit.util.GeneralUtils;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -14,8 +15,8 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
@@ -24,28 +25,27 @@ public class OsuSkinProvider extends SkinProvider {
     private final String name;
     private final String prefix;
 
-    private final String hitImg, overlayImg, bodyImg, endImg, finisherImg, finisherOverlayImg, spinnerImg, approachCircle;
+    private final String hitImg, overlayImg, bodyImg, endImg, finisherImg, finisherOverlayImg, spinnerImg, approachCircle, backgroundKey;
 
     private boolean hasFinisherImg = false, hasSpinner = false, hasApproachCircle = false;
+
+    private SkinRequirements requirements = new SkinRequirements();
 
     public OsuSkinProvider(File folder) {
         this.folder = folder;
         this.name = folder.getName();
 
-        prefix = ("skin" + getName() + ":").toLowerCase();
+        prefix = ("skin" + getName() + ":").toLowerCase(Locale.ROOT);
 
         hitImg = prefix("hitbase");
         overlayImg = prefix("hit overlay");
-
         bodyImg = prefix("body");
         endImg = prefix("end");
-
         finisherImg = prefix("finisher");
         finisherOverlayImg = prefix("finisher overlay");
-
         spinnerImg = prefix("spinner");
-
         approachCircle = prefix("approach");
+        backgroundKey = prefix("background");
 
         gameplayHitAreaColor = new Color(0.7f, 0.7f, 0.7f, 0.7f);
 
@@ -85,48 +85,69 @@ public class OsuSkinProvider extends SkinProvider {
     private void loadAssets() {
         try {
             assetMaster.markLoading();
-            String file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), "taikohitcircle.png"));
+            background = assetMaster.get("menu:background");
+
+            FileHandle base = new FileHandle(folder);
+
+            String file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.hitBaseFile));
             assetMaster.load(file, Texture.class, AssetLists.linear);
             assetMaster.loadedAssets.put(hitImg, file);
 
-            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), "taikohitcircleoverlay.png"));
+            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.hitOverlayFile));
             assetMaster.load(file, Texture.class, AssetLists.linear);
             assetMaster.loadedAssets.put(overlayImg, file);
 
-            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), "taiko-roll-middle.png"));
+            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.rollMiddle));
             assetMaster.load(file, Texture.class, AssetLists.linear);
             assetMaster.loadedAssets.put(bodyImg, file);
 
-            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), "taiko-roll-end.png"));
+            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.rollEnd));
             assetMaster.load(file, Texture.class, AssetLists.linear);
             assetMaster.loadedAssets.put(endImg, file);
 
             //optional stuff
-            FileHandle testHandle = new FileHandle(folder).child("taiko-normal-hitnormal.wav");
-            if (testHandle.exists()) {
-                sfxDon = prefix("don");
-                audioMaster.addSfx(sfxDon, testHandle.path());
+            FileHandle testHandle = base.child("taiko-normal-hitnormal.wav");
+            try {
+                if (testHandle.exists()) {
+                    sfxDon = prefix("don");
+                    audioMaster.addSfx(sfxDon, testHandle.path());
+                }
+                testHandle = base.child("taiko-normal-hitclap.wav");
+                if (testHandle.exists()) {
+                    sfxKat = prefix("kat");
+                    audioMaster.addSfx(sfxKat, testHandle.path());
+                }
+                testHandle = base.child("taiko-normal-hitfinish.wav");
+                if (testHandle.exists()) {
+                    sfxDonFinish = prefix("don finish");
+                    audioMaster.addSfx(sfxDonFinish, testHandle.path());
+                }
+                testHandle = base.child("taiko-normal-hitwhistle.wav");
+                if (testHandle.exists()) {
+                    sfxKatFinish = prefix("kat finish");
+                    audioMaster.addSfx(sfxKatFinish, testHandle.path());
+                }
             }
-            testHandle = new FileHandle(folder).child("taiko-normal-hitclap.wav");
-            if (testHandle.exists()) {
-                sfxKat = prefix("kat");
-                audioMaster.addSfx(sfxKat, testHandle.path());
-            }
-            testHandle = new FileHandle(folder).child("taiko-normal-hitfinish.wav");
-            if (testHandle.exists()) {
-                sfxDonFinish = prefix("don finish");
-                audioMaster.addSfx(sfxDonFinish, testHandle.path());
-            }
-            testHandle = new FileHandle(folder).child("taiko-normal-hitwhistle.wav");
-            if (testHandle.exists()) {
-                sfxKatFinish = prefix("kat finish");
-                audioMaster.addSfx(sfxKatFinish, testHandle.path());
+            catch (GdxRuntimeException e) { //Likely due to wav format mismatch, since only 16-bit is compatible.
+                int i = 0;
+                Throwable cause = e.getCause(), prev = e;
+                while (cause != null && i++ < 99) {
+                    prev = cause;
+                    cause = cause.getCause();
+                }
+                failMsg = prev.getMessage();
+                editorLogger.error(prev.getMessage());
+                GeneralUtils.logStackTrace(editorLogger, e);
+                sfxDon = "hitsound:don";
+                sfxKat = "hitsound:kat";
+                sfxDonFinish = "hitsound:don finish";
+                sfxKatFinish = "hitsound:kat finish";
             }
 
-            testHandle = new FileHandle(folder).child("taikobigcircle.png");
+            testHandle = base.child(requirements.bigBaseFile);
             if (testHandle.exists()) {
                 file = testHandle.path();
-                testHandle = new FileHandle(folder).child("taikobigcircleoverlay.png");
+                testHandle = base.child(requirements.bigOverlayFile);
                 if (testHandle.exists()) {
                     hasFinisherImg = true;
                     assetMaster.load(file, Texture.class, AssetLists.linear);
@@ -138,18 +159,29 @@ public class OsuSkinProvider extends SkinProvider {
                 }
             }
 
-            testHandle = new FileHandle(folder).child("spinner-warning.png");
+            testHandle = base.child(requirements.spinner);
             if (testHandle.exists()) {
                 hasSpinner = true;
                 assetMaster.load(testHandle.path(), Texture.class, AssetLists.linear);
                 assetMaster.loadedAssets.put(spinnerImg, testHandle.path());
             }
 
-            testHandle = new FileHandle(folder).child("approachcircle.png");
+            testHandle = base.child(requirements.approachCircle);
             if (testHandle.exists()) {
                 hasApproachCircle = true;
                 assetMaster.load(testHandle.path(), Texture.class, AssetLists.linear);
                 assetMaster.loadedAssets.put(approachCircle, testHandle.path());
+            }
+
+            if (requirements.hasBg) {
+                testHandle = base.child(requirements.bg);
+                if (testHandle.exists()) {
+                    assetMaster.load(testHandle.path(), Texture.class, AssetLists.linear);
+                    assetMaster.loadedAssets.put(backgroundKey, testHandle.path());
+                }
+                else {
+                    requirements.hasBg = false;
+                }
             }
         }
         catch (GdxRuntimeException e) {
@@ -203,19 +235,23 @@ public class OsuSkinProvider extends SkinProvider {
             gameplaySpinnerScale = largeScale;
             gameplaySpinner = hit;
         }
+
+        if (requirements.hasBg) {
+            background = assetMaster.get(backgroundKey);
+        }
     }
 
-    public static boolean isValid(File folder) {
-        Set<String> requirements = getRequirements();
+    public boolean isValid() {
         File[] contents = folder.listFiles(File::isFile);
         if (contents == null || contents.length == 0)
             return false;
 
-        for (File file : contents) {
-            requirements.remove(file.getName());
-        }
+        requirements = new SkinRequirements();
 
-        return requirements.isEmpty();
+        for (File f : contents)
+            requirements.test(f.getName());
+
+        return requirements.isValid();
     }
 
     @Override
@@ -239,23 +275,94 @@ public class OsuSkinProvider extends SkinProvider {
             assetMaster.unload(approachCircle);
     }
 
-    private static final Set<String> skinRequirements;
-    static {
-        skinRequirements = new HashSet<>();
-        skinRequirements.add("skin.ini");
-        /*skinRequirements.add("taiko-normal-hitnormal.wav");
-        skinRequirements.add("taiko-normal-hitfinish.wav");
-        skinRequirements.add("taiko-normal-hitclap.wav");
-        skinRequirements.add("taiko-normal-hitwhistle.wav");*/
+    private static class SkinRequirements {
+        private static final String ini = "skin.ini";
+        private static final String[] noAlt = { };
+        //well, actually just the overlay allows for an animated variant.
+        private static final String[] hitBase = { "taikohitcircle.png", "taikohitcircle-0.png" };
+        private static final String[] hitOverlay = { "taikohitcircleoverlay.png", "taikohitcircleoverlay-0.png" };
+        private static final String[] bigBase = { "taikobigcircle.png", "taikobigcircle-0.png" };
+        private static final String[] bigOverlay = { "taikobigcircleoverlay.png", "taikobigcircleoverlay-0.png" };
+        private static final String[] menuBg = { "menu-background.jpg", "menu-background.jpeg", "menu-background@2x.jpg", "menu-background@2x.jpeg" };
 
-        skinRequirements.add("taikohitcircle.png");
-        skinRequirements.add("taikohitcircleoverlay.png");
+        //img
+        String hitBaseFile = hitBase[0];
+        String hitOverlayFile = hitOverlay[0];
+        String bigBaseFile = bigBase[0];
+        String bigOverlayFile = bigOverlay[0];
+        String rollMiddle = "taiko-roll-middle.png";
+        String rollEnd = "taiko-roll-end.png";
+        String spinner = "spinner-warning.png";
+        String approachCircle = "approachcircle.png";
 
-        skinRequirements.add("taiko-roll-middle.png");
-        skinRequirements.add("taiko-roll-end.png");
-        //skinRequirements.add("");
-    }
-    private static Set<String> getRequirements() {
-        return new HashSet<>(skinRequirements);
+        String bg = menuBg[0];
+        boolean hasBg = false;
+
+        //sfx
+
+        private Map<String, Pair<String[], Consumer<String>>> required, optional;
+
+        SkinRequirements() {
+            required = new HashMap<>();
+            optional = new HashMap<>();
+
+            Pair<String[], Consumer<String>> item;
+
+            item = new Pair<>(noAlt, GeneralUtils.noConsumer());
+            required.put(ini, item);
+
+            item = new Pair<>(hitBase, (s)->hitBaseFile = s);
+            for (String s : hitBase)
+                required.put(s, item);
+
+            item = new Pair<>(hitOverlay, (s)->hitOverlayFile = s);
+            for (String s : hitOverlay)
+                required.put(s, item);
+
+            item = new Pair<>(bigBase, (s)->bigBaseFile = s);
+            for (String s : bigBase)
+                optional.put(s, item);
+
+            item = new Pair<>(bigOverlay, (s)->bigOverlayFile = s);
+            for (String s : bigOverlay)
+                optional.put(s, item);
+
+            item = new Pair<>(noAlt, (s)->rollMiddle = s);
+            required.put(rollMiddle, item);
+
+            item = new Pair<>(noAlt, (s)->rollEnd = s);
+            required.put(rollEnd, item);
+
+            item = new Pair<>(noAlt, (s)->spinner = s);
+            optional.put(spinner, item);
+
+            item = new Pair<>(noAlt, (s)->approachCircle = s);
+            optional.put(approachCircle, item);
+
+            item = new Pair<>(menuBg, (s)->{ bg = s; hasBg = true; });
+            for (String s : menuBg)
+                optional.put(s, item);
+        }
+
+        public void test(String name) {
+            Pair<String[], Consumer<String>> item = required.remove(name.toLowerCase(Locale.ROOT));
+            if (item != null) {
+                for (String s : item.a)
+                    required.remove(s);
+                item.b.accept(name);
+            }
+            else {
+                item = optional.remove(name);
+                if (item != null) {
+                    for (String s : item.a)
+                        optional.remove(s);
+                    item.b.accept(name);
+                }
+            }
+        }
+
+        public boolean isValid() {
+            return required.isEmpty();
+        }
     }
 }

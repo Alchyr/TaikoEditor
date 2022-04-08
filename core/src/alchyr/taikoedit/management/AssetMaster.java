@@ -124,7 +124,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     }
 
     public <T> T get(String name) {
-        name = name.toLowerCase();
+        name = name.toLowerCase(Locale.ROOT);
         if (loadedAssets.containsKey(name))
             return super.get(loadedAssets.get(name));
 
@@ -134,7 +134,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     }
     @SuppressWarnings("unchecked")
     public <T> RenderComponent<T> getRenderComponent(String name, Class<T> base) {
-        name = name.toLowerCase();
+        name = name.toLowerCase(Locale.ROOT);
         if (renderComponents.containsKey(name)) {
             return (RenderComponent<T>) renderComponents.get(name);
         }
@@ -151,7 +151,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
 
     public TextureAtlas.AtlasRegion getRegion(String name)
     {
-        name = name.toLowerCase();
+        name = name.toLowerCase(Locale.ROOT);
 
         if (loadedRegions.containsKey(name))
             return loadedRegions.get(name);
@@ -162,7 +162,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     }
 
     public BitmapFont getFont(String name) {
-        name = name.toLowerCase();
+        name = name.toLowerCase(Locale.ROOT);
         if (!name.contains(":"))
             name = "font:" + name;
 
@@ -175,7 +175,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     public void load(String key, String filename, Class<?> type)
     {
         filename = filename.replace('\\', '/'); //gdx dumb
-        key = key.toLowerCase();
+        key = key.toLowerCase(Locale.ROOT);
         doneLoading = false;
         loadedAssets.put(key, filename);
         super.load(filename, type);
@@ -191,7 +191,7 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
     public void unload(String name)
     {
         try {
-            String lowerName = name.toLowerCase();
+            String lowerName = name.toLowerCase(Locale.ROOT);
             renderComponents.remove(lowerName);
             if (loadedAssets.containsKey(lowerName))
             {

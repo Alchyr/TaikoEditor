@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.management.assets.AssetLists.mipmaps;
@@ -32,9 +33,9 @@ public class OsuBackgroundLoader implements SpecialLoader {
                 {
                     if (img.exists()) {
                         manager.load(img.getAbsolutePath(), Texture.class, mipmaps);
-                        assetMaster.loadedAssets.put(img.getAbsolutePath().toLowerCase(), FileHelper.gdxSeparator(img.getAbsolutePath()));
+                        assetMaster.loadedAssets.put(img.getAbsolutePath().toLowerCase(Locale.ROOT), FileHelper.gdxSeparator(img.getAbsolutePath()));
 
-                        loadedBackgrounds.add(img.getAbsolutePath().toLowerCase());
+                        loadedBackgrounds.add(img.getAbsolutePath().toLowerCase(Locale.ROOT));
                     }
                 }
             }

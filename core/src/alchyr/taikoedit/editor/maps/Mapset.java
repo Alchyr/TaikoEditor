@@ -6,6 +6,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
@@ -265,23 +266,24 @@ public class Mapset {
     {
         private static int getDifficultyValue(MapInfo info)
         {
-            if (info.getDifficultyName().toLowerCase().contains("inner") || info.getDifficultyName().toLowerCase().contains("ura"))
+            String diff = info.getDifficultyName().toLowerCase(Locale.ROOT);
+            if (diff.contains("inner") || diff.contains("ura"))
             {
                 return 4;
             }
-            else if (info.getDifficultyName().toLowerCase().contains("oni"))
+            else if (diff.contains("oni"))
             {
                 return 3;
             }
-            else if (info.getDifficultyName().toLowerCase().contains("muzu"))
+            else if (diff.contains("muzu"))
             {
                 return 2;
             }
-            else if (info.getDifficultyName().toLowerCase().contains("futsuu"))
+            else if (diff.contains("futsuu"))
             {
                 return 1;
             }
-            else if (info.getDifficultyName().toLowerCase().contains("kantan"))
+            else if (diff.contains("kantan"))
             {
                 return 0;
             }

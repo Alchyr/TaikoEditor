@@ -2,8 +2,10 @@ package alchyr.taikoedit.util;
 
 import org.apache.logging.log4j.Logger;
 
+import java.util.Locale;
+
 public class SystemUtils {
-    private static String OS = System.getProperty("os.name").toLowerCase();
+    private static final String OS = System.getProperty("os.name").toLowerCase(Locale.ROOT);
 
     public static void log(Logger logger) {
         logger.info("OS Name: " + System.getProperty ("os.name"));

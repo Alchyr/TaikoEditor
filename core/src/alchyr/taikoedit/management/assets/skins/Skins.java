@@ -29,8 +29,8 @@ public class Skins {
                 return;
 
             for (File folder : skinFolders) {
-                if (OsuSkinProvider.isValid(folder)) {
-                    OsuSkinProvider provider = new OsuSkinProvider(folder);
+                OsuSkinProvider provider = new OsuSkinProvider(folder);
+                if (provider.isValid()) {
                     skins.add(provider);
                 }
             }

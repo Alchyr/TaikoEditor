@@ -1,5 +1,6 @@
 package alchyr.taikoedit.util;
 
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.JsonValue;
@@ -9,11 +10,24 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.osuSafe;
 
 public class GeneralUtils {
+    //Placeholder Generics
+    private static final Consumer nConsumer = (o)->{};
+    public static <T> Consumer<T> noConsumer() {
+        return (Consumer<T>)nConsumer;
+    }
+    private static final Supplier nSupplier = ()->null;
+    public static <T> Supplier<T> nullSupplier() {
+        return (Supplier<T>)nSupplier;
+    }
+    public static final VoidMethod doNothing = ()->{};
+
     public static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuSafe);
     private static final char[] charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789".toCharArray();
 

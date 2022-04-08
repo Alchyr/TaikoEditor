@@ -22,6 +22,7 @@ public class DefaultSkinProvider extends SkinProvider {
     }
 
     private void prepRenderables() {
+        background = assetMaster.get("menu:background");
         hitBase = assetMaster.get("editor:hit");
         hitOverlay = assetMaster.get("editor:overlay");
 
