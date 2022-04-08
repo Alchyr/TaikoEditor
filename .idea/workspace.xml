@@ -5,21 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/BeatmapDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/BeatmapDatabase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/AssetMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/AssetMaster.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/AssetInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/AssetInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/loaders/OsuBackgroundLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/loaders/OsuBackgroundLoader.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/DefaultSkinProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/DefaultSkinProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/OsuSkinProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/OsuSkinProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/SkinProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/SkinProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/Skins.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/Skins.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/GeneralUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/GeneralUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/SystemUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/SystemUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -134,7 +120,7 @@
       <recent name="alchyr.taikoedit.editor.views" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DesktopLauncher">
+  <component name="RunManager" selected="Gradle.TaikoEditor:desktop [dist]">
     <configuration name="DesktopLauncher" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="alchyr.taikoedit.desktop.DesktopLauncher" />
       <module name="TaikoEditor.desktop.main" />
@@ -381,7 +367,14 @@
       <option name="project" value="LOCAL" />
       <updated>1649289285333</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="3.2.2&#10;&#10;cleaning up skin stuff">
+      <created>1649378992518</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1649378992518</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -408,7 +401,8 @@
     <MESSAGE value="don't need this" />
     <MESSAGE value="3.2.0" />
     <MESSAGE value="3.2.1" />
-    <option name="LAST_COMMIT_MESSAGE" value="3.2.1" />
+    <MESSAGE value="3.2.2&#10;&#10;cleaning up skin stuff" />
+    <option name="LAST_COMMIT_MESSAGE" value="3.2.2&#10;&#10;cleaning up skin stuff" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
