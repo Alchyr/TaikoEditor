@@ -136,6 +136,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         textFields.add(hp.setOnEnter((s)->{hp.disable(); return true;}));
         y -= 30;
         hpSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        hpSlider.setValue(map.getFullMapInfo().hp);
         hpSlider.onValueChange(this::setHP);
 
         y -= 50;
@@ -144,6 +145,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         textFields.add(od.setOnEnter((s)->{od.disable(); return true;}));
         y -= 30;
         odSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        odSlider.setValue(map.getFullMapInfo().od);
         odSlider.onValueChange(this::setOD);
 
         processor.bind();

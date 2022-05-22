@@ -162,7 +162,7 @@ public class TimingPoint extends PositionalObject {
         c.a = alpha;
         sb.setColor(c);
 
-        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
+        sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
         c.a = 1;
     }
 
@@ -170,7 +170,7 @@ public class TimingPoint extends PositionalObject {
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
         sb.setColor(selection);
 
-        sb.draw(pix, x + (int) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
+        sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
     }
 
     @Override

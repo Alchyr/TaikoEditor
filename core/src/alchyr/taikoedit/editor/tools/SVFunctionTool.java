@@ -22,6 +22,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 
 import java.util.*;
 
@@ -340,7 +341,7 @@ public class SVFunctionTool extends EditorTool {
 
             if (info.generateLines) {
                 if (info.svObjects) {
-                    for (Map.Entry<Long, ArrayList<HitObject>> stack : map.getSubMap(start, end).entrySet()) {
+                    for (Map.Entry<Long, ArrayList<HitObject>> stack : map.getSubMap(start - 1, end + 1).entrySet()) {
                         if (!info.selectedOnly || stack.getValue().stream().anyMatch((h)->h.selected)) {
                             positions.add(stack.getKey());
                         }
@@ -352,8 +353,9 @@ public class SVFunctionTool extends EditorTool {
                 {
                     for (Snap s : map.getSnaps(1))
                     {
-                        if (s.divisor == 0 && s.pos >= start && s.pos <= end)
+                        if (s.divisor == 0 && s.pos >= start && s.pos <= end) {
                             positions.add(s.pos);
+                        }
                     }
                 }
             }
@@ -420,6 +422,8 @@ public class SVFunctionTool extends EditorTool {
                     //SV is based on the initial timing point. If the timing is different, the sv also must be adjusted.
                     float ratio = (float) (firstTiming.getBPM() / lastTiming.getValue().get(lastTiming.getValue().size() - 1).getBPM());
 
+                    basePos = MathUtils.clamp(basePos, start, end);
+
                     adjust.tempSet((isv + (dsv * info.function.apply((basePos - start) / dist))) * ratio);
                     sv.add(adjust);
                 }
@@ -473,7 +477,9 @@ public class SVFunctionTool extends EditorTool {
                     }
 
                     //Generate an inherited copy of the closest previous timing point
-                    TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos)).inherit();
+                    TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos + info.genOffset)).inherit();
+
+                    pos = MathUtils.clamp(pos, start, end);
 
                     p.setValue((isv + (dsv * info.function.apply((pos - start) / dist))) * ratio);
 

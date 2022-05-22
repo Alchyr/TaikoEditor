@@ -74,7 +74,7 @@ public class GreenLineTool extends EditorTool {
                     previewView = hovered;
                     renderPreview = hold == null;
                     if (closest == null || BindingGroup.alt()) { //Just go to cursor position
-                        placementObject.setPos(Math.floor(time));
+                        placementObject.setPos(Math.round(time));
                     }
                     else { //Snap to closest snap
                         placementObject.setPos(closest.pos);

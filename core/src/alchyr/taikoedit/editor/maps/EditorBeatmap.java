@@ -1196,7 +1196,7 @@ public class EditorBeatmap {
                 }
                 else {
                     if (removed) { //removed a kiai start
-                        throw new Error("Removal of kiai start caused kiai end map entry generation");
+                        editorLogger.error("Removal of kiai start caused kiai end map entry generation");
                     }
                     kiaiMap.put(cap, false);
                 }
@@ -1231,7 +1231,7 @@ public class EditorBeatmap {
                 if (kiaiEntry == null) {
                     //no higher swap and none of the lines after this have the opposite value.
                     if (!p.kiai) {
-                        throw new Error("Unexpected non-kiai line caused kiai map entry generation");
+                        editorLogger.error("Unexpected non-kiai line caused kiai map entry generation");
                     }
                     kiaiMap.put(cap, false); // +1 +1 = +2
                 }
@@ -1469,9 +1469,6 @@ public class EditorBeatmap {
         double svRate = 1.4, currentBPM = 120;
         int volume = 100;
 
-        //Kiai stuff
-        boolean kiai = false;
-
         TimingPoint temp;
 
         //-1 Header
@@ -1566,10 +1563,10 @@ public class EditorBeatmap {
                                     fullMapInfo.countdown = line.substring(10).trim().equals("1");
                                     break;
                                 case "SampleSet":
-                                    fullMapInfo.sampleSet = line.substring(10);
+                                    fullMapInfo.sampleSet = line.substring(10).trim();
                                     break;
                                 case "StackLeniency":
-                                    fullMapInfo.stackLeniency = line.substring(14);
+                                    fullMapInfo.stackLeniency = line.substring(14).trim();
                                     break;
                                 case "LetterboxInBreaks":
                                     fullMapInfo.letterboxInBreaks = line.substring(18).trim().equals("1");
@@ -1592,16 +1589,16 @@ public class EditorBeatmap {
                                     }
                                     break;
                                 case "DistanceSpacing":
-                                    fullMapInfo.distanceSpacing = line.substring(16);
+                                    fullMapInfo.distanceSpacing = line.substring(16).trim();
                                     break;
                                 case "BeatDivisor":
                                     fullMapInfo.beatDivisor = Integer.parseInt(line.substring(12).trim());
                                     break;
                                 case "GridSize":
-                                    fullMapInfo.gridSize = line.substring(9);
+                                    fullMapInfo.gridSize = line.substring(9).trim();
                                     break;
                                 case "TimelineZoom":
-                                    fullMapInfo.timelineZoom = line.substring(13);
+                                    fullMapInfo.timelineZoom = line.substring(13).trim();
                                     break;
                             }
                         }
@@ -1736,8 +1733,6 @@ public class EditorBeatmap {
                             volume = timingVolume = temp.volume;
                             lastTimingPos = nextTiming.getKey();
                             svRate = fullMapInfo.sliderMultiplier; //return to base sv
-                            if (kiai != temp.kiai)
-                                kiaiMap.put(lastTimingPos, kiai = temp.kiai);
 
                             if (timing.hasNext())
                                 nextTiming = timing.next();
@@ -1752,8 +1747,6 @@ public class EditorBeatmap {
                             lastEffectPos = nextEffect.getKey();
                             svRate = fullMapInfo.sliderMultiplier * temp.value;
                             volume = temp.volume;
-                            if (kiai != temp.kiai)
-                                kiaiMap.put(lastEffectPos, kiai = temp.kiai);
 
                             if (effect.hasNext())
                                 nextEffect = effect.next();
@@ -1783,6 +1776,14 @@ public class EditorBeatmap {
             volumeMap.put(Long.MAX_VALUE, 60);
         allPoints.addAll(timingPoints);
         allPoints.addAll(effectPoints);
+
+        boolean kiai = false, nextKiai;
+        for (Map.Entry<Long, ArrayList<TimingPoint>> stack : allPoints.entrySet()) {
+            nextKiai = stack.getValue().get(stack.getValue().size() - 1).kiai;
+            if (nextKiai != kiai) {
+                kiaiMap.put(stack.getKey(), kiai = nextKiai);
+            }
+        }
 
         sortBreaks();
         autoBreaks = testBreaks();

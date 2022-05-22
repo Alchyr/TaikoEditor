@@ -478,7 +478,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
     }
     public int getDisplayOffset()
     {
-        return (music instanceof PreloadedMp3) ? (int) ((activeOffset - BASE_OFFSET) * 1000) : (int) ((activeOffset - oggOffset) * 1000);
+        return (music instanceof PreloadedMp3) ? Math.round((activeOffset - BASE_OFFSET) * 1000) : Math.round((activeOffset - oggOffset) * 1000);
     }
 
     @Override

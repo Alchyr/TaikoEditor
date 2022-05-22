@@ -32,12 +32,14 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     public static class SvFunctionProperties {
         public final double isv, fsv;
         public final boolean generateLines, svObjects, selectedOnly, svBarlines, adjustExisting, basedOnFollowingObject, relativeLast;
+        public final int genOffset;
         public final Function<Double, Double> function;
 
-        public SvFunctionProperties(double isv, double fsv, boolean generateLines, boolean svObjects, boolean selectedOnly, boolean svBarlines, boolean adjustExisting, boolean basedOnFollowingObject, boolean relativeLast, Function<Double, Double> func) {
+        public SvFunctionProperties(double isv, double fsv, boolean generateLines, int genOffset, boolean svObjects, boolean selectedOnly, boolean svBarlines, boolean adjustExisting, boolean basedOnFollowingObject, boolean relativeLast, Function<Double, Double> func) {
             this.isv = isv;
             this.fsv = fsv;
             this.generateLines = generateLines;
+            this.genOffset = genOffset;
             this.svObjects = svObjects;
             this.selectedOnly = selectedOnly;
             this.svBarlines = svBarlines;
@@ -73,6 +75,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private final TextField finalSv;
 
     private final ToggleButton generateLines;
+    private final TextField genOffset;
     private final ToggleButton svObjects;
     private final ToggleButton selectedOnly;
     private final ToggleButton svBarlines;
@@ -107,6 +110,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         final double p = exp;
         return (y -> Math.pow(x.apply(y), p));
     }
+    private static Function<Double, Double> cos = x -> (Math.cos((x + 1) * Math.PI) + 1) / 2.0; //slow -> fast -> slow
     private static Function<Double, Double> cosIn = x -> Math.cos(x * Math.PI / 2.0 + 1.5 * Math.PI); //fast at start, slow at end
     private static Function<Double, Double> cosOut = x -> (Math.cos(x * Math.PI / 2.0 + Math.PI) + 1); //slow at start, fast at end
 
@@ -114,8 +118,9 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         formulas.add(new Pair<>(linear, "Linear"));
         formulas.add(new Pair<>(exp_3, "Exp 1.3"));
         formulas.add(new Pair<>(exp_6, "Exp 1.6"));
-        formulas.add(new Pair<>(cosIn, "Sin In"));
-        formulas.add(new Pair<>(cosOut, "Sin Out"));
+        formulas.add(new Pair<>(cos, "Sine")); //Maybe I should have named this differently, but they're called sine waves, not cos waves.
+        formulas.add(new Pair<>(cosIn, "Sine In"));
+        formulas.add(new Pair<>(cosOut, "Sine Out"));
 
         TaikoEditor.onMain(()->{
             for (Pair<Function<Double, Double>, String> formula : formulas) {
@@ -177,10 +182,11 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
 
         DecimalFormat df = new DecimalFormat("0.0###", osuSafe);
-        initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4f, 250f, "Initial SV:", df.format(isv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
-        finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 3f, 250f, "Final SV:", df.format(fsv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
+        initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 5f, 250f, "Initial SV:", df.format(isv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
+        finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4f, 250f, "Final SV:", df.format(fsv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
 
-        generateLines  = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 1.5f, "Generate Lines", assetMaster.getFont("aller medium"), true);
+        generateLines = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 2.5f, "Generate Lines", assetMaster.getFont("aller medium"), true);
+        genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1.5f, 250f - SHIFT_STEP, "Position Offset:", "-1", 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
         svObjects = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 0.5f, "Objects", assetMaster.getFont("aller medium"), true);
         selectedOnly = new ToggleButton(LEFT_POS + (SHIFT_STEP * 2), middleY - BUTTON_OFFSET * 0.5f, "Selected Objects Only", assetMaster.getFont("aller medium"), false);
         svBarlines = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY - BUTTON_OFFSET * 1.5f, "Barlines", assetMaster.getFont("aller medium"), true);
@@ -255,6 +261,10 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private void cycleInput() {
         if (initialSv.isActive()) {
             initialSv.disable();
+            genOffset.activate(processor);
+        }
+        else if (genOffset.isActive()) {
+            genOffset.disable();
             finalSv.activate(processor);
         }
         else if (finalSv.isActive()) {
@@ -274,6 +284,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         finalSv.update(elapsed);
 
         generateLines.update(elapsed);
+        genOffset.update(elapsed);
         svObjects.update(elapsed);
         selectedOnly.update(elapsed);
         svBarlines.update(elapsed);
@@ -327,6 +338,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         finalSv.render(sb, sr);
 
         generateLines.render(sb, sr);
+        genOffset.render(sb, sr);
         svObjects.render(sb, sr);
         selectedOnly.render(sb, sr);
         svBarlines.render(sb, sr);
@@ -375,8 +387,11 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     {
         initialSv.disable();
         finalSv.disable();
+        genOffset.disable();
 
         boolean success = true;
+        int offset = 0;
+
         try {
             double testIsv = Double.parseDouble(initialSv.text);
             double testFsv = Double.parseDouble(finalSv.text);
@@ -394,12 +409,23 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
                 fsv = testFsv;
             }
         }
-        catch (Exception e) {
+        catch (NumberFormatException e) {
             success = false;
             textOverlay.setText("Failed to parse SV value.", 3.0f);
         }
+
+        if (generateLines.enabled) {
+            try {
+                offset = Integer.parseInt(genOffset.text);
+            }
+            catch (NumberFormatException e) {
+                success = false;
+                textOverlay.setText("Failed to parse offset value.", 3.0f);
+            }
+        }
+
         if (success) {
-            result = new SvFunctionProperties(isv, fsv, generateLines.enabled, svObjects.enabled, selectedOnly.enabled, svBarlines.enabled, adjustExisting.enabled, basedOnObjects.enabled, relativeLast.enabled, formulas.get(formulaButtons.indexOf(selectedFormula)).a);
+            result = new SvFunctionProperties(isv, fsv, generateLines.enabled, offset, svObjects.enabled, selectedOnly.enabled, svBarlines.enabled, adjustExisting.enabled, basedOnObjects.enabled, relativeLast.enabled, formulas.get(formulaButtons.indexOf(selectedFormula)).a);
             active = false;
             close();
         }
@@ -439,8 +465,9 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
             bindings.addMouseBind((x, y, b)->(b == 0) || (b == 1),
                     (p, b) -> {
                         sourceLayer.initialSv.click(p.x, p.y, this);
+                        sourceLayer.finalSv.click(p.x, p.y, this);
 
-                        if (sourceLayer.finalSv.click(p.x, p.y, this))
+                        if (sourceLayer.genOffset.click(p.x, p.y, this))
                             return null;
 
                         if (sourceLayer.generateLines.click(p.x, p.y, b))
@@ -474,7 +501,8 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         @Override
         public boolean keyTyped(char character) {
             super.keyTyped(character);
-            sourceLayer.updateSv = true;
+            if (sourceLayer.initialSv.isActive() || sourceLayer.finalSv.isActive())
+                sourceLayer.updateSv = true;
             return true;
         }
     }

@@ -667,7 +667,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
                             (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
                     renderLabel(sb, twoDecimal.format(1),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
                     bpmLabelSpacing = LABEL_SPACING;
                     svLabelSpacing = LABEL_SPACING;
                 }
@@ -757,7 +757,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
                             (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
                     renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
                     svLabelSpacing = LABEL_SPACING;
                     bpmLabelSpacing = LABEL_SPACING;
                 }
@@ -895,7 +895,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
                             (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
                     renderLabel(sb, volume.format(timing.volume),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
                     bpmLabelSpacing = LABEL_SPACING;
                     volumeLabelSpacing = LABEL_SPACING;
                 }
@@ -985,7 +985,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
                             (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
                     renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
                     volumeLabelSpacing = LABEL_SPACING;
                     bpmLabelSpacing = LABEL_SPACING;
                 }

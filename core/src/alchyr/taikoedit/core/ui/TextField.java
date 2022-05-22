@@ -108,11 +108,13 @@ public class TextField implements UIElement, TextInputReceiver {
         switch (type) {
             case INTEGER:
                 return (c == 8) ||
-                        (c >= '0' && c <= '9');
+                        (c >= '0' && c <= '9') ||
+                        (c == '-' && text.isEmpty());
             case NUMERIC:
                 return (c == 8) ||
                         (c >= '0' && c <= '9') ||
-                        ((c == ',' || c == '.') && GeneralUtils.charCount(text, '.') < 1);
+                        ((c == ',' || c == '.') && GeneralUtils.charCount(text, '.') < 1) ||
+                        (c == '-' && text.isEmpty());
             default:
                 return true;
         }
@@ -262,10 +264,12 @@ public class TextField implements UIElement, TextInputReceiver {
                     return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
                             (key >= Input.Keys.NUMPAD_0 && key <= Input.Keys.NUMPAD_9) ||
                             key == Input.Keys.PERIOD || key == Input.Keys.COMMA ||
+                            key == Input.Keys.MINUS ||
                             key == Input.Keys.BACKSPACE;
                 case INTEGER:
                     return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
                             (key >= Input.Keys.NUMPAD_0 && key <= Input.Keys.NUMPAD_9) ||
+                            key == Input.Keys.MINUS ||
                             key == Input.Keys.BACKSPACE;
                 default:
                     return (key >= Input.Keys.NUM_0 && key <= Input.Keys.NUM_9) ||
