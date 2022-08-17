@@ -54,9 +54,10 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
     private final TextField od;
     private final Slider odSlider;
 
-    //left
-    private boolean changedMetadata = false;
-    //private final TextField artist, romanizedArtist, title, romanizedTitle, source, tags;
+    //left (excluded fields can contain non-english characters which are Not Supported)
+    /*private final TextField romanizedArtist;
+    private final TextField romanizedTitle;
+    private final TextField tags;*/
 
     private final Button cancelButton;
     private final Button saveButton;
@@ -98,27 +99,27 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         labels.add(new Label(leftCenter, y, big, "Mapset", Label.LabelAlign.CENTER));
 
         y -= 60;
-        labels.add(new Label(leftX, y, font, "(Not yet available.)", Label.LabelAlign.LEFT_CENTER));
-        /*artist = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Artist:", map.getFullMapInfo().artistUnicode, METADATA_LIMIT, font).setOnEndInput((s, f)->changedMetadata = true);
-        textFields.add(artist.setOnEnter((s)->{artist.disable(); return true; }));
+        //labels.add(new Label(leftX, y, font, "(Not yet available.)", Label.LabelAlign.LEFT_CENTER));
+        //artist = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Artist:", map.getFullMapInfo().artistUnicode, METADATA_LIMIT, font).setOnEndInput((s, f)->changedMetadata = true);
+        //textFields.add(artist.setOnEnter((s)->{artist.disable(); return true; }));
 
-        y -= 40;
-        romanizedArtist = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Romanized Artist:", map.getFullMapInfo().artist, METADATA_LIMIT, font);
-        textFields.add(romanizedArtist.setOnEnter((s)->{romanizedArtist.disable(); return true; }));
+        //y -= 40;
+        /*romanizedArtist = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Romanized Artist:", map.getFullMapInfo().artist, METADATA_LIMIT, font);
+        textFields.add(romanizedArtist.setOnEnter((s)->{romanizedArtist.disable(); return true; }));*/
 
-        y -= 40;
-        title = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Title:", map.getFullMapInfo().titleUnicode, METADATA_LIMIT, font);
-        textFields.add(title.setOnEnter((s)->{title.disable(); return true; }));
+        //y -= 40;
+        //title = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Title:", map.getFullMapInfo().titleUnicode, METADATA_LIMIT, font);
+        //textFields.add(title.setOnEnter((s)->{title.disable(); return true; }));
 
-        y -= 40;
+        /*y -= 40;
         romanizedTitle = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Romanized Title:", map.getFullMapInfo().title, METADATA_LIMIT, font);
-        textFields.add(romanizedTitle.setOnEnter((s)->{romanizedTitle.disable(); return true; }));
+        textFields.add(romanizedTitle.setOnEnter((s)->{romanizedTitle.disable(); return true; }));*/
 
-        y -= 40;
-        source = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Source:", map.getFullMapInfo().source, METADATA_LIMIT, font);
-        textFields.add(source.setOnEnter((s)->{source.disable(); return true; }));
+        //y -= 40;
+        //source = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Source:", map.getFullMapInfo().source, METADATA_LIMIT, font);
+        //textFields.add(source.setOnEnter((s)->{source.disable(); return true; }));
 
-        y -= 40;
+        /*y -= 40;
         tags = new TextField(leftX, y, SettingsMaster.getWidth() - leftX, "Tags:", map.getFullMapInfo().tagText(), METADATA_LIMIT, font);
         textFields.add(tags.setOnEnter((s)->{tags.disable(); return true; }));*/
 
@@ -154,6 +155,13 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
     private void save()
     {
         try {
+            /*if (!romanizedTitle.text.equals(map.getFullMapInfo().title) ||
+                    !romanizedArtist.text.equals(map.getFullMapInfo().artist) ||
+                    !tags.text.equals(map.getFullMapInfo().tagText())) {
+
+            }*/
+
+
             if (diffName.text.isEmpty()) {
                 textOverlay.setText("Please enter a difficulty name.", 2.0f);
                 return;

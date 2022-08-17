@@ -70,6 +70,8 @@ public class Deletion extends MapChange {
                     break;
             }
         }
+
+        map.gameplayChanged();
         return this;
     }
     @Override
@@ -102,6 +104,8 @@ public class Deletion extends MapChange {
                     break;
             }
         }
+
+        map.gameplayChanged();
         return this;
     }
 }

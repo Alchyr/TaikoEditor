@@ -5,15 +5,13 @@ import alchyr.taikoedit.audio.mp3.PreloadedMp3;
 import alchyr.taikoedit.audio.ogg.PreloadOgg;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
-import alchyr.taikoedit.core.layers.EditorLayer;
-import alchyr.taikoedit.core.layers.FastMenuLayer;
-import alchyr.taikoedit.core.layers.EditorLoadingLayer;
-import alchyr.taikoedit.core.layers.MenuLayer;
+import alchyr.taikoedit.core.layers.*;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.CursorHoverText;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.*;
+import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.util.RunningAverage;
 import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.TextRenderer;
@@ -24,16 +22,19 @@ import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.OnionExtension;
+import com.badlogic.gdx.backends.lwjgl3.audio.DeviceSwapping;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,10 +43,11 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 322; //x.x.x -> xxx
+    public static final int VERSION = 327; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 
@@ -190,6 +192,8 @@ public class TaikoEditor extends ApplicationAdapter {
         if (directOpen != null) {
             //Check if valid. If it isn't, error message and end.
             if (!open(directOpen)) {
+                editorLogger.error("Map not found: " + directOpen);
+                fileError("Map not found: " + directOpen, "failure");
                 end();
                 return;
             }
@@ -226,6 +230,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
                     lastTime = time;
 
+                    DeviceSwapping.updateActiveDevice(time - lastTime);
                     ++updateCount;
                 }
             } catch (Exception e) {
@@ -233,6 +238,38 @@ public class TaikoEditor extends ApplicationAdapter {
 
                 while (layerLock.getHoldCount() > 0)
                     layerLock.unlock();
+
+                try {
+                    File f = new File("error.txt");
+                    PrintWriter pWriter = null;
+
+                    try {
+                        pWriter = new PrintWriter(f);
+                        pWriter.println("Error occurred during update:");
+                        e.printStackTrace(pWriter);
+
+                        if (EditorLayer.activeEditor != null) {
+                            pWriter.println();
+                            pWriter.println("Active editor detected. Attempting to save data.");
+                            try {
+                                if (EditorLayer.activeEditor.saveAll()) {
+                                    pWriter.println("Successfully saved data.");
+                                }
+                            }
+                            catch (Exception ignored) { }
+                            EditorLayer.activeEditor = null;
+                        }
+                    }
+                    catch (Exception ex) {
+                        Thread.sleep(1500);
+                    }
+                    finally {
+                        StreamUtils.closeQuietly(pWriter);
+                    }
+                }
+                catch (Exception ignored) {
+
+                }
             }
 
             try {
@@ -553,10 +590,41 @@ public class TaikoEditor extends ApplicationAdapter {
                 }
                 EditorLayer edit = new EditorLayer(null, set, initial); //no source, will close on exit
                 ProgramLayer loader = edit.getLoader();
-                addLayer(new EditorLoadingLayer()
-                        .loadLists("ui", "font", "background", "menu", "hitsound")
+                addLayer(new LoadingLayer()
+                        .loadLists("base")
                         .addLayers(true,
-                                new EditorLoadingLayer().addLayers(true, loader).addTask(TaikoEditor::initialize)));
+                                new EditorLoadingLayer()
+                                        .loadLists("ui", "font", "background", "menu", "editor", "hitsound")
+                                        .addTask(Skins::load)
+                                        .addCallback(TaikoEditor::initialize)
+                                        .addLayers(true,
+                                                ()->{
+                                                    if (currentSkin == null) {
+                                                        return new ProgramLayer[] { loader };
+                                                    }
+                                                    else {
+                                                        LoadingLayer skinLoader = currentSkin.getLoader(loader);
+                                                        if (skinLoader != null) {
+                                                            return new ProgramLayer[] { skinLoader };
+                                                        }
+                                                        else {
+                                                            return new ProgramLayer[] { loader };
+                                                        }
+                                                    }
+                                                }
+                                        )
+                        )
+                );
+                music.loadAsync(set.getSongFile(), (thread)->{
+                    if (thread.success()) {
+                        music.play();
+                        music.pause();
+                    }
+                    else {
+                        end();
+                        fileError("Failed to load music for set.", "error");
+                    }
+                });
                 return true;
             }
         }
@@ -588,5 +656,27 @@ public class TaikoEditor extends ApplicationAdapter {
     public void resume() {
         super.resume();
         paused = false;
+    }
+
+    private static void fileError(String msg, String filename) {
+        try {
+            File f = new File(filename + ".txt");
+            PrintWriter pWriter = null;
+
+            try {
+                pWriter = new PrintWriter(f);
+                pWriter.println("Error occurred:");
+                pWriter.println(msg);
+            }
+            catch (Exception ignored) {
+
+            }
+            finally {
+                StreamUtils.closeQuietly(pWriter);
+            }
+        }
+        catch (Exception ignored) {
+
+        }
     }
 }

@@ -163,7 +163,7 @@ public class GreenLineTool extends EditorTool {
         }
 
 
-        TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy((long) time)).inherit();
+        TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy(time)).inherit();
         if (BindingGroup.shift()) {
             p.kiai = !p.kiai;
         }

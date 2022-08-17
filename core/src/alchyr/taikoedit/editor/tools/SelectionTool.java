@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.tools;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.InputBinding;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
@@ -38,6 +39,8 @@ public class SelectionTool extends EditorTool {
     private static final Color selectionColor = new Color(0.8f, 0.8f, 0.8f, 0.35f);
 
     private static SelectionTool tool;
+
+    public static volatile boolean seeked = false; //Prevents seeking while dragging during playback more than once per frame
 
     ///Extra features - changing cursor based on hover?
     public boolean effectMode = true; //true = sv, false = volume
@@ -96,7 +99,7 @@ public class SelectionTool extends EditorTool {
 
     @Override
     public boolean consumesRightClick() {
-        return true;
+        return mode != SelectionToolMode.NONE;
     }
 
     //First check -> clicking on an object? If ctrl is held and it's selected, deselect it. Otherwise, select it.
@@ -360,11 +363,11 @@ public class SelectionTool extends EditorTool {
 
     @Override
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
-
     }
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
+        seeked = false;
         if (selectingView != null)
         {
             if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL) //Render selection effect on objects you are dragging over before they're actually selected
@@ -443,13 +446,24 @@ public class SelectionTool extends EditorTool {
         public void update(float elapsed) {
             if (mode == SelectionToolMode.SELECTING)
             {
+                float mul = BindingGroup.alt() ? 4 : 1;
                 if (Gdx.input.getX() <= 1)
                 {
-                    music.seekSecond(music.getSecondTime() - (music.isPlaying() ? 0.2 : elapsed * 6));
+                    if (music.isPlaying()) {
+                        TaikoEditor.onMain(()->{
+                            if (!seeked) {
+                                seeked = true;
+                                music.seekSecond(music.getSecondTime() - mul * Math.max(0.1, Gdx.graphics.getDeltaTime() * 12));
+                            }
+                        });
+                    }
+                    else {
+                        music.seekSecond(music.getSecondTime() - mul * elapsed * 6);
+                    }
                 }
                 else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                 {
-                    music.seekSecond(music.getSecondTime() + (music.isPlaying() ? 0.2 : elapsed * 6));
+                    music.seekSecond(music.getSecondTime() + mul * elapsed * 6);
                 }
             }
         }
@@ -516,11 +530,22 @@ public class SelectionTool extends EditorTool {
                     if (dragMode == DragMode.HORIZONTAL) {
                         if (Gdx.input.getX() <= 1)
                         {
-                            music.seekSecond(music.getSecondTime() - elapsed * 2);
+                            float mul = BindingGroup.alt() ? 4 : 1;
+                            if (music.isPlaying()) {
+                                TaikoEditor.onMain(()->{
+                                    if (!seeked) {
+                                        seeked = true;
+                                        music.seekSecond(music.getSecondTime() - mul * Math.max(0.15, Gdx.graphics.getDeltaTime() * 10));
+                                    }
+                                });
+                            }
+                            else {
+                                music.seekSecond(music.getSecondTime() - mul * elapsed * 2);
+                            }
                         }
                         else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                         {
-                            music.seekSecond(music.getSecondTime() + elapsed * 2);
+                            music.seekSecond(music.getSecondTime() + (music.isPlaying() ? elapsed * 8 : elapsed * 2) * (BindingGroup.alt() ? 4 : 1));
                         }
                     }
                 }
@@ -604,11 +629,22 @@ public class SelectionTool extends EditorTool {
                     //Should move slower than normal selection.
                     if (Gdx.input.getX() <= 1)
                     {
-                        music.seekSecond(music.getSecondTime() - elapsed * 2);
+                        float mul = BindingGroup.alt() ? 4 : 1;
+                        if (music.isPlaying()) {
+                            TaikoEditor.onMain(()->{
+                                if (!seeked) {
+                                    seeked = true;
+                                    music.seekSecond(music.getSecondTime() - mul * Math.max(0.15, Gdx.graphics.getDeltaTime() * 10));
+                                }
+                            });
+                        }
+                        else {
+                            music.seekSecond(music.getSecondTime() - mul * elapsed * 2);
+                        }
                     }
                     else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                     {
-                        music.seekSecond(music.getSecondTime() + elapsed * 2);
+                        music.seekSecond(music.getSecondTime() + (music.isPlaying() ? elapsed * 8 : elapsed * 2) * (BindingGroup.alt() ? 4 : 1));
                     }
                 }
             }

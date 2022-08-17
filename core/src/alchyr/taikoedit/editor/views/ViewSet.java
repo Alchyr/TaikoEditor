@@ -52,12 +52,12 @@ public class ViewSet {
         difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
     }
 
-    public void update(double exactPos, long pos, float elapsed, boolean isPlaying)
+    public void update(double exactPos, long pos, float elapsed, boolean isPlaying, boolean canHover)
     {
         prep(pos);
         for (MapView view : views)
         {
-            view.update(exactPos, pos, elapsed);
+            view.update(exactPos, pos, elapsed, canHover);
             view.primaryUpdate(isPlaying);
         }
     }
@@ -204,11 +204,12 @@ public class ViewSet {
 
             organizedViews.get(toAdd.type).add(toAdd);
 
-            switch (toAdd.type) //Bind to certain hooks
-            {
-                case EFFECT_VIEW:
-                    map.bindEffectView((EffectView) toAdd);
-                    break;
+            //Causes updates to occur on map changes
+            if (toAdd instanceof EffectView) {
+                map.bindEffectView((EffectView) toAdd);
+            }
+            else if (toAdd instanceof GameplayView) {
+                map.bindGameplayView((GameplayView) toAdd);
             }
         }
         else
@@ -233,11 +234,11 @@ public class ViewSet {
             }
         }
 
-        switch (toRemove.type)
-        {
-            case EFFECT_VIEW:
-                map.removeEffectView((EffectView) toRemove);
-                break;
+        if (toRemove instanceof EffectView) {
+            map.removeEffectView((EffectView) toRemove);
+        }
+        else if (toRemove instanceof GameplayView) {
+            map.removeGameplayView((GameplayView) toRemove);
         }
     }
 

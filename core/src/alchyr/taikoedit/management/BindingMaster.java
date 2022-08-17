@@ -59,6 +59,7 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Reverse", new InputBinding.InputInfo(Input.Keys.G, true)));
         creating.addBinding(InputBinding.create("ClearSelect", new InputBinding.InputInfo(Input.Keys.GRAVE)));
         creating.addBinding(InputBinding.create("Bookmark", new InputBinding.InputInfo(Input.Keys.B, true)));
+        creating.addBinding(InputBinding.create("RemoveBookmark", new InputBinding.InputInfo(Input.Keys.B, false, false, true)));
         creating.addBinding(InputBinding.create("OpenView", new InputBinding.InputInfo(Input.Keys.N, true)));
         creating.addBinding(InputBinding.create("Save", new InputBinding.InputInfo(Input.Keys.S, true)));
         creating.addBinding(InputBinding.create("SaveAll", new InputBinding.InputInfo(Input.Keys.S, true, false, true)));

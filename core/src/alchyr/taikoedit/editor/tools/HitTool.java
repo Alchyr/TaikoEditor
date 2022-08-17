@@ -86,7 +86,7 @@ public class HitTool extends EditorTool {
                     {
                         previewView = hovered;
                         renderPreview = true;
-                        placementObject.setPos((long) closest.pos);
+                        placementObject.setPos(closest.pos);
                     }
                 }
                 return;

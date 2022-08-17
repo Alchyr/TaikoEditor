@@ -86,7 +86,7 @@ public class Mapset {
         if (width < limit)
             return artist;
 
-        int len = artist.length() - 3;
+        int len = Math.max(0, artist.length() - 3);
 
         do
         {
@@ -112,7 +112,7 @@ public class Mapset {
         if (width < limit)
             return title;
 
-        int len = title.length() - 2;
+        int len = Math.max(0, title.length() - 2);
 
         do
         {
@@ -139,7 +139,7 @@ public class Mapset {
             return creator;
 
 
-        int len = creator.length() - 3;
+        int len = Math.max(0, creator.length() - 3);
 
         do
         {
@@ -167,7 +167,7 @@ public class Mapset {
         if (width < limit)
             return songMeta;
 
-        int len = title.length() - 3;
+        int len = Math.max(0, title.length() - 3);
 
         do
         {
@@ -183,7 +183,7 @@ public class Mapset {
         if (len == 0) { //could not get short enough by just shortening title
             float artistLimit = limit * 0.4f, titleLimit = limit - artistLimit;
 
-            len = artist.length() - 3;
+            len = Math.max(0, artist.length() - 3);
             do
             {
                 while (len > 0 && artist.charAt(len - 1) == ' ')
@@ -195,10 +195,10 @@ public class Mapset {
                 --len;
             } while (width >= artistLimit && len > 0);
 
-            int titleLen = title.length() - 3;
+            int titleLen = Math.max(0, title.length() - 3);
             do
             {
-                while (titleLen > 0 && title.charAt(len - 1) == ' ')
+                while (titleLen > 0 && title.charAt(titleLen - 1) == ' ')
                     --titleLen;
 
                 songMeta = title.substring(0, titleLen) + "...";

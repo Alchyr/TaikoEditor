@@ -213,6 +213,7 @@ public abstract class CustomAudio extends OpenALMusic {
             if (wasPlaying) {
                 alSourcePlay(sourceID);
                 isPlaying = true;
+                snapOffset = 0;
 
                 //update = true;
             }
@@ -220,14 +221,14 @@ public abstract class CustomAudio extends OpenALMusic {
     }
 
     @Override
-    protected void setup (int channels, int sampleRate) {
+    protected void setup(int channels, int sampleRate) {
         this.format = channels > 1 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
         this.sampleRate = sampleRate;
         maxSecondsPerBuffer = (float)bufferSize / (bytesPerSample * channels * sampleRate);
     }
 
     @Override
-    public void play () {
+    public void play() {
         if (hasNoDevice) return;
         if (sourceID == -1) {
             if (!initialize(0))
@@ -366,9 +367,13 @@ public abstract class CustomAudio extends OpenALMusic {
         float currentBufferSeconds = maxSecondsPerBuffer * (float)length / (float)bufferSize; //Calculate the number of seconds this buffer has IGNORING tempo
         renderedSecondsQueue.insert(0, previousLoadedSeconds + currentBufferSeconds); //When this buffer is removed in update, time will be updated to the new calculated value.
 
-        tempBuffer.put(tempBytes, 0, length).flip();
-
-        alBufferData(bufferID, format, tempBuffer, (int) (sampleRate * tempo));
+        if (length > tempBuffer.remaining()) {
+            TaikoEditor.editorLogger.error("temp audio buffer not enough space. Needed: " + length + " Remaining: " + tempBuffer.remaining());
+        }
+        else {
+            tempBuffer.put(tempBytes, 0, length).flip();
+            alBufferData(bufferID, format, tempBuffer, (int) (sampleRate * tempo));
+        }
 
         return true;
     }

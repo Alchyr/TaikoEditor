@@ -135,8 +135,8 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void update(double exactPos, long msPos, float elapsed) {
-        super.update(exactPos, msPos, elapsed);
+    public void update(double exactPos, long msPos, float elapsed, boolean canHover) {
+        super.update(exactPos, msPos, elapsed, canHover);
         activeSnaps = map.getActiveSnaps(preciseTime - EditorLayer.viewTime, preciseTime + EditorLayer.viewTime);
 
         blipTimer -= elapsed;
@@ -166,7 +166,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     public void primaryUpdate(boolean isPlaying) {
         if (isPrimary && isPlaying && lastSounded < time && parent.getViewSet(map).contains((o)->o.type == ViewType.OBJECT_VIEW)) //might have skipped backwards
         {
-            for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, time, true).values())
+            for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
                 for (HitObject o : objects)
                 {
@@ -1571,7 +1571,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     private static final Toolset svToolset = new Toolset(SelectionTool.get(), GreenLineTool.get(), SVFunctionTool.get(), KiaiTool.get());
-    private static final Toolset volumeToolset = new Toolset(SelectionTool.get(), GreenLineTool.get(), KiaiTool.get());
+    private static final Toolset volumeToolset = new Toolset(SelectionTool.get(), GreenLineTool.get(), VolumeFunctionTool.get(), KiaiTool.get());
     public Toolset getToolset()
     {
         return mode ? svToolset : volumeToolset;

@@ -58,6 +58,8 @@ public class Movement extends MapChange {
         }
         movedObjects.clear();
         movedObjects.putAll(moved);
+
+        map.gameplayChanged();
         return this;
     }
     @Override
@@ -95,6 +97,8 @@ public class Movement extends MapChange {
         }
         movedObjects.clear();
         movedObjects.putAll(moved);
+
+        map.gameplayChanged();
         return this;
     }
 
@@ -156,6 +160,8 @@ public class Movement extends MapChange {
                 map.updateEffectPoints(movedObjects.entrySet(), moved.entrySet());
                 break;
         }
+
+        map.gameplayChanged();
         return this;
     }
 }

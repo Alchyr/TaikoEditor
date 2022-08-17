@@ -130,7 +130,7 @@ public class BeatDivisors {
             {
                 if (existingDivisor != divisor && existingDivisor % divisor == 0) //The newly generated divisor is a sub-set of this existing set. Re-generate it.
                 {
-                    generateSnappings(existingDivisor);
+                    generateSnappings(existingDivisor); //The snappings in this re-generated set will have some of them replaced with the sub-set's snappings.
                 }
             }
         }

@@ -35,7 +35,10 @@ public class ValueSetChange extends MapChange {
                 o.setValue(originalValues.get(o));
             }
         }
+
         map.updateSv();
+        map.gameplayChanged();
+
         return this;
     }
     @Override
@@ -46,7 +49,10 @@ public class ValueSetChange extends MapChange {
                 o.setValue(newValue);
             }
         }
+
         map.updateSv();
+        map.gameplayChanged();
+
         return this;
     }
 }

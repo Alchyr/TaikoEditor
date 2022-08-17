@@ -73,6 +73,7 @@ public class Reverse extends MapChange {
                 break;
         }
 
+        map.gameplayChanged();
         return this;
     }
 
@@ -143,6 +144,7 @@ public class Reverse extends MapChange {
                 break;
         }
 
+        map.gameplayChanged();
         return this;
     }
 }

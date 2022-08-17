@@ -20,7 +20,7 @@ public class Page extends TextInputProcessor implements Scrollable {
 
     private final List<Label> labels = new ArrayList<>();
     private final List<Button> buttons = new ArrayList<>();
-    private final List<Dropdown<?>> dropdowns = new ArrayList<>();
+    private final List<DropdownBox<?>> dropdownBoxes = new ArrayList<>();
     private final List<TextField> textFields = new ArrayList<>();
     private final List<UIElement> general = new ArrayList<>();
 
@@ -39,7 +39,7 @@ public class Page extends TextInputProcessor implements Scrollable {
     public void hidden() {
         for (TextField f : textFields)
             f.disable();
-        for (Dropdown<?> d : dropdowns)
+        for (DropdownBox<?> d : dropdownBoxes)
             d.cancel();
     }
 
@@ -74,8 +74,8 @@ public class Page extends TextInputProcessor implements Scrollable {
         buttons.add(b);
         return b;
     }
-    public <T> Dropdown<T> add(Dropdown<T> d) {
-        dropdowns.add(d);
+    public <T> DropdownBox<T> add(DropdownBox<T> d) {
+        dropdownBoxes.add(d);
         return d;
     }
     public UIElement addUIElement(UIElement thing) {
@@ -98,7 +98,7 @@ public class Page extends TextInputProcessor implements Scrollable {
     public void update(float elapsed) {
         super.update(elapsed);
 
-        for (Dropdown<?> d : dropdowns)
+        for (DropdownBox<?> d : dropdownBoxes)
             d.update(elapsed);
 
         for (Button b : buttons)
@@ -142,7 +142,7 @@ public class Page extends TextInputProcessor implements Scrollable {
         for (Button b : buttons)
             b.render(sb, sr, 0, currentScroll);
 
-        for (Dropdown<?> d : dropdowns)
+        for (DropdownBox<?> d : dropdownBoxes)
             d.render(sb, sr, 0, currentScroll);
     }
 
@@ -178,8 +178,8 @@ public class Page extends TextInputProcessor implements Scrollable {
         }, new ScrollKeyHold(this, 20));
 
         bindings.addMouseBind((x, y, b)-> {
-                    for (Dropdown<?> dropdown : dropdowns) {
-                        if (dropdown.tryClick(x, y))
+                    for (DropdownBox<?> dropdownBox : dropdownBoxes) {
+                        if (dropdownBox.tryClick(x, y))
                             return true;
                     }
 
@@ -197,12 +197,12 @@ public class Page extends TextInputProcessor implements Scrollable {
                 (p, b)->{
                     boolean clickConsumed = false;
                     subScrollable = null;
-                    for (Dropdown<?> dropdown : dropdowns) {
+                    for (DropdownBox<?> dropdownBox : dropdownBoxes) {
                         if (clickConsumed)
-                            dropdown.cancel();
-                        else if (dropdown.click(p.x, p.y)) {
-                            if (dropdown.isOpen())
-                                subScrollable = dropdown;
+                            dropdownBox.cancel();
+                        else if (dropdownBox.click(p.x, p.y)) {
+                            if (dropdownBox.isOpen())
+                                subScrollable = dropdownBox;
                             clickConsumed = true;
                         }
                     }

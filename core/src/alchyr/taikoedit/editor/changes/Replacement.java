@@ -39,6 +39,8 @@ public class Replacement extends MapChange {
                 map.allPoints.addAll(deletedObjects);
                 break;
         }
+
+        map.gameplayChanged();
         return this;
     }
     @Override
@@ -60,6 +62,8 @@ public class Replacement extends MapChange {
                 map.allPoints.addAll(addedObjects);
                 break;
         }
+
+        map.gameplayChanged();
         return this;
     }
 }

@@ -30,7 +30,7 @@ public class VolumeModificationChange extends MapChange {
         if (toChange.hasNext()) {
             secondary = toChange.next();
         }
-        else { //Shouldn't Happen
+        else { //No auto-modification of stacked objects
             this.modifiedObjects = modifiedObjects;
 
             for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {

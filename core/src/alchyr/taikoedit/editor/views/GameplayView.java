@@ -64,12 +64,33 @@ public class GameplayView extends MapView {
     //Offset
     private int objectY = 0;
 
+    private boolean autoRefresh = true;
+
     public GameplayView(EditorLayer parent, EditorBeatmap beatmap) {
         super(MapView.ViewType.GAMEPLAY_VIEW, parent, beatmap, HEIGHT);
         lastSounded = 0;
 
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:refresh"), assetMaster.get("editor:refreshh")).setClick((i)->this.calculateTimes()).setAction("Refresh"));
+
+        Texture aron = assetMaster.get("editor:arefreshon");
+        Texture aronh = assetMaster.get("editor:arefreshonh");
+        Texture aroff = assetMaster.get("editor:arefreshoff");
+        Texture aroffh = assetMaster.get("editor:arefreshoffh");
+        ImageButton autoRefreshButton = new ImageButton(aron, aronh).setAction("Disable Auto Refresh");
+        autoRefreshButton.setClick(()->{
+            if (autoRefreshButton.action.equals("Disable Auto Refresh")) {
+                autoRefreshButton.setTextures(aroff, aroffh);
+                autoRefreshButton.setAction("Enable Auto Refresh");
+                this.autoRefresh = false;
+            }
+            else {
+                autoRefreshButton.setTextures(aron, aronh);
+                autoRefreshButton.setAction("Disable Auto Refresh");
+                this.autoRefresh = true;
+            }
+        });
+        addOverlayButton(autoRefreshButton);
 
         startTimes = new TreeMap<>();
         endTimes = new TreeMap<>();
@@ -86,8 +107,11 @@ public class GameplayView extends MapView {
         calculateTimes();
     }
 
+    public boolean autoRefresh() {
+        return autoRefresh;
+    }
 
-    private void calculateTimes() {
+    public void calculateTimes() {
         startTimes.clear();
         endTimes.clear();
         svMap.clear();
@@ -289,8 +313,8 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public void update(double exactPos, long msPos, float elapsed) {
-        super.update(exactPos, msPos, elapsed);
+    public void update(double exactPos, long msPos, float elapsed, boolean canHover) {
+        super.update(exactPos, msPos, elapsed, canHover);
     }
 
     @Override

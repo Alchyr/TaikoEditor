@@ -2,11 +2,22 @@ package alchyr.taikoedit.editor;
 
 import java.util.*;
 
+//This is pretty awful
+//Controls the options, controls setting the current divisor.
+//the BeatDivisors in dependents hold the actual snappings for each individual difficulty.
 public class DivisorOptions {
+    private static final NavigableSet<Integer> autoGen = new TreeSet<>();
+    static {
+        for (int i = 1; i <= 16; ++i)
+            autoGen.add(i);
+        autoGen.add(32);
+        autoGen.add(48);
+    }
+
     public final Set<Integer> snappingOptions;
     public final List<Integer> activeSnappings;
 
-    private int maxDivisor;
+    private int currentSnapping;
 
     private final List<BeatDivisors> dependents;
 
@@ -34,7 +45,7 @@ public class DivisorOptions {
     public void reset()
     {
         activeSnappings.clear();
-        maxDivisor = 0;
+        currentSnapping = 0;
     }
 
     //Enables this divisor and any subdivisors. Will not disable any already enabled divisors.
@@ -54,10 +65,10 @@ public class DivisorOptions {
         Collections.sort(activeSnappings);
 
         if (activeSnappings.isEmpty())
-            maxDivisor = 0;
+            currentSnapping = 0;
         else
         {
-            maxDivisor = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -72,10 +83,10 @@ public class DivisorOptions {
         Collections.sort(activeSnappings);
 
         if (activeSnappings.isEmpty())
-            maxDivisor = 0;
+            currentSnapping = 0;
         else
         {
-            maxDivisor = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -86,6 +97,9 @@ public class DivisorOptions {
 
     public void set(int divisor)
     {
+        if (divisor < 0)
+            divisor = 0;
+
         activeSnappings.clear();
 
         if (divisor > 0)
@@ -108,10 +122,10 @@ public class DivisorOptions {
         Collections.sort(activeSnappings);
 
         if (activeSnappings.isEmpty())
-            maxDivisor = 0;
+            currentSnapping = 0;
         else
         {
-            maxDivisor = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -124,16 +138,43 @@ public class DivisorOptions {
     {
         if (adjustment > 0)
         {
-            set(Math.max(0, --maxDivisor));
+            set(prev());
         }
         else
         {
-            set(Math.min(16, ++maxDivisor));
+            set(next());
+        }
+    }
+
+    private int prev() {
+        int dec = currentSnapping - 1;
+
+        if (dec <= 0)
+            return 0;
+
+        if (snappingOptions.contains(dec) || autoGen.contains(dec))
+            return dec;
+
+        Integer prev = autoGen.lower(currentSnapping);
+        if (prev == null)
+            return currentSnapping;
+        return prev;
+    }
+    private int next() {
+        int inc = currentSnapping + 1;
+        if (snappingOptions.contains(inc) || autoGen.contains(inc)) {
+            return inc;
+        }
+        else {
+            Integer next = autoGen.higher(currentSnapping);
+            if (next == null)
+                return currentSnapping;
+            return next;
         }
     }
 
     @Override
     public String toString() {
-        return maxDivisor > 0 ? "1/" + maxDivisor : "None";
+        return currentSnapping > 0 ? "1/" + currentSnapping : "None";
     }
 }

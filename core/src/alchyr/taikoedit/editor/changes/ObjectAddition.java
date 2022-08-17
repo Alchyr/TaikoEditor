@@ -57,6 +57,8 @@ public class ObjectAddition extends MapChange {
             map.objects.addAll(replacedObjects);
             map.updateVolume(replacedObjects);
         }
+
+        map.gameplayChanged();
         return this;
     }
 
@@ -103,6 +105,8 @@ public class ObjectAddition extends MapChange {
             map.objects.addAll(addedObjects);
             map.updateVolume(addedObjects);
         }
+
+        map.gameplayChanged();
         return this;
     }
 }

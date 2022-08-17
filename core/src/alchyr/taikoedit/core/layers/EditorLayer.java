@@ -7,6 +7,7 @@ import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
 import alchyr.taikoedit.core.layers.sub.DifficultyMenuLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
+import alchyr.taikoedit.core.ui.Dropdown;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
@@ -26,6 +27,7 @@ import alchyr.taikoedit.management.localization.LocalizedText;
 import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.core.input.KeyHoldObject;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
@@ -33,6 +35,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -46,6 +49,8 @@ import java.util.List;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class EditorLayer extends LoadedLayer implements InputLayer {
+    public static EditorLayer activeEditor = null;
+
     //Return to menu
     private ProgramLayer src;
 
@@ -68,9 +73,19 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private static final Color CENTER_LINE_COLOR = new Color(0.6f, 0.6f, 0.6f, 0.5f);
 
+    //Top bar
     private int topBarHeight;
     private int topBarY;
     private int timelineY;
+
+    private ImageButton moreOptionsButton;
+    private ImageButton selectionOptionsButton;
+    private Dropdown<String> topBarDropdown;
+
+    private final List<Dropdown.DropdownElement<String>> moreOptionsList = new ArrayList<>();
+    private final List<Dropdown.DropdownElement<String>> baseSelectionList = new ArrayList<>();
+    //TODO: More lists based on selection (primary view type)
+
     private ImageButton exitButton;
     private ImageButton settingsButton;
     private ImageButton openButton;
@@ -131,6 +146,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     @Override
     public void initialize() {
+        activeEditor = this;
         if (music.noTrack())
         {
             //No opening a song with no music in this editor.
@@ -165,6 +181,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
         }
 
+        BitmapFont aller = assetMaster.getFont("aller medium");
+
         pixel = assetMaster.get("ui:pixel");
         topBarHeight = 40;
         timelineY = SettingsMaster.getHeight() - (topBarHeight + Timeline.HEIGHT);
@@ -174,12 +192,144 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         //float titleOffsetX = 10;
         //float titleOffsetY = 35;
         minimumVisibleY = Tools.HEIGHT;
-        textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
+        textOverlay = new TextOverlay(aller, SettingsMaster.getHeight() / 2, 100);
 
         //Top bar
-        exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::returnToMenu);
-        settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
+        moreOptionsButton = new ImageButton(0, topBarY, assetMaster.get("editor:dropdown"), (Texture) assetMaster.get("editor:dropdownh")).setClick(this::moreOptions);
+        selectionOptionsButton = new ImageButton(40, topBarY, assetMaster.get("editor:edit"), (Texture) assetMaster.get("editor:edith")).setClick(this::selectionOptions);
+
+        exitButton = new ImageButton(SettingsMaster.getWidth() - 40, topBarY, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::returnToMenu);
+        settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, topBarY, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
         openButton = new ImageButton(SettingsMaster.getWidth() - 120, topBarY, assetMaster.get("editor:open"), (Texture) assetMaster.get("editor:openh")).setClick(this::openDifficultyMenu);
+
+        topBarDropdown = new Dropdown<>(Math.min(SettingsMaster.getWidth() / 2, 240));
+
+        //Dropdown contents
+        {
+            BindingGroup editorBindings = BindingMaster.getBindingGroupCopy("Editor");
+            LocalizedText keyNames = LocalizationMaster.getLocalizedText("keys", "names");
+            String[] keyNameArray = keyNames == null ? new String[] { } : keyNames.get("");
+
+            moreOptionsList.clear();
+            moreOptionsList.add(new Dropdown.ItemElement<>("Save", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Save", keyNameArray));
+                        return primaryView != null;
+                    }).setOnClick((e) -> {
+                        savePrimary();
+                        return true;
+                    })
+            );
+            moreOptionsList.add(new Dropdown.ItemElement<>("Save All", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("SaveAll", keyNameArray));
+                        return !activeMaps.isEmpty();
+                    }).setOnClick((e) -> {
+                        saveAll();
+                        return true;
+                    })
+            );
+            moreOptionsList.add(new Dropdown.SeparatorElement<>());
+            moreOptionsList.add(new Dropdown.ItemElement<>("Open All", aller)
+                    .setCondition((e) -> activeMaps.size() < set.getMaps().size())
+                    .setOnClick((e) -> {
+                        openAll();
+                        return true;
+                    })
+            );
+
+
+            baseSelectionList.clear();
+            baseSelectionList.add(new Dropdown.ItemElement<>("Undo", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Undo", keyNameArray));
+                        return primaryView != null && primaryView.map.canUndo();
+                    })
+                    .setOnClick((e) -> {
+                        if (primaryView != null)
+                            primaryView.map.undo();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.ItemElement<>("Redo", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Redo", keyNameArray));
+                        return primaryView != null && primaryView.map.canRedo();
+                    })
+                    .setOnClick((e) -> {
+                        if (primaryView != null)
+                            primaryView.map.redo();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.SeparatorElement<>());
+            baseSelectionList.add(new Dropdown.ItemElement<>("Select All", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("SelectAll", keyNameArray));
+                        return primaryView != null;
+                    })
+                    .setOnClick((e) -> {
+                        if (primaryView != null)
+                            primaryView.selectAll();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.ItemElement<>("Clear Selection", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("ClearSelect", keyNameArray));
+                        return primaryView != null && primaryView.hasSelection();
+                    })
+                    .setOnClick((e) -> {
+                        if (primaryView != null)
+                            primaryView.clearSelection();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.SeparatorElement<>());
+            baseSelectionList.add(new Dropdown.ItemElement<>("Cut", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Cut", keyNameArray));
+                        return primaryView != null && primaryView.hasSelection();
+                    })
+                    .setOnClick((e) -> {
+                        cutPrimary();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.ItemElement<>("Copy", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Copy", keyNameArray));
+                        return primaryView != null && primaryView.hasSelection();
+                    })
+                    .setOnClick((e) -> {
+                        copyPrimary();
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.ItemElement<>("Paste", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Paste", keyNameArray));
+                        return copyObjects != null && primaryView != null && primaryView.type == copyType;
+                    })
+                    .setOnClick((e) -> {
+                        if (copyObjects != null && primaryView != null && primaryView.type == copyType) {
+                            primaryView.pasteObjects(copyObjects);
+                        }
+                        return true;
+                    })
+            );
+            baseSelectionList.add(new Dropdown.ItemElement<>("Delete Selection", aller)
+                    .setCondition((e) -> {
+                        e.setHoverText(editorBindings.getBindingInputString("Delete", keyNameArray));
+                        return primaryView != null && primaryView.hasSelection();
+                    })
+                    .setOnClick((e) -> {
+                        if (primaryView != null && primaryView.hasSelection())
+                            primaryView.deleteSelection();
+                        return true;
+                    })
+            );
+        }
 
         setViewScale(1.0f);
 
@@ -224,29 +374,45 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         long msTime = Math.round(currentPos * 1000);
         //editorLogger.info(pos);
 
+        boolean canHover = true;
+
         timeline.update(currentPos);
+        if (topBarDropdown.update())
+            canHover = false;
 
         for (ViewSet views : mapViews.values())
         {
-            views.update(currentPos, msTime, elapsed, music.isPlaying());
+            views.update(currentPos, msTime, elapsed, music.isPlaying(), canHover);
         }
 
         textOverlay.update(elapsed);
         tools.update(timelineY, minimumVisibleY, activeMaps, mapViews, elapsed);
 
+        moreOptionsButton.update(elapsed);
+        selectionOptionsButton.update(elapsed);
+
         exitButton.update(elapsed);
         openButton.update(elapsed);
         settingsButton.update(elapsed);
 
-        if (openButton.hovered) {
-            String input = processor.getBindingInput(keyNames.get(""), "OpenView");
-            hoverText.setText(input == null ? "Open New View" : "Open New View (" + input + ")");
-        }
-        else if (settingsButton.hovered) {
-            hoverText.setText("Settings");
-        }
-        else if (exitButton.hovered) {
-            hoverText.setText("Exit");
+        if (SettingsMaster.gameY() > topBarY) {
+            //NEEDS LOCALIZATION
+            if (moreOptionsButton.hovered) {
+                hoverText.setText("More Options");
+            }
+            else if (selectionOptionsButton.hovered) {
+                hoverText.setText("Edit");
+            }
+            else if (openButton.hovered) {
+                String input = processor.getBindingInput(keyNames.get(""), "OpenView");
+                hoverText.setText(input == null ? "Open New View" : "Open New View (" + input + ")");
+            }
+            else if (settingsButton.hovered) {
+                hoverText.setText("Settings");
+            }
+            else if (exitButton.hovered) {
+                hoverText.setText("Exit");
+            }
         }
     }
 
@@ -291,6 +457,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         //Top bar
         sb.setColor(Color.BLACK);
         sb.draw(pixel, 0, topBarY, SettingsMaster.getWidth(), topBarHeight);
+
+        moreOptionsButton.render(sb, sr);
+        selectionOptionsButton.render(sb, sr);
+
         exitButton.render(sb, sr);
         settingsButton.render(sb, sr);
         openButton.render(sb, sr);
@@ -301,6 +471,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         tools.render(sb, sr);
 
         //Overlays
+        topBarDropdown.render(sb, sr);
         textOverlay.render(sb, sr);
 
         /*sb.setColor(Color.WHITE);
@@ -315,6 +486,27 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     @Override
     public InputProcessor getProcessor() {
         return processor;
+    }
+
+    private void moreOptions() {
+        if (!topBarDropdown.isOpen() || !topBarDropdown.id.equals("Opt")) {
+            topBarDropdown.id = "Opt";
+            topBarDropdown.setPos(0, topBarY);
+            topBarDropdown.setElements(moreOptionsList).open();
+        }
+        else {
+            topBarDropdown.close();
+        }
+    }
+    private void selectionOptions() {
+        if (!topBarDropdown.isOpen() || !topBarDropdown.id.equals("Sel")) {
+            topBarDropdown.id = "Sel";
+            topBarDropdown.setPos(40, topBarY);
+            topBarDropdown.setElements(baseSelectionList).open();
+        }
+        else {
+            topBarDropdown.close();
+        }
     }
 
     private void returnToMenu()
@@ -368,6 +560,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private void returnToSrc() {
         if (!closed) {
             closed = true;
+            activeEditor = null;
             TaikoEditor.removeLayer(this);
             if (src instanceof LoadedLayer) {
                 TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
@@ -440,7 +633,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         /*for (MapInfo info : set.getMaps())
         {
             EditorBeatmap beatmap = getEditorBeatmap(info);
-            addEditView(beatmap, false);
+            addObjectView(beatmap, false);
         }*/
 
         if (activeMaps.isEmpty())
@@ -473,7 +666,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
         }
 
-        addEditView(newMap, false);
+        addObjectView(newMap, false);
         addEffectView(newMap, false);
         activeMaps.add(newMap);
     }
@@ -531,7 +724,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         activeMaps.add(newMap);
     }
 
-    private void addEditView(EditorBeatmap beatmap, boolean delayed)
+    //View control
+    private void addObjectView(EditorBeatmap beatmap, boolean delayed)
     {
         addView(new ObjectView(this, beatmap), delayed);
     }
@@ -554,7 +748,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 mapViews.put(newView.map, new ViewSet(this, newView.map));
 
             if (!mapViews.get(newView.map).contains((o)->o.type == newView.type)) {
-                newView.update(currentPos, Math.round(currentPos * 1000), 0);
+                newView.update(currentPos, Math.round(currentPos * 1000), 0, false);
                 mapViews.get(newView.map).addView(newView);
             }
         }
@@ -686,6 +880,98 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
     }
 
+    //Menu option methods
+    public boolean savePrimary() {
+        if (primaryView != null) {
+            if (primaryView.map.save()) {
+                textOverlay.setText("Difficulty \"" + primaryView.map.getName() + "\" saved!", 0.5f);
+                return true;
+            }
+            else {
+                textOverlay.setText("Failed to save!", 2.0f);
+            }
+        }
+        return false;
+    }
+    public boolean saveAll() {
+        return saveAll(true);
+    }
+    public boolean saveAll(boolean withOverlay) {
+        int failures = 0;
+        StringBuilder failed = new StringBuilder();
+        for (EditorBeatmap m : activeMaps) {
+            if (!m.save()) {
+                failed.append(" [").append(m.getName()).append("]");
+                ++failures;
+            }
+        }
+        if (withOverlay) {
+            if (failures == 0) {
+                textOverlay.setText("Saved all.", 2.0f);
+            }
+            else if (failures == 1) {
+                textOverlay.setText("Failed to save difficulty" + failed + ".", 2.0f);
+            }
+            else {
+                textOverlay.setText("Failed to save difficulties" + failed + ".", 2.0f);
+            }
+        }
+        return failures == 0;
+    }
+    private void openAll() {
+        List<MapInfo> toOpen = new ArrayList<>(set.getMaps());
+        toOpen.removeIf(info -> {
+            for (EditorBeatmap map : activeMaps) {
+                if (map.is(info))
+                    return true;
+            }
+            return false;
+        });
+
+        for (MapInfo info : toOpen) {
+            EditorBeatmap newMap = new EditorBeatmap(set, info);
+
+            if (!set.sameSong)
+            {
+                newMap.generateDivisor(divisorOptions);
+            }
+            else
+            {
+                if (universalDivisor == null)
+                {
+                    universalDivisor = newMap.generateDivisor(divisorOptions);
+                }
+                else
+                {
+                    newMap.setDivisorObject(universalDivisor);
+                }
+            }
+
+            addObjectView(newMap, true);
+            activeMaps.add(newMap);
+        }
+    }
+    private void cutPrimary() {
+        if (primaryView != null && primaryView.hasSelection()) {
+            copyObjects = primaryView.getSelection().copy();
+            copyType = primaryView.type; //Can only paste into same type of view.
+            Toolkit.getDefaultToolkit()
+                    .getSystemClipboard()
+                    .setContents(new StringSelection(primaryView.getSelectionString()), null);
+
+            primaryView.deleteSelection();
+        }
+    }
+    private void copyPrimary() {
+        if (primaryView != null && primaryView.hasSelection()) {
+            copyObjects = primaryView.getSelection().copy();
+            copyType = primaryView.type; //Can only paste into same type of view.
+            Toolkit.getDefaultToolkit()
+                    .getSystemClipboard()
+                    .setContents(new StringSelection(primaryView.getSelectionString()), null);
+        }
+    }
+
     private void disposeMap(EditorBeatmap map) {
         mapViews.remove(map);
         activeMaps.remove(map);
@@ -751,43 +1037,85 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
         }
     }
+    private void jumpLeft()
+    {
+        if (primaryView == null || primaryView.noSnaps())
+        {
+            music.seekSecond(currentPos - 1);
+            return;
+        }
+        Snap s = primaryView.getClosestSnap((currentPos - 1) * 1000, 900);
+        if (s == null)
+            s = primaryView.getPreviousSnap();
+
+        if (s == null)
+        {
+            music.seekSecond(0);
+        }
+        else
+        {
+            music.seekMs(s.pos);
+        }
+    }
     private void seekRight()
     {
-        if (primaryView == null)
+        //TaikoEditor.onMain(()->{
+            if (primaryView == null)
+            {
+                music.seekSecond(currentPos + 1);
+                return;
+            }
+
+            if (BindingGroup.ctrl())
+            {
+                NavigableSet<Integer> bookmarks = primaryView.map.getBookmarks();
+                if (!bookmarks.isEmpty())
+                {
+                    Integer next = bookmarks.higher((int) (currentPos * 1000) + 1);
+
+                    if (next != null)
+                    {
+                        music.seekMs(next);
+                    }
+                }
+            }
+            else
+            {
+                if (primaryView.noSnaps())
+                    music.seekSecond(currentPos + 1);
+                else
+                {
+                    Snap s = primaryView.getNextSnap();
+                    if (s == null)
+                    {
+                        music.seekSecond(music.getSecondLength());
+                    }
+                    else
+                    {
+                        music.seekMs(s.pos);
+                    }
+                }
+            }
+        //});
+    }
+    private void jumpRight()
+    {
+        if (primaryView == null || primaryView.noSnaps())
         {
             music.seekSecond(currentPos + 1);
             return;
         }
+        Snap s = primaryView.getClosestSnap((currentPos + 1) * 1000, 900);
+        if (s == null)
+            s = primaryView.getNextSnap();
 
-        if (BindingGroup.ctrl())
+        if (s == null)
         {
-            NavigableSet<Integer> bookmarks = primaryView.map.getBookmarks();
-            if (!bookmarks.isEmpty())
-            {
-                Integer next = bookmarks.higher((int) (currentPos * 1000) + 1);
-
-                if (next != null)
-                {
-                    music.seekMs(next);
-                }
-            }
+            music.seekSecond(music.getSecondLength());
         }
         else
         {
-            if (primaryView.noSnaps())
-                music.seekSecond(currentPos + 1);
-            else
-            {
-                Snap s = primaryView.getNextSnap();
-                if (s == null)
-                {
-                    music.seekSecond(music.getSecondLength());
-                }
-                else
-                {
-                    music.seekMs(s.pos);
-                }
-            }
+            music.seekMs(s.pos);
         }
     }
     private void increaseOffset()
@@ -864,6 +1192,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         if (music.isPlaying())
             music.pause();
 
+        topBarDropdown.close();
+
         processor.releaseInput(false);
     }
 
@@ -906,6 +1236,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 }
                 sourceLayer.timeline.recalculateBookmarks();
             });
+            bindings.bind("RemoveBookmark", () -> {
+                for (EditorBeatmap map : sourceLayer.activeMaps) {
+                    map.removeBookmark((int) music.getMsTime());
+                }
+                sourceLayer.timeline.recalculateBookmarks();
+            });
 
             //Selection controls
             {
@@ -917,11 +1253,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 bindings.bind("Copy", () -> {
                     if (sourceLayer.primaryView != null) {
                         if (sourceLayer.primaryView.hasSelection()) {
-                            copyObjects = sourceLayer.primaryView.getSelection().copy();
-                            copyType = sourceLayer.primaryView.type; //Can only paste into same type of layer.
-                            Toolkit.getDefaultToolkit()
-                                    .getSystemClipboard()
-                                    .setContents(new StringSelection(sourceLayer.primaryView.getSelectionString()), null);
+                            sourceLayer.copyPrimary();
                         } else {
                             Toolkit.getDefaultToolkit()
                                     .getSystemClipboard()
@@ -935,13 +1267,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         if (sourceLayer.primaryView.hasSelection()) {
                             releaseMouse(true);
 
-                            copyObjects = sourceLayer.primaryView.getSelection().copy();
-                            copyType = sourceLayer.primaryView.type; //Can only paste into same type of layer.
-                            Toolkit.getDefaultToolkit()
-                                    .getSystemClipboard()
-                                    .setContents(new StringSelection(sourceLayer.primaryView.getSelectionString()), null);
-
-                            sourceLayer.primaryView.deleteSelection();
+                            sourceLayer.cutPrimary();
                         }
                     }
                 });
@@ -986,35 +1312,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
             bindings.bind("OpenView", sourceLayer::openDifficultyMenu);
 
-            bindings.bind("Save", ()->{
-                if (sourceLayer.primaryView != null) {
-                    if (sourceLayer.primaryView.map.save()) {
-                        sourceLayer.textOverlay.setText("Difficulty \"" + sourceLayer.primaryView.map.getName() + "\" saved!", 0.5f);
-                    }
-                    else {
-                        sourceLayer.textOverlay.setText("Failed to save!", 2.0f);
-                    }
-                }
-            });
-            bindings.bind("SaveAll", ()->{
-                int failures = 0;
-                StringBuilder failed = new StringBuilder();
-                for (EditorBeatmap m : sourceLayer.activeMaps) {
-                    if (!m.save()) {
-                        failed.append(" [").append(m.getName()).append("]");
-                        ++failures;
-                    }
-                }
-                if (failures == 0) {
-                    sourceLayer.textOverlay.setText("Saved all.", 2.0f);
-                }
-                else if (failures == 1) {
-                    sourceLayer.textOverlay.setText("Failed to save difficulty" + failed + ".", 2.0f);
-                }
-                else {
-                    sourceLayer.textOverlay.setText("Failed to save difficulties" + failed + ".", 2.0f);
-                }
-            });
+            bindings.bind("Save", sourceLayer::savePrimary);
+            bindings.bind("SaveAll", (VoidMethod) sourceLayer::saveAll);
 
             bindings.bind("TJASave", ()->{
                 if (sourceLayer.primaryView != null) {
@@ -1108,28 +1407,47 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 });
 
             //------------ Mouse Bindings ------------
+            //Dropdown
+            bindings.addMouseBind((x, y, b) -> sourceLayer.topBarDropdown.isOpen() && sourceLayer.topBarDropdown.contains(x, y),
+                    (p, button) -> {
+                        sourceLayer.topBarDropdown.click(p.x, p.y);
+                        return null;
+                    });
             //Top area
             bindings.addMouseBind((x, y, b) -> y > sourceLayer.timelineY,
                     (p, button) -> {
                         if (p.y < sourceLayer.topBarY)
                         {
                             //timeline area
+                            sourceLayer.topBarDropdown.close();
                             return sourceLayer.timeline.click(p.x, p.y);
                         }
                         else
                         {
-                            if (sourceLayer.openButton.click(p.x, p.y, button))
+                            if (sourceLayer.moreOptionsButton.click(p.x, p.y, button))
                                 return null;
-                            else if (sourceLayer.settingsButton.click(p.x, p.y, button))
+                            else if (sourceLayer.selectionOptionsButton.click(p.x, p.y, button))
                                 return null;
-                            else if (sourceLayer.exitButton.click(p.x, p.y, button))
+                            else if (sourceLayer.openButton.click(p.x, p.y, button)) {
+                                sourceLayer.topBarDropdown.close();
                                 return null;
+                            }
+                            else if (sourceLayer.settingsButton.click(p.x, p.y, button)) {
+                                sourceLayer.topBarDropdown.close();
+                                return null;
+                            }
+                            else if (sourceLayer.exitButton.click(p.x, p.y, button)) {
+                                sourceLayer.topBarDropdown.close();
+                                return null;
+                            }
+                            sourceLayer.topBarDropdown.close();
                         }
                         return null;
                     });
             //MapView area
             bindings.addMouseBind((x, y, b) -> y > sourceLayer.minimumVisibleY,
                     (p, button) -> {
+                        sourceLayer.topBarDropdown.close();
                         for (EditorBeatmap m : sourceLayer.activeMaps)
                         {
                             ViewSet set = sourceLayer.mapViews.get(m);
@@ -1143,6 +1461,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             //tools
             bindings.addMouseBind((x, y, b)->true,
                     (p, b) -> {
+                        sourceLayer.topBarDropdown.close();
                         sourceLayer.tools.click(p.x, p.y, b);
                         return null;
                     });
@@ -1166,7 +1485,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
                     if (gameY < sourceLayer.timelineY && gameY > sourceLayer.minimumVisibleY)
                     {
-                        sourceLayer.scrollPos += amountY * 16;
+                        sourceLayer.scrollPos += amountY * 50;
 
                         if (sourceLayer.scrollPos < 0)
                             sourceLayer.scrollPos = 0;
@@ -1181,13 +1500,25 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                     }
                 }
 
-                if (amountY > 0)
-                {
-                    sourceLayer.seekRight();
+                if (BindingGroup.alt()) {
+                    if (amountY > 0)
+                    {
+                        sourceLayer.jumpRight();
+                    }
+                    else
+                    {
+                        sourceLayer.jumpLeft();
+                    }
                 }
-                else
-                {
-                    sourceLayer.seekLeft();
+                else {
+                    if (amountY > 0)
+                    {
+                        sourceLayer.seekRight();
+                    }
+                    else
+                    {
+                        sourceLayer.seekLeft();
+                    }
                 }
             }});
 

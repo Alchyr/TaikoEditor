@@ -4,7 +4,6 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.ObjectAddition;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
@@ -20,7 +19,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
@@ -171,12 +169,15 @@ public abstract class MapView {
         this.bottom = this.y + offset;
         this.top = this.bottom + height;
     }
-    public void update(double exactPos, long msPos, float elapsed)
+    public void update(double exactPos, long msPos, float elapsed, boolean canHover)
     {
         preciseTime = exactPos * 1000.0f;
         time = msPos;
         for (ImageButton b : overlayButtons) {
             b.update(elapsed);
+            if (!canHover)
+                b.hovered = false;
+
             if (b.hovered) {
                 TaikoEditor.hoverText.setText(b.action);
             }
@@ -226,7 +227,7 @@ public abstract class MapView {
 
     public abstract Snap getPreviousSnap();
     public abstract Snap getNextSnap();
-    public abstract Snap getClosestSnap(double time, float limit);
+    public abstract Snap getClosestSnap(double time, float limit); //time in ms, limit as max ms gap
     public abstract boolean noSnaps();
 
     //Other methods

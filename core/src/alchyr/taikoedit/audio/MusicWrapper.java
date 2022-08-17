@@ -44,6 +44,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     private double time = -1; //Refresher to see if music has give a new value
     private double last = -1; //The last updated value obtained from music
+    private boolean seeked = false;
 
     private double totalElapsed = 0, baseElapsed = 0;
 
@@ -298,53 +299,56 @@ public class MusicWrapper implements Music.OnCompletionListener {
             if (playing)
             {
                 if (elapsed < 0.5f) {
-                    totalElapsed += elapsed * (catchup + 1); //Keep track of passing time
-                    baseElapsed += elapsed;
+                    totalElapsed += elapsed * music.tempo * (catchup + 1); //Keep track of passing time
+                    baseElapsed += elapsed * music.tempo;
                     //editorLogger.info("Total elapsed time: " + baseElapsed);
 
-                    precise = Math.max(last + totalElapsed * music.tempo, minimum);
+                    precise = Math.max(last + totalElapsed, minimum);
                 }
                 if (time == last) //Music has not updated position, but the song is playing
                 {
                     return false;
                 }
                 //editorLogger.info("Music updated position.");
-                double gap = time - last;
-                if (gap < 0.1) {
-                    if (initGap) {
-                        if (updateGap.avg() == 0) {
-                            updateGap.add(gap);
+                if (!seeked) {
+                    double gap = time - last;
+                    if (gap < 0.1 && gap > 0) {
+                        if (initGap) {
+                            if (updateGap.avg() == 0) {
+                                updateGap.add(gap);
+                            }
+                            else {
+                                updateGap.init(gap); //fill based on the second gap, which will occur during continuous play and is thus more reliable
+                                initGap = false;
+                            }
                         }
                         else {
-                            updateGap.init(gap); //fill based on the second gap, which will occur during continuous play and is thus more reliable
-                            initGap = false;
+                            updateGap.add(gap);
                         }
                     }
-                    else {
-                        updateGap.add(gap);
-                    }
-                }
 
-                gap = time - (last + baseElapsed * music.tempo);
-                if (gap < 0.1 && gap > -0.1)
-                    timeGap.add(gap);
+                    gap = time - (last + baseElapsed);
+                    if (gap < 0.1 && gap > -0.1)
+                        timeGap.add(gap);
+                }
             }
             baseElapsed = 0;
             totalElapsed = 0;
             minimum = Long.MIN_VALUE;
 
             if (playing) {
-                double gap = updateGap.avg();
-                //editorLogger.debug("UpdateGap: " + gap + " | TimeGap: " + timeGap.avg());
+                double avg = updateGap.avg();
+                //editorLogger.debug("UpdateGap: " + avg + " | TimeGap: " + timeGap.avg());
                 if (precise > time && precise - time < 0.1) {
                     minimum = precise;
-                    if (!initGap && gap != 0)
-                        catchup = timeGap.avg() / updateGap.avg();
+                    if (!initGap && avg != 0) {
+                        catchup = timeGap.avg() / avg;
+                    }
                     //editorLogger.debug("A bit ahead. Catchup: " + catchup);
                 }
                 else if (precise < time && time - precise < 0.1) {
-                    if (!initGap && gap != 0)
-                        catchup = timeGap.avg() / updateGap.avg();
+                    if (!initGap && avg != 0)
+                        catchup = timeGap.avg() / avg;
                     //editorLogger.debug("A bit behind. Catchup: " + catchup);
                 }
                 else {
@@ -356,6 +360,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
             last = time;
             precise = Math.max(last, minimum);
         }
+        seeked = false;
         return true;
     }
     public double getMsTime()
@@ -435,6 +440,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
     public void seekSecond(double newPos)
     {
         music.setPosition((float) Math.max(0, newPos) - activeOffset);
+        seeked = true;
     }
     public void seekSecond(double newPos, boolean continuePlaying)
     {
@@ -446,6 +452,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
         if (!continuePlaying)
             playing = false;
         music.setPosition((float) Math.max(0, newPos) - activeOffset, continuePlaying);
+        seeked = true;
     }
 
     public float setTempo(float newRate)

@@ -98,9 +98,9 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private ImageButton selectedFormula;
 
     private static final int GRAPH_STEP = 8;
-    private final static List<Pair<Function<Double, Double>, String>> formulas = new ArrayList<>();
-    private final static HashMap<Function<Double, Double>, Texture> formulaTextures = new HashMap<>();
-    private final static HashMap<Function<Double, Double>, Texture> formulaHoverTextures = new HashMap<>();
+    final static List<Pair<Function<Double, Double>, String>> formulas = new ArrayList<>();
+    final static HashMap<Function<Double, Double>, Texture> formulaTextures = new HashMap<>();
+    final static HashMap<Function<Double, Double>, Texture> formulaHoverTextures = new HashMap<>();
 
     private static Function<Double, Double> linear = x -> x;
     private static Function<Double, Double> exp_3 = getExp(x -> x,1.3);
@@ -186,7 +186,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4f, 250f, "Final SV:", df.format(fsv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
 
         generateLines = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 2.5f, "Generate Lines", assetMaster.getFont("aller medium"), true);
-        genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1.5f, 250f - SHIFT_STEP, "Position Offset:", "-1", 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
+        genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1.5f, 250f - SHIFT_STEP, "Position Offset:", "-1", 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.INTEGER).blocking();
         svObjects = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 0.5f, "Objects", assetMaster.getFont("aller medium"), true);
         selectedOnly = new ToggleButton(LEFT_POS + (SHIFT_STEP * 2), middleY - BUTTON_OFFSET * 0.5f, "Selected Objects Only", assetMaster.getFont("aller medium"), false);
         svBarlines = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY - BUTTON_OFFSET * 1.5f, "Barlines", assetMaster.getFont("aller medium"), true);

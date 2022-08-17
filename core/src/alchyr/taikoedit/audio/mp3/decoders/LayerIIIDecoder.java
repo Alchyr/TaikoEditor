@@ -935,8 +935,6 @@ public final class LayerIIIDecoder implements FrameDecoder {
             if (quotien < 0) quotien = 0;
             xr_1d[quotien][reste] = 0.0f;
         }
-
-        return;
     }
 
     /**

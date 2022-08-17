@@ -308,7 +308,7 @@ public class InputBinding {
         }
 
         public static String toString(String[] keyNameArray, int code, boolean ctrl, boolean alt, boolean shift) {
-            if (keyNameArray.length < 259 || code >= keyNameArray.length)
+            if (code >= keyNameArray.length)
                 return "";
 
             return (ctrl ? keyNameArray[CTRL_INDEX] + " " : "") +

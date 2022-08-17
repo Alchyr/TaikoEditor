@@ -1,6 +1,7 @@
 package alchyr.taikoedit.desktop;
 
 import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.desktop.config.ConfigMenu;
 import alchyr.taikoedit.desktop.config.ProgramConfig;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -19,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /*
  * Display modes:
@@ -70,19 +72,20 @@ public class DesktopLauncher {
 	}
 
 	private static void processCommandlineArgs(String[] args) {
+		int startIndex = 0, currentIndex = 0;
 		for (String arg : args) {
+			++currentIndex;
 			switch (arg) {
 				case "-fast":
 					//logger.info("Loading fast menu.");
 					fast = true;
+					startIndex = currentIndex;
 					break;
 				default:
 					if (arg.endsWith(".osu")) {
-						logger.info("Maybe beatmap file: " + arg);
-						directOpen = arg;
-					}
-					else {
-						logger.info("Unknown argument: " + arg);
+						String path = String.join(" ", Arrays.copyOfRange(args, startIndex, currentIndex));
+						logger.info("Maybe beatmap file: " + path);
+						directOpen = path;
 					}
 					break;
 			}
@@ -174,7 +177,20 @@ public class DesktopLauncher {
 
 				try {
 					pWriter = new PrintWriter(f);
+					pWriter.println("Error occurred on main thread:");
 					e.printStackTrace(pWriter);
+
+					if (EditorLayer.activeEditor != null) {
+						pWriter.println();
+						pWriter.println("Active editor detected. Attempting to save data.");
+						try {
+							if (EditorLayer.activeEditor.saveAll()) {
+								pWriter.println("Successfully saved data.");
+							}
+						}
+						catch (Exception ignored) { }
+						EditorLayer.activeEditor = null;
+					}
 				}
 				catch (Exception ex) {
 					logger.error("Failed to write error file.");

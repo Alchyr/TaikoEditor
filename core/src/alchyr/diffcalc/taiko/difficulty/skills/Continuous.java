@@ -69,18 +69,18 @@ public class Continuous extends Skill {
         if (current.baseObject.type != HitObject.HitObjectType.CIRCLE) {
             return 0.0;
         }
-        if (circleDelta >= 500) { //After a long gap, the first two objects are considered to be 1/1 in spacing.
-            lastCircleDelta = 0;
-            circleDelta = 0;
-            //Simplicity tracking is not reset, so after a long slow section simplicity will be very high due to residual max simplicity.
-            //Avoids excessive volatility immediately after a slow section.
-        }
         if (circleDelta >= 1000) {
             for (int i = 999; i < circleDelta; i += 1000) {
                 if (simplicityTrackers.size() == MAX_LENGTH)
                     simplicityTrackers.remove(0);
                 simplicityTrackers.add(new SimplicityTracker());
             }
+        }
+        if (circleDelta >= 500) { //After a long gap, the first two objects are considered to be 1/1 in spacing.
+            lastCircleDelta = 0;
+            circleDelta = 0;
+            //Simplicity tracking is not reset, so after a long slow section simplicity will be very high due to residual max simplicity.
+            //Avoids excessive volatility immediately after a slow section.
         }
 
         TaikoDifficultyHitObject taikoCurrent = (TaikoDifficultyHitObject)current;

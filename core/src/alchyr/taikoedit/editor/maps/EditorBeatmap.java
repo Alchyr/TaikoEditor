@@ -10,6 +10,7 @@ import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
+import alchyr.taikoedit.editor.views.GameplayView;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.util.structures.Pair;
@@ -26,18 +27,20 @@ import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 //Will be referenced by displays for rendering, and modifications in editor will be performed on it to ensure all displays are connected to the same map object
 public class EditorBeatmap {
+    private static final int BOOKMARK_REMOVE_DIST = 1000; //ms gap on either side of deletion attempt where a bookmark can be removed
+
     public boolean dirty = false; //Are there unsaved changes
 
     //For hitobjects/timing points use a structure that allows for fast find/insertion at the desired position but also fast iteration?
     public final PositionalObjectTreeMap<TimingPoint> timingPoints; //red lines
     public final PositionalObjectTreeMap<TimingPoint> effectPoints; //green lines
-    public final PositionalObjectTreeMap<TimingPoint> allPoints; //should not be modified directly?
+    public final PositionalObjectTreeMap<TimingPoint> allPoints; //should not be modified directly? Accessibility is intended for iteration? Should probably make a readonly accessor but meh
     public final PositionalObjectTreeMap<HitObject> objects;
 
     private final TreeMap<Long, Integer> volumeMap;
     private final TreeMap<Long, Boolean> kiaiMap; //each boolean is a spot where kiai is turned on or off.
 
-    public boolean autoBreaks = true; //set to false if invalid breaks on load
+    public boolean autoBreaks = true; //set to false if invalid breaks on load, which will disable automatic modification of breaks.
 
     private BeatDivisors divisor;
 
@@ -62,6 +65,7 @@ public class EditorBeatmap {
 
     //Not the most "ideal" method, but it's quick and easy.
     private EffectView effectView = null;
+    private GameplayView gameplayView = null;
     private Timeline timeline = null;
 
 
@@ -229,6 +233,9 @@ public class EditorBeatmap {
     // These should be used if the map is changed using ANYTHING other than undo and redo
     //Redo queue is added to when undo is used, and cleared when any change is made.
     //Undo queue fills up... Forever? Changes are added to END of undo queue, and removed from end as well.
+    public boolean canUndo() {
+        return !undoQueue.isEmpty();
+    }
     public boolean undo()
     {
         if (!undoQueue.isEmpty())
@@ -238,6 +245,9 @@ public class EditorBeatmap {
             return redoQueue.last().invalidateSelection;
         }
         return false;
+    }
+    public boolean canRedo() {
+        return !redoQueue.isEmpty();
     }
     public boolean redo()
     {
@@ -312,6 +322,7 @@ public class EditorBeatmap {
         dirty = true;
         undoQueue.addLast(new ValueModificationChange(this, modifiedObjects));
         redoQueue.clear();
+        gameplayChanged();
     }
     public void registerVolumeChange(PositionalObjectTreeMap<PositionalObject> modifiedObjects, PositionalObjectTreeMap<PositionalObject> allChangeObjects) {
         dirty = true;
@@ -334,6 +345,34 @@ public class EditorBeatmap {
     public void addBookmark(int time) {
         dirty = true;
         fullMapInfo.bookmarks.add(time);
+    }
+    public void removeBookmark(int time) {
+        if (fullMapInfo.bookmarks.remove(time)) {
+            dirty = true;
+            return;
+        }
+        Integer floor = fullMapInfo.bookmarks.floor(time), ceil = fullMapInfo.bookmarks.ceiling(time);
+        if (floor == null && ceil == null)
+            return;
+
+        if (floor == null) {
+            if (ceil - time < BOOKMARK_REMOVE_DIST) {
+                fullMapInfo.bookmarks.remove(ceil);
+                dirty = true;
+            }
+        }
+        else if (ceil == null || (time - floor < ceil - time)) {
+            if (time - floor < BOOKMARK_REMOVE_DIST) {
+                fullMapInfo.bookmarks.remove(floor);
+                dirty = true;
+            }
+        }
+        else {
+            if (ceil - time < BOOKMARK_REMOVE_DIST) {
+                fullMapInfo.bookmarks.remove(ceil);
+                dirty = true;
+            }
+        }
     }
 
     public long getBreakEndDelay() {
@@ -1372,6 +1411,11 @@ public class EditorBeatmap {
         }
     }
 
+    public void gameplayChanged() {
+        if (gameplayView != null && gameplayView.autoRefresh())
+            gameplayView.calculateTimes();
+    }
+
     //Effects
     public NavigableMap<Long, ArrayList<TimingPoint>> getEditEffectPoints(long startPos, long endPos)
     {
@@ -1398,9 +1442,20 @@ public class EditorBeatmap {
     }
     public void removeEffectView(EffectView view)
     {
-        if (this.effectView == view)
+        if (this.effectView.equals(view))
         {
             this.effectView = null;
+        }
+    }
+    public void bindGameplayView(GameplayView view)
+    {
+        this.gameplayView = view;
+    }
+    public void removeGameplayView(GameplayView view)
+    {
+        if (this.gameplayView.equals(view))
+        {
+            this.gameplayView = null;
         }
     }
     public void setTimeline(Timeline line) {

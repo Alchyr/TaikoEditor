@@ -53,6 +53,7 @@ Page 3: Colors?
 public class SettingsLayer extends ProgramLayer implements InputLayer {
     private static final float BUTTON_X = 0, BUTTON_Y = SettingsMaster.getHeight() / 2;
     private static final int BUTTON_WIDTH = 100, BUTTON_HEIGHT = 40;
+    private static final String credits = "Made by Alchyr.\nCertain icons are from Font Awesome.";
 
     //editor settings
     //divided into 5 columns, one of which is wider than the others. 1/6 1/6 1/6 2/6 1/6
@@ -84,6 +85,9 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
     private Page[] pages;
     private Button[] pageButtons;
 
+    private BitmapFont font;
+    private float creditsY = 50;
+
     public TextOverlay textOverlay;
 
     private ImageButton exitButton;
@@ -101,7 +105,9 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
     private static final DecimalFormat oneDecimal = new DecimalFormat("#0.#", osuSafe);
     @Override
     public void initialize() {
-        BitmapFont font = assetMaster.getFont("aller medium");
+        font = assetMaster.getFont("aller medium");
+        creditsY = 10 + textRenderer.setFont(font).getHeight(credits);
+
         mainProcessor = new SettingsProcessor(this);
         processor = new BoundInputMultiplexer(mainProcessor);
 
@@ -209,6 +215,8 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         exitButton.render(sb, sr);
 
         textOverlay.render(sb, sr);
+
+        textRenderer.setFont(font).renderText(sb, credits, 10, creditsY);
     }
 
     @Override
@@ -329,7 +337,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         y = LABEL_Y_START;
         Label skinLabel = editorSettings.addLabel(X_6, y, font, "Skin: ");
-        Dropdown<SkinProvider> skinSelect = new Dropdown<>(X_6 + skinLabel.getWidth() + 6, y, 1.5f * SMALL_SECTION_WIDTH, SettingsMaster.getHeight() * 0.5f, Skins.skins, font)
+        DropdownBox<SkinProvider> skinSelect = new DropdownBox<>(X_6 + skinLabel.getWidth() + 6, y, 1.5f * SMALL_SECTION_WIDTH, SettingsMaster.getHeight() * 0.5f, Skins.skins, font)
                 .setOption(Skins.currentSkin);
         skinSelect.setOnSelect((old, current)->{
                     if (!current.equals(old)) {

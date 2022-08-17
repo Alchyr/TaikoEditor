@@ -124,8 +124,8 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public void update(double exactPos, long msPos, float elapsed) {
-        super.update(exactPos, msPos, elapsed);
+    public void update(double exactPos, long msPos, float elapsed, boolean canHover) {
+        super.update(exactPos, msPos, elapsed, canHover);
         activeSnaps = map.getActiveSnaps(preciseTime - EditorLayer.viewTime, preciseTime + EditorLayer.viewTime);
     }
 

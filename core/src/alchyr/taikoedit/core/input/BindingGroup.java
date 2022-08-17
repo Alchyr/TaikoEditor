@@ -59,6 +59,19 @@ public class BindingGroup {
         allBindings.put(binding.getInputID(), binding);
         orderedBindings.add(binding);
     }
+    public InputBinding getBinding(String key) {
+        return allBindings.get(key);
+    }
+    public String getBindingInputString(String key, String[] keyNameArray) {
+        InputBinding binding = allBindings.get(key);
+        if (binding != null) {
+            if (binding.getInputs().isEmpty()) {
+                return null;
+            }
+            return binding.getInputs().get(0).toString(keyNameArray);
+        }
+        return null;
+    }
 
     public void initialize(Map<String, BindingGroup> bindingMap, Map<String, List<InputBinding.InputInfo>> bindingData) {
         //Load data

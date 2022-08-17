@@ -386,8 +386,8 @@ public class MapSelect implements Scrollable {
 
                 float bgScale = Math.max(infoWidth / thumbnail.getWidth(), thumbnailMaxHeight / thumbnail.getHeight());
 
-                thumbnailWidth = (int) Math.ceil(thumbnail.getWidth() * bgScale);
-                thumbnailHeight = (int) Math.ceil(thumbnail.getHeight() * bgScale);
+                thumbnailWidth = Math.round(thumbnail.getWidth() * bgScale);
+                thumbnailHeight = Math.round(thumbnail.getHeight() * bgScale);
 
                 if (thumbnailWidth > infoWidth) {
                     thumbnailSrcHeight = thumbnail.getHeight();

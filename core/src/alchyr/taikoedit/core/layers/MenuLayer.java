@@ -281,8 +281,13 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
         return null;
     }
     private void versionUpdate() {
-        TaikoEditor.addLayer(new ConfirmationLayer("Exit and update?", "Yes", "No", false).onConfirm(
-                ()->TaikoEditor.addLayer(new UpdatingLayer(updateID, new File("lib").getAbsolutePath()))));
+        if (updateID != null) {
+            TaikoEditor.addLayer(new ConfirmationLayer("Exit and update?", "Yes", "No", false).onConfirm(
+                    ()->{
+                        music.pause();
+                        TaikoEditor.addLayer(new UpdatingLayer(updateID, new File("lib").getAbsolutePath()));
+                    }));
+        }
     }
 
     private void quit()

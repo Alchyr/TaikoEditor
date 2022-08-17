@@ -25,8 +25,11 @@ public class Snap implements Comparable<Snap> {
         divisorColors.put(6, Color.PURPLE.cpy());
         divisorColors.put(7, Color.MAGENTA.cpy());
         divisorColors.put(8, Color.YELLOW.cpy());
+        divisorColors.put(9, Color.ROYAL.cpy());
         divisorColors.put(12, Color.LIGHT_GRAY.cpy());
         divisorColors.put(16, Color.VIOLET.cpy());
+        divisorColors.put(32, Color.LIME.cpy());
+        divisorColors.put(48, Color.FOREST.cpy());
     }
     private static Color getDivisorColor(int divisor)
     {

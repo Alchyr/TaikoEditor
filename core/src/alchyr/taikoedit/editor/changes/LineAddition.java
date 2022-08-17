@@ -73,6 +73,8 @@ public class LineAddition extends MapChange {
             }
             map.updateEffectPoints(replacedObjects, addedLines.entrySet());
         }
+
+        map.gameplayChanged();
         return this;
     }
 
@@ -121,6 +123,8 @@ public class LineAddition extends MapChange {
 
             map.updateEffectPoints(addedLines.entrySet(), replacedObjects);
         }
+
+        map.gameplayChanged();
         return this;
     }
 }

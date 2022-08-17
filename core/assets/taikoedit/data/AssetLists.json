@@ -226,6 +226,26 @@
       "class": "Texture"
     },
     {
+      "name": "arefreshon",
+      "file": "taikoedit/images/editor/ui/autorefreshon.png",
+      "class": "Texture"
+    },
+    {
+      "name": "arefreshonh",
+      "file": "taikoedit/images/editor/ui/autorefreshonhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "arefreshoff",
+      "file": "taikoedit/images/editor/ui/autorefreshoff.png",
+      "class": "Texture"
+    },
+    {
+      "name": "arefreshoffh",
+      "file": "taikoedit/images/editor/ui/autorefreshoffhover.png",
+      "class": "Texture"
+    },
+    {
       "name": "breaks",
       "file": "taikoedit/images/editor/ui/breaks.png",
       "class": "Texture"
@@ -293,6 +313,26 @@
     {
       "name": "openh",
       "file": "taikoedit/images/editor/ui/openhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "dropdown",
+      "file": "taikoedit/images/editor/ui/dropdown.png",
+      "class": "Texture"
+    },
+    {
+      "name": "dropdownh",
+      "file": "taikoedit/images/editor/ui/dropdownhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "edit",
+      "file": "taikoedit/images/editor/ui/edit.png",
+      "class": "Texture"
+    },
+    {
+      "name": "edith",
+      "file": "taikoedit/images/editor/ui/edithover.png",
       "class": "Texture"
     },
     {
