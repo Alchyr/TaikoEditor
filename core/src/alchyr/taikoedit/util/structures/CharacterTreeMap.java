@@ -8,28 +8,42 @@ public class CharacterTreeMap<T> {
 
     public CharacterTreeMap() {
         starting = new HashMap<>();
-        head = new CharacterTreeNode();
+        head = new CharacterTreeNode(false);
     }
 
     public List<T> search(String[] keys, float leniency) {
         //Results are sorted by total score
         Map<T, Float> results = new HashMap<>();
+        Set<T> notFound = new HashSet<>();
+
         float max = 0, valueMul;
         for (String key : keys) {
             if (key.isEmpty())
                 continue;
+
+            notFound.clear();
+            notFound.addAll(results.keySet());
             ArrayList<CharacterTreeNode> startPoints = starting.get(key.charAt(0));
+            valueMul = Math.min(1, (key.length() / 5.0f)*(key.length() / 5.0f)); //Search term weight increases as length increases
+
             if (startPoints != null) {
-                valueMul = Math.min(1, (key.length() / 5.0f)*(key.length() / 5.0f)); //Search term weight increases as length increases
                 for (CharacterTreeNode start : startPoints) {
-                    for (WeightedEntry result : start.find(key, 1)) {
-                        max = Math.max(max, results.merge(result.value, result.weight * valueMul, Float::sum));
+                    for (WeightedEntry result : start.find(key)) {
+                        if (start.isTop && result.exactMatch) {
+                            max = Math.max(max, results.merge(result.entry, result.weight * 2.5f, Float::sum));
+                        }
+                        else {
+                            max = Math.max(max, results.merge(result.entry, result.weight * valueMul, Float::sum));
+                        }
+                        notFound.remove(result.entry);
                     }
                 }
             }
-            /*for (WeightedEntry result : head.find(key)) {
-                results.merge(result.value, result.weight, Float::sum);
-            }*/
+
+            for (T entry : notFound) {
+                //Each search term with no match cuts a result's value
+                results.merge(entry, -2f * valueMul, Float::sum);
+            }
         }
 
         float requirement = max * leniency;
@@ -53,11 +67,13 @@ public class CharacterTreeMap<T> {
     }
 
     private class CharacterTreeNode {
+        final boolean isTop;
         final HashMap<Character, CharacterTreeNode> children;
         final List<WeightedEntry> values;
 
-        CharacterTreeNode()
+        CharacterTreeNode(boolean isTop)
         {
+            this.isTop = isTop;
             children = new HashMap<>();
             values = new ArrayList<>();
         }
@@ -77,23 +93,30 @@ public class CharacterTreeMap<T> {
 
         List<WeightedEntry> find(String key)
         {
-            return find(key, 0);
+            return find(key, 1);
         }
         List<WeightedEntry> find(String key, int index) {
             if (index >= key.length()) {
+                //This is the last letter of the term, return all values (which includes all children's values)
                 return getAllValues();
             }
 
+            //Still going, move to child
             CharacterTreeNode child = children.get(key.charAt(index));
             if (child != null) {
                 return child.find(key, index + 1);
             }
+            //No match
             return Collections.emptyList();
         }
 
         List<WeightedEntry> getAllValues()
         {
-            List<WeightedEntry> results = new ArrayList<>(values);
+            List<WeightedEntry> results = new ArrayList<>();
+            for (WeightedEntry entry : values) {
+                entry.exactMatch = true;
+                results.add(entry);
+            }
 
             for (CharacterTreeNode t : children.values())
             {
@@ -104,7 +127,10 @@ public class CharacterTreeMap<T> {
         }
         void getAllValues(List<WeightedEntry> results)
         {
-            results.addAll(values);
+            for (WeightedEntry entry : values) {
+                entry.exactMatch = false;
+                results.add(entry);
+            }
 
             for (CharacterTreeNode t : children.values())
             {
@@ -127,7 +153,7 @@ public class CharacterTreeMap<T> {
                 CharacterTreeNode n = children.get(c);
                 if (n == null)
                 {
-                    n = new CharacterTreeNode();
+                    n = new CharacterTreeNode(head == this);
                     starting.computeIfAbsent(c, k -> new ArrayList<>()).add(n);
                     children.put(c, n);
                 }
@@ -141,11 +167,12 @@ public class CharacterTreeMap<T> {
     }
 
     private class WeightedEntry implements Comparable<WeightedEntry> {
-        final T value;
+        final T entry;
         final float weight;
+        boolean exactMatch = false;
 
-        WeightedEntry(T value, float weight) {
-            this.value = value;
+        WeightedEntry(T entry, float weight) {
+            this.entry = entry;
             this.weight = weight;
         }
 

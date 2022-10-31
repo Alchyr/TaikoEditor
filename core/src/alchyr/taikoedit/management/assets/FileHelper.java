@@ -112,6 +112,39 @@ public class FileHelper {
     {
         if (f.isFile() && f.canRead())
         {
+            InputStream fStream = null;
+            try
+            {
+                fStream = new FileInputStream(f);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fStream));
+
+                ArrayList<String> lines = new ArrayList<>();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lines.add(line);
+                    if (line.equals(stopLine))
+                        break;
+                }
+
+                fStream.close();
+
+                return lines;
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            finally {
+                StreamUtils.closeQuietly(fStream);
+            }
+        }
+        return null;
+    }
+
+    public static List<String> readFileLinesOld(File f, String stopLine)
+    {
+        if (f.isFile() && f.canRead())
+        {
             FileReader reader = null;
             try
             {

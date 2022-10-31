@@ -301,21 +301,30 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                 .loadLists("base")
                 .addLayers(true,
                         new EditorLoadingLayer()
-                            .loadLists("ui", "font", "background", "menu", "editor", "hitsound")
+                            .loadLists("ui", "font", "menu", "editor", "hitsound")
                             .addTask(MapMaster::load).addTracker(MapMaster::getProgress).addTask(Skins::load)
                             .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)
                             .addLayers(true,
                                     ()->{
                                         if (currentSkin == null) {
-                                            return new ProgramLayer[] { this };
+                                            return new ProgramLayer[] {
+                                                    this,
+                                                    new LoadingLayer().loadLists("background")
+                                            };
                                         }
                                         else {
                                             LoadingLayer loader = currentSkin.getLoader(this);
                                             if (loader != null) {
-                                                return new ProgramLayer[] { loader };
+                                                return new ProgramLayer[] {
+                                                        loader,
+                                                        new LoadingLayer().loadLists("background")
+                                                };
                                             }
                                             else {
-                                                return new ProgramLayer[] { this };
+                                                return new ProgramLayer[] {
+                                                        this,
+                                                        new LoadingLayer().loadLists("background")
+                                                };
                                             }
                                         }
                                     }

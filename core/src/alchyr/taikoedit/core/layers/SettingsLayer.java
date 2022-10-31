@@ -53,7 +53,15 @@ Page 3: Colors?
 public class SettingsLayer extends ProgramLayer implements InputLayer {
     private static final float BUTTON_X = 0, BUTTON_Y = SettingsMaster.getHeight() / 2;
     private static final int BUTTON_WIDTH = 100, BUTTON_HEIGHT = 40;
-    private static final String credits = "Made by Alchyr.\nCertain icons are from Font Awesome.";
+    private static final String verString;
+    static {
+        String base = String.valueOf(VERSION);
+        if (base.length() == 3)
+            verString = "v" + base.charAt(0) + "." + base.charAt(1) + "." + base.charAt(2);
+        else
+            verString = "v???";
+    }
+    private static final String credits = "Made by Alchyr.\nCertain icons are from Font Awesome.\n" + verString;
 
     //editor settings
     //divided into 5 columns, one of which is wider than the others. 1/6 1/6 1/6 2/6 1/6

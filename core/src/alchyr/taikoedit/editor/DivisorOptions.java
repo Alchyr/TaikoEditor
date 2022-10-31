@@ -10,7 +10,10 @@ public class DivisorOptions {
     static {
         for (int i = 1; i <= 16; ++i)
             autoGen.add(i);
+        autoGen.add(18);
+        autoGen.add(27);
         autoGen.add(32);
+        autoGen.add(36);
         autoGen.add(48);
     }
 

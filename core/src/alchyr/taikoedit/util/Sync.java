@@ -42,7 +42,7 @@ import static org.lwjgl.glfw.GLFW.glfwGetTime;
  */
 public class Sync {
     /** number of nano seconds in a second */
-    private static final long NANOS_IN_SECOND = 1000L * 1000L * 1000L;
+    public static final long NANOS_IN_SECOND = 1000L * 1000L * 1000L;
 
     /** The time to sleep/yield until the next frame */
     private long nextFrame = 0;

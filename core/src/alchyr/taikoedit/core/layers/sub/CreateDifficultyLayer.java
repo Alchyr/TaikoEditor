@@ -122,19 +122,21 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
         textFields.add(diffName.setOnEnter((s)->{diffName.disable(); return true;}));
 
         y -= 40;
-        hp = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "HP:", oneDecimal.format(5), 4, font).setType(TextField.TextType.NUMERIC);
+        hp = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "HP:", oneDecimal.format(base.getFullMapInfo().hp), 4, font).setType(TextField.TextType.NUMERIC);
         hp.setOnEndInput(this::testDiffValue);
         textFields.add(hp.setOnEnter((s)->{hp.disable(); return true;}));
         y -= 30;
         hpSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        hpSlider.setValue(base.getFullMapInfo().hp);
         hpSlider.onValueChange(this::setHP);
 
         y -= 50;
-        od = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "OD:", oneDecimal.format(5), 4, font).setType(TextField.TextType.NUMERIC);
+        od = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "OD:", oneDecimal.format(base.getFullMapInfo().od), 4, font).setType(TextField.TextType.NUMERIC);
         od.setOnEndInput(this::testDiffValue);
         textFields.add(od.setOnEnter((s)->{od.disable(); return true;}));
         y -= 30;
         odSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        odSlider.setValue(base.getFullMapInfo().od);
         odSlider.onValueChange(this::setOD);
 
         processor.bind();

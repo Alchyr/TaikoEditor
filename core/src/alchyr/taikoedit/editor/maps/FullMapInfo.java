@@ -94,7 +94,8 @@ public class FullMapInfo {
         this.sliderTickRate = base.sliderTickRate;
 
         this.backgroundEvents.addAll(base.backgroundEvents);
-        this.breakPeriods.addAll(base.breakPeriods);
+        for (Pair<Long, Long> breakPeriod : base.breakPeriods)
+            this.breakPeriods.add(new Pair<>(breakPeriod.a, breakPeriod.b));
         this.fullStoryboard.addAll(base.fullStoryboard);
 
         File f = new File(base.getMapFile().getParentFile(), generateFilename(diffName));

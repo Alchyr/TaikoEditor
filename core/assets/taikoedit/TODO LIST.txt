@@ -5,17 +5,10 @@ Now saves database, which should increase speed on subsequent loads on non-solid
 On SSD probably almost no difference, but on a hard drive should? make a very large difference due to far less file operations.
 
 MAJOR:
-GOOD MENU - IS DONE
-
-Gradual Volume Change tool - can mostly copy sv tool, though the various curves are probably not too necessary
-Insert Break tool
-
-Way to directly open maps skipping menu - done-ish, requires a different launcher
-
-
-All automatic break checks should depend on a boolean "autoBreaks"
-If on load, breaks are "invalid" (objects during them, invalid starting/end time) autoBreaks will be disabled.
-Breaks will all be saved in the Break Periods section, regardless of where they were.
+Bezier Curve SV
+- Select x green points as the initial anchor points, can then adjust up/down for green lines, and add/adjust more points?
+ on a special screen before generating sv?
+ Simpler option - https://cubic-bezier.com/ this style
 
 Progress:
 Breaks are displayed on timeline and in object view.

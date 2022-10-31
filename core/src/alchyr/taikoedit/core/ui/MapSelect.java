@@ -6,8 +6,10 @@ import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.AlphabeticComparer;
+import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.Hitbox;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -88,6 +90,7 @@ public class MapSelect implements Scrollable {
     private float mapLoadingAlpha = 0;
 
     //map info
+    private String currentThumbnail = null;
     private Texture thumbnail;
     private int thumbnailX, thumbnailY, thumbnailWidth, thumbnailHeight, thumbnailOffsetX, thumbnailOffsetY,
             thumbnailSrcWidth, thumbnailSrcHeight, thumbnailSrcOffsetX, thumbnailSrcOffsetY;
@@ -377,46 +380,54 @@ public class MapSelect implements Scrollable {
     }
 
     public void render(SpriteBatch sb, ShapeRenderer sr) {
-        if (updateThumbnail && selected != null) {
+        if (selected != null && (updateThumbnail || (currentThumbnail != null && !currentThumbnail.equals(selected.getBackground())))) {
             updateThumbnail = false;
-            String bg = selected.getBackground();
-            if (bg != null && !bg.isEmpty()) {
-                thumbnail = new Texture(Gdx.files.absolute(bg), true); //these song folders have quite high odds of containing characters libgdx doesn't like. assetMaster.get(backgroundImg.toLowerCase());
-                thumbnail.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
+            currentThumbnail = selected.getBackground();
+            if (currentThumbnail != null && !currentThumbnail.isEmpty()) {
+                FileHandle bgFile = Gdx.files.absolute(currentThumbnail);
+                if (bgFile.exists()) {
+                    try {
+                        thumbnail = new Texture(Gdx.files.absolute(currentThumbnail), true); //these song folders have quite high odds of containing characters libgdx doesn't like. assetMaster.get(backgroundImg.toLowerCase());
+                        thumbnail.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
 
-                float bgScale = Math.max(infoWidth / thumbnail.getWidth(), thumbnailMaxHeight / thumbnail.getHeight());
+                        float bgScale = Math.max(infoWidth / thumbnail.getWidth(), thumbnailMaxHeight / thumbnail.getHeight());
 
-                thumbnailWidth = Math.round(thumbnail.getWidth() * bgScale);
-                thumbnailHeight = Math.round(thumbnail.getHeight() * bgScale);
+                        thumbnailWidth = Math.round(thumbnail.getWidth() * bgScale);
+                        thumbnailHeight = Math.round(thumbnail.getHeight() * bgScale);
 
-                if (thumbnailWidth > infoWidth) {
-                    thumbnailSrcHeight = thumbnail.getHeight();
-                    thumbnailSrcOffsetY = 0;
+                        if (thumbnailWidth > infoWidth) {
+                            thumbnailSrcHeight = thumbnail.getHeight();
+                            thumbnailSrcOffsetY = 0;
 
-                    thumbnailSrcWidth = (int) (thumbnail.getWidth() * (infoWidth / thumbnailWidth));
-                    thumbnailSrcOffsetX = (int) ((thumbnail.getWidth() - thumbnailSrcWidth) * 0.5f);
-                    thumbnailWidth = (int) infoWidth;
+                            thumbnailSrcWidth = (int) (thumbnail.getWidth() * (infoWidth / thumbnailWidth));
+                            thumbnailSrcOffsetX = (int) ((thumbnail.getWidth() - thumbnailSrcWidth) * 0.5f);
+                            thumbnailWidth = (int) infoWidth;
+                        }
+                        else if (thumbnailHeight > thumbnailMaxHeight) {
+                            thumbnailSrcWidth = thumbnail.getWidth();
+                            thumbnailSrcOffsetX = 0;
+
+                            thumbnailSrcHeight = (int) (thumbnail.getHeight() * (thumbnailMaxHeight / thumbnailHeight));
+                            thumbnailSrcOffsetY = (int) ((thumbnail.getHeight() - thumbnailSrcHeight) * 0.5f);
+                            thumbnailHeight = (int) thumbnailMaxHeight;
+                        }
+                        else {
+                            thumbnailSrcWidth = thumbnail.getWidth();
+                            thumbnailSrcHeight = thumbnail.getHeight();
+                            thumbnailSrcOffsetX = 0;
+                            thumbnailSrcOffsetY = 0;
+                        }
+
+                        thumbnailOffsetX = thumbnailWidth / 2;
+                        thumbnailOffsetY = thumbnailHeight / 2;
+
+                        thumbnailX = (int) (infoCenterX - thumbnailWidth / 2.0f);
+                        thumbnailY = (int) (thumbnailCenterY - thumbnailHeight / 2.0f);
+                    }
+                    catch (Exception e) {
+                        GeneralUtils.logStackTrace(editorLogger, e);
+                    }
                 }
-                else if (thumbnailHeight > thumbnailMaxHeight) {
-                    thumbnailSrcWidth = thumbnail.getWidth();
-                    thumbnailSrcOffsetX = 0;
-
-                    thumbnailSrcHeight = (int) (thumbnail.getHeight() * (thumbnailMaxHeight / thumbnailHeight));
-                    thumbnailSrcOffsetY = (int) ((thumbnail.getHeight() - thumbnailSrcHeight) * 0.5f);
-                    thumbnailHeight = (int) thumbnailMaxHeight;
-                }
-                else {
-                    thumbnailSrcWidth = thumbnail.getWidth();
-                    thumbnailSrcHeight = thumbnail.getHeight();
-                    thumbnailSrcOffsetX = 0;
-                    thumbnailSrcOffsetY = 0;
-                }
-
-                thumbnailOffsetX = thumbnailWidth / 2;
-                thumbnailOffsetY = thumbnailHeight / 2;
-
-                thumbnailX = (int) (infoCenterX - thumbnailWidth / 2.0f);
-                thumbnailY = (int) (thumbnailCenterY - thumbnailHeight / 2.0f);
             }
         }
 

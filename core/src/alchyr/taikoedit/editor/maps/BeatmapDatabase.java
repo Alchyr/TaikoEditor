@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.maps;
 
 import alchyr.taikoedit.util.GeneralUtils;
+import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.structures.CharacterTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -18,8 +19,8 @@ import java.util.concurrent.Future;
 
 public class BeatmapDatabase {
     private static final Logger logger = LogManager.getLogger("BeatmapDatabase");
-    private final ExecutorService executor = Executors.newCachedThreadPool();
     private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
+    private Thread saveThread;
 
     private static final String DATABASE_VER = "0";
 
@@ -37,6 +38,7 @@ public class BeatmapDatabase {
         try
         {
             logger.info("Loading Songs folder: " + songsFolder.getPath());
+            long loadStart = System.nanoTime();
 
             File database = getDatabaseFile();
 
@@ -50,9 +52,18 @@ public class BeatmapDatabase {
                     HashMap<String, Mapset> oldData = loadDatabase(database);
                     if (oldData != null) {
                         logger.info("Updating data.");
+                        long updateStart = System.nanoTime();
+
                         updateData(oldData, songsFolder);
                         saveDatabase();
+                        updateStart = System.nanoTime() - updateStart;
+                        loadStart = System.nanoTime() - loadStart;
+                        logger.debug("Updating database: " + (1.0 * updateStart / Sync.NANOS_IN_SECOND) + " seconds.");
+                        logger.debug("Total load: " + (1.0 * loadStart / Sync.NANOS_IN_SECOND) + " seconds.");
                         return;
+                    }
+                    else {
+                        logger.info("Failed to load database.");
                     }
                 }
                 catch (Exception e) {
@@ -62,13 +73,33 @@ public class BeatmapDatabase {
             }
 
             logger.info("Loading new data.");
+            long loadNewStart = System.nanoTime();
             loadData(songsFolder);
             saveDatabase();
+            loadNewStart = System.nanoTime() - loadNewStart;
+            loadStart = System.nanoTime() - loadStart;
+            logger.debug("Loading new database: " + (1.0 * loadNewStart / Sync.NANOS_IN_SECOND) + " seconds.");
+            logger.debug("Total load: " + (1.0 * loadStart / Sync.NANOS_IN_SECOND) + " seconds.");
         }
         catch (Exception e)
         {
             logger.error("Failed to generate map data.");
             e.printStackTrace();
+        }
+    }
+
+    public void save() {
+        if (saveThread == null) {
+            saveThread = new Thread(()->{
+                saveDatabase();
+                saveThread = null;
+            });
+            saveThread.setName("TaikoEditor Save");
+            saveThread.setDaemon(true);
+            saveThread.start();
+        }
+        else {
+            logger.info("Attempted to save while save already in progress.");
         }
     }
 
@@ -79,6 +110,8 @@ public class BeatmapDatabase {
     private int completeCount = 0;
     private final Object loadWaiter = new Object();
     private void loadData(File songsFolder) {
+        final ExecutorService executor = Executors.newCachedThreadPool();
+
         File[] songFolders = songsFolder.listFiles(File::isDirectory);
         activeCount = 0;
         completeCount = 0;
@@ -94,6 +127,7 @@ public class BeatmapDatabase {
 
             synchronized (loadWaiter) {
                 try {
+
                     int step = songFolders.length / TASK_LIMIT, stage = 0, limit = step;
                     //Divide folders into 32 sub-sections and assign a task for each section
                     for (int i = 0; i < songFolders.length; ++i) {
@@ -169,6 +203,8 @@ public class BeatmapDatabase {
         //Similar to loadData, but first checks old data map.
         //If old data with matching filename exists, it will be used.
         //If filename has no match, it will be loaded normally.
+        final ExecutorService executor = Executors.newCachedThreadPool();
+
         File[] songFolders = songsFolder.listFiles(File::isDirectory);
         activeCount = 0;
         completeCount = 0;
@@ -466,6 +502,7 @@ public class BeatmapDatabase {
                 json.writeObjectEnd();
             }
             json.writeArrayEnd();
+            logger.info("Database saved.");
         }
         catch (Exception e) {
             logger.error("Failed to save map database.");
@@ -542,6 +579,7 @@ public class BeatmapDatabase {
                 data = data.next();
             }
 
+            logger.info("Database loaded.");
             return processed;
         }
         return null;

@@ -6,6 +6,7 @@ import alchyr.taikoedit.management.assets.AssetInfo;
 import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.assets.SpecialLoader;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.math.MathUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,8 +30,9 @@ public class OsuBackgroundLoader implements SpecialLoader {
 
             if (files != null)
             {
-                for (File img : files)
-                {
+                int i = MathUtils.random(files.length - 1);
+                if (i >= 0 && i < files.length) {
+                    File img = files[i];
                     if (img.exists()) {
                         manager.load(img.getAbsolutePath(), Texture.class, mipmaps);
                         assetMaster.loadedAssets.put(img.getAbsolutePath().toLowerCase(Locale.ROOT), FileHelper.gdxSeparator(img.getAbsolutePath()));

@@ -85,10 +85,9 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
         setLoader(BitmapFont.class, ".ttf", new FreetypeFontLoader(resolver));
     }
 
-    public boolean update()
-    {
+    public void fastUpdate() {
         try {
-            doneLoading = super.update();
+            doneLoading = update();
             if (doneLoading && !loadingRegions.isEmpty())
             {
                 Texture t;
@@ -111,7 +110,32 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
             editorLogger.error("Exception occurred loading asset.");
             GeneralUtils.logStackTrace(editorLogger, e);
         }
-        return doneLoading;
+    }
+    public void longUpdate() {
+        try {
+            doneLoading = update(84);
+            if (doneLoading && !loadingRegions.isEmpty())
+            {
+                Texture t;
+                for (Pair<String, RegionInfo> info : loadingRegions)
+                {
+                    t = super.get(info.b.texture);
+
+                    loadedRegions.put(info.a, new TextureAtlas.AtlasRegion(t, info.b.x, info.b.y, info.b.width, info.b.height));
+
+                    if (!textureRegions.containsKey(info.b.texture))
+                        textureRegions.put(info.b.texture, new ArrayList<>());
+
+                    textureRegions.get(info.b.texture).add(info.a);
+                }
+
+                loadingRegions.clear();
+            }
+        }
+        catch (GdxRuntimeException e) {
+            editorLogger.error("Exception occurred loading asset.");
+            GeneralUtils.logStackTrace(editorLogger, e);
+        }
     }
 
     public boolean isDoneLoading() {

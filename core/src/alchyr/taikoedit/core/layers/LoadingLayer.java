@@ -3,6 +3,7 @@ package alchyr.taikoedit.core.layers;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.AdjustedInputProcessor;
+import alchyr.taikoedit.util.Sync;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Queue;
@@ -54,6 +55,11 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
     private boolean addToBottom;
 
     private LoadingInputProcessor processor;
+
+
+    //Debug
+    private long assetLoadTime = 0;
+    private long taskSetTime = 0;
 
     //If addToBottom, the last index in the array will end up on the bottom, first index on top (of the bottom)
     //If not addToBottom, the first index will be on the bottom of the top, and the last index will be on the very top.
@@ -160,6 +166,9 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
 
     @Override
     public void initialize() {
+        if (assetLists != null || !extraLoads.isEmpty())
+            assetLoadTime = System.nanoTime();
+
         if (assetLists != null) {
             for (String assetList : assetLists)
                 assetMaster.loadList(assetList);
@@ -172,12 +181,18 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
     public void update(float elapsed) {
         if (!done && updateLoading())
         {
+            if (taskSetTime != 0) {
+                taskSetTime = System.nanoTime() - taskSetTime;
+                editorLogger.debug("Task set complete: took " + (1.0 * taskSetTime / Sync.NANOS_IN_SECOND) + " seconds.");
+            }
             //done with current tasks
             activeTasks.clear();
             activeTrackers.clear();
 
             if (!tasks.isEmpty())
             {
+                taskSetTime = System.nanoTime();
+
                 ArrayList<Runnable> taskSet = tasks.removeLast();
                 taskCount = taskSet.size();
                 editorLogger.info("Starting next loading task set. Tasks: " + taskCount);
@@ -236,7 +251,13 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
 
     private boolean updateLoading()
     {
-        assetsLoaded = assetMaster.isDoneLoading();
+        if (!assetsLoaded && assetMaster.isDoneLoading()) {
+            if (assetLoadTime != 0) {
+                assetLoadTime = System.nanoTime() - assetLoadTime;
+                editorLogger.debug("Asset loading complete: took " + (1.0 * assetLoadTime / Sync.NANOS_IN_SECOND) + " seconds.");
+            }
+            assetsLoaded = true;
+        }
 
         boolean tasksDone = true;
 

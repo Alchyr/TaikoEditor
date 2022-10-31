@@ -261,14 +261,14 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private void cycleInput() {
         if (initialSv.isActive()) {
             initialSv.disable();
-            genOffset.activate(processor);
-        }
-        else if (genOffset.isActive()) {
-            genOffset.disable();
             finalSv.activate(processor);
         }
         else if (finalSv.isActive()) {
             finalSv.disable();
+            genOffset.activate(processor);
+        }
+        else if (genOffset.isActive()) {
+            genOffset.disable();
         }
         else {
             initialSv.activate(processor);

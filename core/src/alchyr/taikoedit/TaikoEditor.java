@@ -47,7 +47,7 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 327; //x.x.x -> xxx
+    public static final int VERSION = 331; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 
@@ -331,8 +331,14 @@ public class TaikoEditor extends ApplicationAdapter {
         }
 
         TextRenderer.swapLayouts();
-        assetMaster.update(); //has to be updated on the main thread
-        gameRender(renderLayer);
+        //assetMaster must be updated on main thread.
+        //Give it more time to load if none/only loadinglayers are rendered.
+        if (gameRender(renderLayer)) {
+            assetMaster.longUpdate(); //has to be updated on the main thread
+        }
+        else {
+            assetMaster.fastUpdate(); //has to be updated on the main thread
+        }
         disposeLayers();
         TextRenderer.swapLayouts();
 
@@ -376,8 +382,9 @@ public class TaikoEditor extends ApplicationAdapter {
 
         return renderIndex;
     }
-    private void gameRender(int renderIndex)
+    private boolean gameRender(int renderIndex)
     {
+        boolean onlyLoading = true;
         if (renderIndex < 0) //the lowest layer does not cancel rendering, clear with black color
         {
             Gdx.gl.glClearColor(0, 0, 0, 1);
@@ -391,6 +398,8 @@ public class TaikoEditor extends ApplicationAdapter {
 
             for (; renderIndex < layers.size(); ++renderIndex)
             {
+                if (!(layers.get(renderIndex) instanceof LoadingLayer))
+                    onlyLoading = false;
                 layers.get(renderIndex).render(sb, sr); //, elapsed);
             }
 
@@ -398,6 +407,8 @@ public class TaikoEditor extends ApplicationAdapter {
 
             sb.end();
         }
+
+        return onlyLoading;
     }
     private void updateLayers()
     {

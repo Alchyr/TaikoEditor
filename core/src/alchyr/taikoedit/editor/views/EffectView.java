@@ -1696,7 +1696,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         return this::onEnter;
     }
     public boolean onEnter(String text) {
-        endAdjust();
+        onMain(this::endAdjust);
         return false;
     }
 

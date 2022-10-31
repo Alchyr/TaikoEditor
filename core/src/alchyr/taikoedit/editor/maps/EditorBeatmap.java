@@ -11,6 +11,7 @@ import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.views.GameplayView;
+import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.util.structures.Pair;
@@ -1340,9 +1341,9 @@ public class EditorBeatmap {
                     if (next == null) {
                         if (kiaiEntry == null) {
                             //no higher swap and none of the lines after this have the opposite value.
-                            if (!p.kiai) {
+                            /*if (!p.kiai) {
                                 throw new Error("Unexpected non-kiai line caused kiai map entry generation");
-                            }
+                            }*/
                             kiaiMap.put(cap, false); // +1 +1 = +2
                         }
                         else {
@@ -1757,7 +1758,10 @@ public class EditorBeatmap {
                                     if (FileHelper.isImageFilename(parts[2])) {
                                         String bgFile = FileHelper.concat(map.getMapFile().getParent(), parts[2]);
                                         map.setBackground(bgFile);
-                                        set.background = bgFile;
+                                        if (set.background == null || !set.background.equals(bgFile)) {
+                                            set.background = bgFile;
+                                            MapMaster.mapDatabase.save();
+                                        }
                                     }
                                 }
                             }

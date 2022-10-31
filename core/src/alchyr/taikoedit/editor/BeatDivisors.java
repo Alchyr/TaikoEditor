@@ -147,6 +147,9 @@ public class BeatDivisors {
             return;
         }
 
+        if (divisorSnappings.containsKey(divisor))
+            divisorSnappings.get(divisor).clear();
+        
         HashSet<Long> subSnaps = new HashSet<>(); //Contains all the points that shouldn't be repeated. HashSet as it is used entirely for contains() operations.
         for (Map.Entry<Integer, HashSet<Snap>> snaps : divisorSnappings.entrySet())
         {

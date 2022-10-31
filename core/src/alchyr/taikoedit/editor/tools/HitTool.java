@@ -143,7 +143,7 @@ public class HitTool extends EditorTool {
                 time = closest.pos;
             }
 
-            view.map.addObject(new Hit(time, isRim, finisherLock ^ Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)), view.replaceTest);
+            view.map.addObject(new Hit(time, isRim, finisherLock ^ BindingGroup.shift()), view.replaceTest);
             return true;
         }
     }

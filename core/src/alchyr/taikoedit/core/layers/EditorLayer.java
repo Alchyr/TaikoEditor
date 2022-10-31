@@ -649,6 +649,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void prepSingleDiff(MapInfo info) {
         EditorBeatmap newMap = new EditorBeatmap(set, info);
+        backgroundImg = newMap.getFullMapInfo().getBackground();
 
         if (!set.sameSong)
         {

@@ -7,8 +7,8 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 import javazoom.jl.decoder.OutputBuffer;
 
 
-//TODO:
-//Preload entire mp3 to find length and speed up seek operations? done
+//Changes from original:
+//Preload entire mp3 to determine exact length and speed up seek operations? done
 //Change the setPos method. Currently it goes to beginning then reads through ENTIRE song to desired point. Done
 //Not good for rapid seeking, which will occur if arrow keys are held. Fixed
 //Make a fancier ByteStream (used in read method) to support seek operations? done
