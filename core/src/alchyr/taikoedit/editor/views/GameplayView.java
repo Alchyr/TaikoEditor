@@ -40,9 +40,9 @@ public class GameplayView extends MapView {
     //private HashMap<HitObject, Long> oldEndTimes; //for getting end times of objects to remove them when they're updated.
     //Start times do not need a similar list since they are stored on objects and will only be updated in this class.
 
-    TreeMap<Long, Snap> barlineStartTimes; //Sorted maps for purpose of determining which snaps to render.
+    TreeMap<Long, Snap> barlineStartTimes; //Sorted snaps for purpose of determining which barlines to render.
     TreeMap<Long, Snap> barlineEndTimes;
-    HashMap<Snap, Long> barlineStartMap; //The same snaps are used in every gameplay view, so they have to be tracked outside of the snaps themselves.
+    HashMap<Snap, Long> barlineStartMap; //The same snaps are used in every gameplay view, so they have to be tracked outside of the snaps themselves (since different difficulties could have different sv on their barlines)
 
     public static final int HEIGHT = 150;
     public static final int HALF_HEIGHT = HEIGHT / 2;
@@ -348,7 +348,7 @@ public class GameplayView extends MapView {
         //remaining time * speed = distance from hit zone
         //end time is always pos, the start time of the object.
         if (h.type == HitObject.HitObjectType.SPINNER && h.getGameplayEndPos() - h.gameplayStart > 5000)
-            //Dunno osu's logic to decide when to fade sliders in, this is merely an approximation for convenience
+            //Dunno osu's logic to decide when to fade spinners in, this is merely an approximation for convenience
             alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 750) / 250.0, 0.0, 1.0);
 
         h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);

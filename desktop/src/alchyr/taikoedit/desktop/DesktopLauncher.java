@@ -113,6 +113,8 @@ public class DesktopLauncher {
 		config.setAudioConfig(16, 2048, 6);
 		config.useVsync(true);
 
+		config.setWindowIcon(Files.FileType.Internal, "taikoedit/images/icon_48.png", "taikoedit/images/icon_32.png", "taikoedit/images/icon_16.png");
+
 		try {
 			boolean success = true;
 
