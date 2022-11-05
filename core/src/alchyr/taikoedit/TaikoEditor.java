@@ -47,7 +47,7 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 331; //x.x.x -> xxx
+    public static final int VERSION = 332; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = true; //ctrl+alt+d
 

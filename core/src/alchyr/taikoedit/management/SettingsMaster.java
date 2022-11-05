@@ -23,7 +23,7 @@ public class SettingsMaster {
 
     public static String osuFolder = "";
 
-    private static float musicVolume = 1.0f;
+    private static float musicVolume = 0.5f;
     public static float getMusicVolume() {
         return musicVolume;
     }
@@ -31,7 +31,7 @@ public class SettingsMaster {
         musicVolume = Math.max(0, Math.min(1.0f, f));
         audioMaster.setMusicVolume(musicVolume);
     }
-    public static float effectVolume = 1.0f;
+    public static float effectVolume = 0.5f;
 
     //Controls position of dons and kats.
     //Is applied on newly placed objects and objects that have their properties changed (finisher, change color)

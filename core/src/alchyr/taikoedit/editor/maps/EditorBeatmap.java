@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
+import static alchyr.taikoedit.TaikoEditor.music;
 
 //Will be referenced by displays for rendering, and modifications in editor will be performed on it to ensure all displays are connected to the same map object
 public class EditorBeatmap {
@@ -151,8 +152,6 @@ public class EditorBeatmap {
             ArrayList<TimingPoint> nextStack;
             TimingPoint next;
 
-            boolean stackKiai = false;
-
             while (stackIterator.hasNext()) {
                 nextStack = stackIterator.next().getValue();
 
@@ -184,13 +183,16 @@ public class EditorBeatmap {
                     else {
                         next = GeneralUtils.listLast(nextStack);
                         volumeMap.put(next.getPos(), next.volume);
-                        if (next.kiai != stackKiai) {
+                        if (next.kiai != kiaiActive) {
                             kiaiMap.put(next.getPos(), next.kiai);
-                            stackKiai = next.kiai;
+                            kiaiActive = next.kiai;
                         }
                     }
                 }
             }
+
+            if (kiaiActive)
+                kiaiMap.put((long) music.getMsLength(), false);
         }
         else {
             //generate kiai map
@@ -202,6 +204,9 @@ public class EditorBeatmap {
                     kiaiActive = t.kiai;
                 }
             }
+
+            if (kiaiActive)
+                kiaiMap.put((long) music.getMsLength(), false);
         }
 
         if (keepObjects) {
@@ -1214,7 +1219,7 @@ public class EditorBeatmap {
 
         Boolean removed = kiaiMap.remove(pos);
         if (removed != null) { // -1
-            long cap = Math.max(getAllSnaps().lastKey(), pos) + 1;
+            long cap = Math.max((long) music.getMsLength(), pos + 1);
             Map.Entry<Long, Boolean> kiaiEntry = kiaiMap.higherEntry(pos);
             if (kiaiEntry != null)
                 cap = kiaiEntry.getKey();
@@ -1235,10 +1240,9 @@ public class EditorBeatmap {
                     kiaiMap.remove(kiaiEntry.getKey()); //-1 -1 = -2
                 }
                 else {
-                    if (removed) { //removed a kiai start
-                        editorLogger.error("Removal of kiai start caused kiai end map entry generation");
+                    if (!removed) { //removed a kiai end, no more points until end of map
+                        kiaiMap.put(cap, false);
                     }
-                    kiaiMap.put(cap, false);
                 }
             }
         }
@@ -1252,7 +1256,7 @@ public class EditorBeatmap {
         if ((kiaiEntry != null && kiaiEntry.getValue() != p.kiai) || (kiaiEntry == null && p.kiai)) { //point has different kiai setting than point before it
             kiaiMap.put(p.getPos(), p.kiai);
 
-            long cap = Math.max(getAllSnaps().lastKey(), p.getPos()) + 1;
+            long cap = Math.max((long) music.getMsLength(), p.getPos() + 1);
             kiaiEntry = kiaiMap.higherEntry(p.getPos());
             if (kiaiEntry != null)
                 cap = kiaiEntry.getKey();
@@ -1268,16 +1272,15 @@ public class EditorBeatmap {
                 next = points.hasNext() ? GeneralUtils.listLast(points.next().getValue()) : null;
             }
             if (next == null) {
-                if (kiaiEntry == null) {
-                    //no higher swap and none of the lines after this have the opposite value.
-                    if (!p.kiai) {
-                        editorLogger.error("Unexpected non-kiai line caused kiai map entry generation");
-                    }
-                    kiaiMap.put(cap, false); // +1 +1 = +2
+                //No swaps between. Just remove the higher entry.
+                if (kiaiEntry != null) {
+                    kiaiMap.remove(kiaiEntry.getKey()); //-1 -1 = -2
                 }
                 else {
-                    //No swaps between. Just remove the higher entry.
-                    kiaiMap.remove(kiaiEntry.getKey()); // +1 -1 = +0
+                    //No higher entry. If kiai was enabled, put cap at end of map.
+                    if (p.kiai) {
+                        kiaiMap.put(cap, false);
+                    }
                 }
             }
         }
@@ -1289,7 +1292,7 @@ public class EditorBeatmap {
         for (TimingPoint p : changed) {
             if (kiaiMap.containsKey(p.getPos()) && kiaiMap.get(p.getPos()) != p.kiai) { //Was originally a swapping point.
                 if (kiaiMap.remove(p.getPos()) != null) { // -1
-                    long cap = Math.max(getAllSnaps().lastKey(), p.getPos()) + 1;
+                    long cap = Math.max((long) music.getMsLength(), p.getPos() + 1);
                     kiaiEntry = kiaiMap.higherEntry(p.getPos());
                     if (kiaiEntry != null)
                         cap = kiaiEntry.getKey();
@@ -1310,10 +1313,10 @@ public class EditorBeatmap {
                             kiaiMap.remove(kiaiEntry.getKey()); //-1 -1 = -2
                         }
                         else {
-                            if (!p.kiai) {
-                                throw new Error("Unexpected non-kiai line caused kiai end map entry generation");
+                            //No higher entry. If kiai was enabled, put cap at end of map.
+                            if (p.kiai) {
+                                kiaiMap.put(cap, false);
                             }
-                            kiaiMap.put(cap, false);
                         }
                     }
                 }
@@ -1323,7 +1326,7 @@ public class EditorBeatmap {
                 if ((kiaiEntry != null && kiaiEntry.getValue() != p.kiai) || (kiaiEntry == null && p.kiai)) { //point has different kiai setting than point before it
                     kiaiMap.put(p.getPos(), p.kiai);
 
-                    long cap = Math.max(getAllSnaps().lastKey(), p.getPos()) + 1;
+                    long cap = Math.max((long) music.getMsLength(), p.getPos() + 1);
                     kiaiEntry = kiaiMap.higherEntry(p.getPos());
                     if (kiaiEntry != null)
                         cap = kiaiEntry.getKey();
@@ -1339,16 +1342,15 @@ public class EditorBeatmap {
                         next = points.hasNext() ? GeneralUtils.listLast(points.next().getValue()) : null;
                     }
                     if (next == null) {
-                        if (kiaiEntry == null) {
-                            //no higher swap and none of the lines after this have the opposite value.
-                            /*if (!p.kiai) {
-                                throw new Error("Unexpected non-kiai line caused kiai map entry generation");
-                            }*/
-                            kiaiMap.put(cap, false); // +1 +1 = +2
+                        //No swaps between. Just remove the higher entry.
+                        if (kiaiEntry != null) {
+                            kiaiMap.remove(kiaiEntry.getKey()); //+1 -1 = +0
                         }
                         else {
-                            //No swaps between. Just remove the higher entry.
-                            kiaiMap.remove(kiaiEntry.getKey()); // +1 -1 = +0
+                            //No higher entry. If kiai was enabled, put cap at end of map.
+                            if (p.kiai) {
+                                kiaiMap.put(cap, false);
+                            }
                         }
                     }
                 }
@@ -1843,6 +1845,8 @@ public class EditorBeatmap {
                 kiaiMap.put(stack.getKey(), kiai = nextKiai);
             }
         }
+        if (kiai) //kiai never turned off
+            kiaiMap.put((long) music.getMsLength(), false);
 
         sortBreaks();
         autoBreaks = testBreaks();
@@ -2089,30 +2093,45 @@ public class EditorBeatmap {
 
     /// EXPERIMENTAL TJA SAVE SUPPORT ///
 
-    //ASSUMPTION: The version of TJA used requires 16 notes per line.
-    //No fancy features will be implemented, only the basics.
+
+    //TODO:
+    /*
+        Make metadata information a class.
+        TJA and osu will have separate metadata classes.
+        Editing beatmap properties will depend on the metadata class.
+        Enable negative scroll rate if TJA.
+
+        BRANCHES:
+        Support them?
+        If a section is a "branch":
+        Have a special highlight.
+        Hotkey/buttons to swap between branches/add branch.
+     */
 
     public boolean saveTJA()
     {
-        return false;
-        /*
+        if (true)
+            return false;
+
+        //All difficulties are stored in one file. Move this to set.
+
         FileOutputStream out = null;
         BufferedWriter w = null;
         try
         {
-            String tjaFile = fullMapInfo.mapFile.getPath();
-            tjaFile = tjaFile.substring(0, tjaFile.lastIndexOf(".")) + ".tja";
+            String tjaFile = fullMapInfo.getMapFile().getParentFile().getPath();
+            tjaFile += ".tja";
 
-            out = new FileOutputStream(new File(tjaFile), false);
+            out = new FileOutputStream(tjaFile, false);
             w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
 
-            Map.Entry<Integer, ArrayList<TimingPoint>> firstEntry = timingPoints.firstEntry();
+            Map.Entry<Long, ArrayList<TimingPoint>> firstEntry = timingPoints.firstEntry();
 
             //required part of file header
             double bpm = firstEntry.getValue().get(0).getBPM();
-            int offset = firstEntry.getValue().get(0).pos;
+            long offset = firstEntry.getValue().get(0).getPos();
 
-            w.write("// CONVERTED FROM .osu\n");
+            w.write("// Generated using TaikoEditor\n");
             w.write("TITLE:" + fullMapInfo.titleUnicode + "\n");
             w.write("TITLEEN:" + fullMapInfo.title + "\n"); //Is this even supported?
 
@@ -2120,6 +2139,14 @@ public class EditorBeatmap {
             //To write this as TJA, the objects must be converted into Measures.
             //Measure snappings will be determined by finding closest snaps, 1 millisecond before or after.
             //Unsnapped notes will cause an error, which should be reported to TextOverlay.
+            //#BPMCHANGE can be used in the middle of a measure.
+            //Timing points with barline hidden are not considered to be the start of a new measure.
+            //The end of the measure will be based on barlines.
+            //First, read an entire measure. Determine the necessary base snapping. Generate the measure.
+
+            Iterator<Map.Entry<Long, ArrayList<HitObject>>> objStackItr = objects.entrySet().iterator();
+            long measure = 0;
+
 
             w.close();
             out.close();
@@ -2146,7 +2173,7 @@ public class EditorBeatmap {
             editorLogger.error("Failed to save beatmap.");
             e.printStackTrace();
             return false;
-        }*/
+        }
     }
 
     /**

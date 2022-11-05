@@ -538,12 +538,13 @@ public class BindingGroup {
 
         return anyInput.onDown(actionQueue);
     }
+    private final Vector2 tempVector = new Vector2();
     private void finalizeTouch(MouseInputInfo info, int gameX, int gameY, int button) {
         MouseHoldObject hold = mouseHolds.remove(button);
         if (hold != null) {
             hold.onRelease(gameX, gameY);
         }
-        hold = info.onPress.apply(new Vector2(gameX, gameY), button);
+        hold = info.onPress.apply(tempVector.set(gameX, gameY), button);
         if (hold != null)
             mouseHolds.put(button, hold);
     }

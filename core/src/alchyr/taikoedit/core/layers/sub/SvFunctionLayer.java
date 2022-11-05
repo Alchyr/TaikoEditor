@@ -182,8 +182,8 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
 
         DecimalFormat df = new DecimalFormat("0.0###", osuSafe);
-        initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 5f, 250f, "Initial SV:", df.format(isv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
-        finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4f, 250f, "Final SV:", df.format(fsv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
+        initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 5f, 250f, "Initial Rate:", df.format(isv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
+        finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4f, 250f, "Final Rate:", df.format(fsv), 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.NUMERIC).blocking();
 
         generateLines = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 2.5f, "Generate Lines", assetMaster.getFont("aller medium"), true);
         genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1.5f, 250f - SHIFT_STEP, "Position Offset:", "-1", 6, assetMaster.getFont("aller medium")).setType(TextField.TextType.INTEGER).blocking();
@@ -398,11 +398,11 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
 
             if (testIsv <= 0) {
                 success = false;
-                textOverlay.setText("Invalid initial SV.", 3.0f);
+                textOverlay.setText("Invalid initial rate.", 3.0f);
             }
             else if (testFsv <= 0) {
                 success = false;
-                textOverlay.setText("Invalid final SV.", 3.0f);
+                textOverlay.setText("Invalid final rate.", 3.0f);
             }
             else {
                 isv = testIsv;
@@ -411,7 +411,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         }
         catch (NumberFormatException e) {
             success = false;
-            textOverlay.setText("Failed to parse SV value.", 3.0f);
+            textOverlay.setText("Invalid value.", 3.0f);
         }
 
         if (generateLines.enabled) {

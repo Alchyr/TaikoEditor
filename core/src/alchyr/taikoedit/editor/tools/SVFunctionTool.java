@@ -72,7 +72,7 @@ public class SVFunctionTool extends EditorTool {
      */
     private SVFunctionTool()
     {
-        super("SV Function");
+        super("Function");
 
         start = new PreviewLine(0);
         end = new PreviewLine(0);

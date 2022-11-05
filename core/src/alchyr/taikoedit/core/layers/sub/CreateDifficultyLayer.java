@@ -111,7 +111,7 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
         keepVolume = new ToggleButton(leftX, y, "Keep Volume and Kiai", font, true);
 
         y -= 40;
-        keepSv = new ToggleButton(leftX, y, "Keep SV Changes", font, false);
+        keepSv = new ToggleButton(leftX, y, "Keep Rate Changes", font, false);
 
         //Diff stuff
         y = SettingsMaster.getHeight() - 60;

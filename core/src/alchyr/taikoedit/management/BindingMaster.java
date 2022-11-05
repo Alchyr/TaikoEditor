@@ -80,16 +80,16 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("DecreaseOffset", new InputBinding.InputInfo(Input.Keys.MINUS, InputBinding.InputInfo.Maybe.MAYBE)));
 
         creating.addBinding(InputBinding.create("FinishLock", new InputBinding.InputInfo(Input.Keys.Q)));
-        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1)));
-        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2)));
-        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3)));
-        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4)));
-        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5)));
-        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6)));
-        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7)));
-        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8)));
-        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9)));
-        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0)));
+        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("i2",
                 new InputBinding.InputInfo(Input.Keys.W, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),
                 new InputBinding.InputInfo(Input.Keys.F, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),

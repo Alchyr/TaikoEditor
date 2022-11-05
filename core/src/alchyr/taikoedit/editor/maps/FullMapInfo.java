@@ -135,6 +135,10 @@ public class FullMapInfo {
         String name = artist + " - " + title + " (" + creator + ") [" + getDifficultyName() + "].osu";
         return name.replaceAll("[\\\\/:*?\"<>|]", "");
     }
+    public String generateTJAFilename() {
+        String name = artist + "-" + title + ".tja";
+        return name.replaceAll("[\\\\/:*?\"<>| ]", "");
+    }
 
     private final StringBuilder saveBuilder = new StringBuilder();
     @Override

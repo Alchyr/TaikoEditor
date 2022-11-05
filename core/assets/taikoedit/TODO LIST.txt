@@ -3,6 +3,7 @@ Loading takes way too long on some pcs or if you have a huge amount of maps.
 - Should be improved?
 Now saves database, which should increase speed on subsequent loads on non-solid state drives.
 On SSD probably almost no difference, but on a hard drive should? make a very large difference due to far less file operations.
+- Should be extremely significantly improved by dedicating more time to loading during load screens, as well as improvement to file loading for maps.
 
 MAJOR:
 Bezier Curve SV
@@ -23,12 +24,8 @@ Adding -
 
 
 
-- Settings menu
-    - Gotta add those hotkey settings.
-
 - Kiai - Done?
 
-- Add way of getting hotkey string so that it can be appended to hover popup of certain controls
 
 MAYBE:
 Add scaling so lower resolutions can see a reasonable amount of stuff
@@ -44,6 +41,8 @@ Unless view has a selection, in which case it will be just from selected lines
 Sort difficulties by difficulty?
 
 Snaps may not generate correctly 100% of the time?
+- should be fixed. Was an issue with snaps that aren't initially generated being removed from other sets when generated later.
+It was silly.
 
 Selection tool shift + click to select all between currently selection and clicked point
 If on left, from left end of selection, on right, from right end of selection (doesn't affect existing selection)
