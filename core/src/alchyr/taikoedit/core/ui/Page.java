@@ -20,6 +20,7 @@ public class Page extends TextInputProcessor implements Scrollable {
 
     private final List<Label> labels = new ArrayList<>();
     private final List<Button> buttons = new ArrayList<>();
+    private final List<ToggleButton> toggleButtons = new ArrayList<>();
     private final List<DropdownBox<?>> dropdownBoxes = new ArrayList<>();
     private final List<TextField> textFields = new ArrayList<>();
     private final List<UIElement> general = new ArrayList<>();
@@ -74,6 +75,10 @@ public class Page extends TextInputProcessor implements Scrollable {
         buttons.add(b);
         return b;
     }
+    public ToggleButton add(ToggleButton b) {
+        toggleButtons.add(b);
+        return b;
+    }
     public <T> DropdownBox<T> add(DropdownBox<T> d) {
         dropdownBoxes.add(d);
         return d;
@@ -85,6 +90,9 @@ public class Page extends TextInputProcessor implements Scrollable {
 
     public void remove(Button b) {
         buttons.remove(b);
+    }
+    public void remove(ToggleButton b) {
+        toggleButtons.remove(b);
     }
     public void remove(Label l) {
         labels.remove(l);
@@ -102,6 +110,9 @@ public class Page extends TextInputProcessor implements Scrollable {
             d.update(elapsed);
 
         for (Button b : buttons)
+            b.update(elapsed);
+
+        for (ToggleButton b : toggleButtons)
             b.update(elapsed);
 
         for (TextField f : textFields)
@@ -140,6 +151,9 @@ public class Page extends TextInputProcessor implements Scrollable {
             f.render(sb, sr, 0, currentScroll);
 
         for (Button b : buttons)
+            b.render(sb, sr, 0, currentScroll);
+
+        for (ToggleButton b : toggleButtons)
             b.render(sb, sr, 0, currentScroll);
 
         for (DropdownBox<?> d : dropdownBoxes)
@@ -192,6 +206,11 @@ public class Page extends TextInputProcessor implements Scrollable {
                         if (button.contains(x, y))
                             return true;
                     }
+
+                    for (ToggleButton toggle : toggleButtons) {
+                        if (toggle.contains(x, y))
+                            return true;
+                    }
                     return false;
                 },
                 (p, b)->{
@@ -219,6 +238,11 @@ public class Page extends TextInputProcessor implements Scrollable {
 
                     for (Button button : buttons) {
                         if (button.click(p.x, p.y, b))
+                            return null;
+                    }
+
+                    for (ToggleButton toggle : toggleButtons) {
+                        if (toggle.click(p.x, p.y, b))
                             return null;
                     }
                     return null;

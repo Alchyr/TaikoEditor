@@ -511,7 +511,7 @@ public class GimmickView extends MapView {
         return null;
     }
 
-    public PositionalObject clickObject(float x, float y)
+    public PositionalObject clickObject(float x, float y, boolean rightClick)
     {
         NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep(time);
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)

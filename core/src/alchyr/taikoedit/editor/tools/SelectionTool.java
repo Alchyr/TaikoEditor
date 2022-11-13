@@ -99,7 +99,7 @@ public class SelectionTool extends EditorTool {
 
     @Override
     public boolean consumesRightClick() {
-        return mode != SelectionToolMode.NONE;
+        return true; // mode != SelectionToolMode.NONE;
     }
 
     //First check -> clicking on an object? If ctrl is held and it's selected, deselect it. Otherwise, select it.
@@ -138,7 +138,7 @@ public class SelectionTool extends EditorTool {
             case NONE:
                 boolean delete = button == Input.Buttons.RIGHT;
                 selectingView = view;
-                dragObject = selectingView.clickObject(x, y);
+                dragObject = selectingView.clickObject(x, y, delete);
                 boolean shift = (modifiers & InputBinding.InputInfo.SHIFT_ID) != 0;
                 boolean canDrag = true;
                 boolean canSelect = false;
@@ -155,6 +155,13 @@ public class SelectionTool extends EditorTool {
                     }
                     else if (clickTime > selectionEnd) {
                         selectingView.addSelectionRange(selectionEnd, clickTime);
+                    }
+
+                    if (delete) {
+                        selectingView.deleteSelection();
+                        dragMode = DragMode.NONE;
+                        selectingView = null;
+                        return MouseHoldObject.nothing;
                     }
                 }
                 else if (dragObject != null && (modifiers & InputBinding.InputInfo.CTRL_ID) == 0)
@@ -323,7 +330,7 @@ public class SelectionTool extends EditorTool {
                     selectingView.deleteSelection(); //Deletion occurs after movement, so this is saved as two separate actions.
                 }
                 else if (dragMode == DragMode.NONE) {
-                    selectingView.clickRelease();
+                    selectingView.dragRelease();
                 }
             }
         }

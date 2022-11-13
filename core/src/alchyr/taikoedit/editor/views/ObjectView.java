@@ -376,7 +376,7 @@ public class ObjectView extends MapView {
             else
                 newSelected =  map.getSubMap(startTime, endTime);
 
-            selectedObjects.addAll(newSelected);
+            selectedObjects.addAllUnique(newSelected);
 
             for (ArrayList<? extends PositionalObject> stuff : newSelected.values())
                 for (PositionalObject o : stuff)
@@ -463,7 +463,7 @@ public class ObjectView extends MapView {
         return null;
     }
 
-    public PositionalObject clickObject(float x, float y)
+    public PositionalObject clickObject(float x, float y, boolean rightClick)
     {
         NavigableMap<Long, ArrayList<HitObject>> selectable = map.getEditObjects();
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)

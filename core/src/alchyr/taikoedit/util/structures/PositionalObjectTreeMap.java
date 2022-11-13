@@ -285,6 +285,18 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
+    //Add all contents that are not already in this container
+    @SuppressWarnings("unchecked")
+    public void addAllUnique(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
+        for (Map.Entry<Long, ArrayList<V>> e : ((Map<Long, ArrayList<V>>)map).entrySet())
+        {
+            for (V val : e.getValue())
+            {
+                addIfAbsent(val);
+            }
+        }
+    }
+
     /**
      * Returns this map's entry for the given key, or {@code null} if the map
      * does not contain an entry for the key.
@@ -696,6 +708,73 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         size++;
         count++;
         modCount++;
+    }
+
+    public boolean addIfAbsent(V value) {
+        long key = value.getPos();
+
+        Entry<V> t = root;
+        if (t == null) {
+            compare(key, key); // type (and possibly null) check
+
+            root = new Entry<>(key, value, null);
+            size = 1;
+            count = 1;
+            modCount++;
+            return true;
+        }
+        int cmp;
+        Entry<V> parent;
+        // split comparator and comparable paths
+        Comparator<? super Long> cpr = comparator;
+        if (cpr != null) {
+            do {
+                parent = t;
+                cmp = cpr.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                {
+                    if (t.value.contains(value))
+                        return false;
+                    t.addValue(value);
+                    count++;
+                    modCount++;
+                    return true;
+                }
+            } while (t != null);
+        }
+        else {
+            do {
+                parent = t;
+                cmp = Long.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                {
+                    if (t.value.contains(value))
+                        return false;
+                    t.addValue(value);
+                    count++;
+                    modCount++;
+                    return true;
+                }
+            } while (t != null);
+        }
+        Entry<V> e = new Entry<>(key, value, parent);
+        if (cmp < 0)
+            parent.left = e;
+        else
+            parent.right = e;
+        fixAfterInsertion(e);
+        size++;
+        count++;
+        modCount++;
+        return true;
     }
 
     /**

@@ -238,7 +238,7 @@ public abstract class MapView {
             clearSelection();
         }
         else {
-            PositionalObject close = clickObject(x, y);
+            PositionalObject close = clickObject(x, y, false);
 
             if (close != null) {
                 deleteObject(close);
@@ -247,7 +247,7 @@ public abstract class MapView {
         }
     }
     public boolean deletePrecise(float x, float y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
-        PositionalObject close = clickObject(x, y);
+        PositionalObject close = clickObject(x, y, false);
 
         if (close != null) {
             if (close.selected && hasSelection()) {
@@ -312,9 +312,9 @@ public abstract class MapView {
     //Perform Click selection.
     public void dragging() { //method called when dragging begins
     }
-    public void clickRelease() { //method called when mouse released without entering a dragging mode
+    public void dragRelease() { //method called when mouse released without entering a dragging mode
     }
-    public abstract PositionalObject clickObject(float x, float y);
+    public abstract PositionalObject clickObject(float x, float y, boolean rightClick);
     public abstract boolean clickedEnd(PositionalObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
     public void select(PositionalObject p) //Add a single object to selection.
     {

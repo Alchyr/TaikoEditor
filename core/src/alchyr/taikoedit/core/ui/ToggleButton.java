@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import java.util.function.Consumer;
+
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
@@ -36,6 +38,7 @@ public class ToggleButton implements UIElement {
     private boolean hovered;
 
     public String action = "";
+    private Consumer<Boolean> onToggle = null;
 
     public ToggleButton(float leftX, float centerY, String text, BitmapFont font, boolean defaultValue)
     {
@@ -68,6 +71,11 @@ public class ToggleButton implements UIElement {
         return this;
     }
 
+    public ToggleButton setOnToggle(Consumer<Boolean> onToggle) {
+        this.onToggle = onToggle;
+        return this;
+    }
+
     @Override
     public void move(float dx, float dy) {
         x += dx;
@@ -79,6 +87,10 @@ public class ToggleButton implements UIElement {
         this.centerY = MathUtils.floor((y + y2) / 2.0f);
     }
 
+    public boolean contains(float mouseX, float mouseY) {
+        return x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy;
+    }
+
     public boolean click(float mouseX, float mouseY, int button)
     {
         if (x + dx < mouseX && y + dy < mouseY && mouseX < x2 + dx && mouseY < y2 + dy)
@@ -86,6 +98,8 @@ public class ToggleButton implements UIElement {
             hovered = true;
 
             enabled = !enabled;
+            if (onToggle != null)
+                onToggle.accept(enabled);
             return true;
         }
         return false;

@@ -172,7 +172,7 @@ public abstract class CustomAudio extends OpenALMusic {
             renderedSeconds += maxSecondsPerBuffer * (float)length / (float)bufferSize; //Calculate the number of seconds this buffer has IGNORING tempo
         }*/
 
-        //New method: Move to closest frame with custom method
+        //New method: Move to the closest frame with custom method
         renderedSeconds = seekTime(position);
         renderedSecondsQueue.add(renderedSeconds);
 

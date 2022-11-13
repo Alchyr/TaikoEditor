@@ -176,7 +176,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         {
             background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
 
-            float bgScale = Math.max((float) SettingsMaster.getWidth()/ background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+            float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
             bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
             bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
         }
@@ -1186,7 +1186,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private void settings()
     {
         clean();
-        TaikoEditor.addLayer(new SettingsLayer());
+        TaikoEditor.addLayer(new SettingsLayer(background));
     }
 
     public void clean() {

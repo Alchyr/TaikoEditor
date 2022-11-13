@@ -54,7 +54,7 @@ public class GameplayView extends MapView {
     private static final int HIT_AREA_X = 200;
     private static final int HIT_AREA_DRAW_X = HIT_AREA_X + 1;
 
-    private static final float SCROLL_SPEED_SCALE = 240;
+    private static final float SCROLL_SPEED_SCALE = 245;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.9f); //more opacity than other types of view
 
@@ -543,7 +543,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public PositionalObject clickObject(float x, float y) {
+    public PositionalObject clickObject(float x, float y, boolean rightClick) {
         return null;
     }
 

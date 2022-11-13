@@ -28,9 +28,9 @@ public class Timeline {
     private static final int TIMELINE_START = 150, TIMELINE_END = SettingsMaster.getWidth() - 50, TIMELINE_LENGTH = TIMELINE_END - TIMELINE_START;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.85f);
-    private static final Color kiaiColor = new Color(240.0f/255.0f, 164.0f/255.0f, 66.0f/255.0f, 0.8f);
+    private static final Color kiaiColor = new Color(240.0f/255.0f, 164.0f/255.0f, 66.0f/255.0f, 0.6f);
     private static final Color breakColor = new Color(0.7f, 0.7f, 0.7f, 0.5f);
-    private static final Color bookmarkColor = new Color(0.25f, 0.25f, 0.95f, 1.0f);
+    private static final Color bookmarkColor = new Color(0.25f, 0.4f, 1.0f, 1.0f);
 
     private BitmapFont font;
     private Texture pix = assetMaster.get("ui:pixel");

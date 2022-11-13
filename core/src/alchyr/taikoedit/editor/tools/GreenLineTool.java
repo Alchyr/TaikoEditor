@@ -115,6 +115,10 @@ public class GreenLineTool extends EditorTool {
             else if (lastEffect == null) {
                 lastEffect = lastTiming;
             }
+            else if (lastTiming != null) {
+                if (lastTiming.getKey() > lastEffect.getKey())
+                    lastEffect = lastTiming;
+            }
 
             TimingPoint p = ((TimingPoint) lastEffect.getValue().get(lastEffect.getValue().size() - 1).shiftedCopy(placementObject.getPos())).inherit();
             if (BindingGroup.shift()) {
@@ -160,6 +164,10 @@ public class GreenLineTool extends EditorTool {
         }
         else if (lastEffect == null) {
             lastEffect = lastTiming;
+        }
+        else if (lastTiming != null) {
+            if (lastTiming.getKey() > lastEffect.getKey())
+                lastEffect = lastTiming;
         }
 
 

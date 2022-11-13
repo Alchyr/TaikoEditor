@@ -152,6 +152,8 @@ public class EditorBeatmap {
             ArrayList<TimingPoint> nextStack;
             TimingPoint next;
 
+            boolean stackKiai = false;
+
             while (stackIterator.hasNext()) {
                 nextStack = stackIterator.next().getValue();
 
@@ -161,19 +163,14 @@ public class EditorBeatmap {
                     while (pointIterator.hasNext()) {
                         next = pointIterator.next();
 
-                        if (!next.uninherited && next.volume == lastVolume && next.kiai == kiaiActive) {
+                        if (!next.uninherited && next.volume == lastVolume && next.kiai == stackKiai) {
                             //Remove green lines with the same settings as the last non-removed line
                             pointIterator.remove();
-                            if (next.uninherited) {
-                                timingPoints.removeObject(next);
-                            }
-                            else {
-                                effectPoints.removeObject(next);
-                            }
+                            effectPoints.removeObject(next);
                         }
                         else {
                             lastVolume = next.volume;
-                            kiaiActive = next.kiai;
+                            stackKiai = next.kiai;
                         }
                     }
 

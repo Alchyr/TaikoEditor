@@ -266,7 +266,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     private void settings(int button)
     {
-        TaikoEditor.addLayer(new SettingsLayer());
+        TaikoEditor.addLayer(new SettingsLayer(useOsuBackground ? osuBackground : currentSkin.background));
     }
 
     private void openConnect() {

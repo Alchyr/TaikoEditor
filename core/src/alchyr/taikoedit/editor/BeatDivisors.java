@@ -3,6 +3,7 @@ package alchyr.taikoedit.editor;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.management.SettingsMaster;
 
 import java.util.*;
 
@@ -215,7 +216,7 @@ public class BeatDivisors {
             if (beatSegment == 0)
                 ++beat;
 
-            pos = Math.round(t);
+            pos = SettingsMaster.roundPos(t);
 
             beat = beat % meter;
 
@@ -255,7 +256,7 @@ public class BeatDivisors {
                 --beat;
             }
 
-            pos = Math.round(t);
+            pos = SettingsMaster.roundPos(t);
 
             if (ignoreSnaps.contains(pos) || ignoreSnaps.contains(pos + 1) || ignoreSnaps.contains(pos - 1))
                 continue;

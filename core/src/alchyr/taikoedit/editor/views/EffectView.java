@@ -71,6 +71,9 @@ public class EffectView extends MapView implements TextInputReceiver {
     //Hitsounds of map
     private long lastSounded;
 
+    //Bad Jank Input Method
+    private boolean deleteLineValue = false;
+
     public EffectView(EditorLayer parent, EditorBeatmap beatmap) {
         super(ViewType.EFFECT_VIEW, parent, beatmap, HEIGHT);
 
@@ -144,6 +147,8 @@ public class EffectView extends MapView implements TextInputReceiver {
             blipTimer = 0.4f;
             renderBlip = !renderBlip;
         }
+
+        deleteLineValue = false;
 
         if (adjustMode == AdjustMode.ACTIVE && !parent.tools.getCurrentTool().equals(getToolset().getDefaultTool())) {
             endAdjust();
@@ -1290,8 +1295,15 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public void deleteObject(PositionalObject o) {
-        endAdjust();
-        this.map.delete(MapChange.ChangeType.EFFECT, o);
+        if (adjustMode == AdjustMode.POSSIBLE && deleteLineValue && o.equals(adjustPoint)) {
+            select(o);
+            startAdjust(adjustPoint);
+            deleteLineValue = false;
+        }
+        else {
+            endAdjust();
+            this.map.delete(MapChange.ChangeType.EFFECT, o);
+        }
     }
     @Override
     public void deleteSelection() {
@@ -1406,7 +1418,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             else
                 newSelected = map.getSubEffectMap(startTime, endTime);
 
-            selectedObjects.addAll(newSelected);
+            selectedObjects.addAllUnique(newSelected);
 
             for (ArrayList<PositionalObject> stuff : selectedObjects.values())
                 for (PositionalObject o : stuff)
@@ -1426,7 +1438,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         endAdjust();
     }
     @Override
-    public void clickRelease() {
+    public void dragRelease() {
         if (adjustMode == AdjustMode.POSSIBLE && selectedObjects != null && adjustPoint != null) {
             startAdjust(adjustPoint);
         }
@@ -1436,7 +1448,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public PositionalObject clickObject(float x, float y) {
+    public PositionalObject clickObject(float x, float y, boolean rightClick) {
         //Check if y location is on sv label area
         //If so, allow wider x area for clicking.
         endAdjust();
@@ -1449,6 +1461,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         if (y > bottom + VALUE_LABEL_BOTTOM && y < bottom + VALUE_LABEL_TOP) {
             adjustMode = AdjustMode.POSSIBLE;
+            deleteLineValue = rightClick;
         }
 
         if (selectable.containsKey((long) time)) {
@@ -1591,7 +1604,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void startAdjust(TimingPoint p) {
         adjustPoint = p;
         adjustMode = AdjustMode.ACTIVE;
-        textInput = mode ? precise.format(p.value) : volume.format(p.volume);
+        textInput = deleteLineValue ? "" : (mode ? precise.format(p.value) : volume.format(p.volume));
         blipOffsetX = textRenderer.setFont(font).getWidth(textInput) + BLIP_BUFFER;
         renderBlip = true;
         blipTimer = 0.4f;

@@ -105,9 +105,18 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
     private static int currentPage = 0;
 
 
-    public SettingsLayer()
+    private Texture bg;
+
+
+    public SettingsLayer(Texture background)
     {
         this.type = LAYER_TYPE.FULL_STOP;
+        this.bg = background;
+    }
+
+    public SettingsLayer()
+    {
+        this(null);
     }
 
     private static final DecimalFormat oneDecimal = new DecimalFormat("#0.#", osuSafe);
@@ -129,7 +138,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         pageButtons[0] = new Button(BUTTON_X, BUTTON_Y + BUTTON_HEIGHT / 2.0f, BUTTON_WIDTH, BUTTON_HEIGHT, "Editor", font).setClick((i)->this.swapPages(0)).useBorderRendering();
         pageButtons[1] = new Button(BUTTON_X, BUTTON_Y - BUTTON_HEIGHT / 2.0f, BUTTON_WIDTH, BUTTON_HEIGHT, "Hotkeys", font).setClick((i)->this.swapPages(1)).useBorderRendering();
 
-        pages[0] = editorSettingsPage(font);
+        pages[0] = editorSettingsPage(font, bg);
         pages[1] = hotkeysPage(font);
 
         pages[0].bind();
@@ -192,6 +201,15 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         catch (Exception ignored) {
         }
         f.setText(oneDecimal.format(SettingsMaster.effectVolume * 100));
+    }
+
+    private void updateUseLazerSnappings(boolean useLazerSnappings) {
+        SettingsMaster.lazerSnaps = useLazerSnappings;
+        SettingsMaster.save();
+
+        if (EditorLayer.activeEditor != null) {
+            textOverlay.setText("Reopen map to update snappings.", 2.0f);
+        }
     }
 
     @Override
@@ -270,7 +288,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
                 return null;
             });
 
-            bindings.addMouseBind((x, y, b)->currentPage == 0 && !sourceLayer.activePositioning.isEmpty(),
+            bindings.addMouseBind((x, y, b)->currentPage == 0 && !sourceLayer.activePositioning.isEmpty() && sourceLayer.positioningArea.contains(x, y),
                     (p, b)-> {
                         if (sourceLayer.positioningArea.position(p.x, p.y, sourceLayer)) {
                             sourceLayer.activePositioning.clear();
@@ -292,7 +310,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
 
     // Page Generation
-    private Page editorSettingsPage(BitmapFont font) {
+    private Page editorSettingsPage(BitmapFont font, Texture bg) {
         Page editorSettings = new Page(null);
 
         //editor settings page
@@ -313,7 +331,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         xField.lock();
         editorSettings.add(xField);
 
-        positioningArea = new ObjectPositioningArea(X_4 + LARGE_SECTION_WIDTH / 2.0f, y - LABEL_Y_SPACING / 2.0f, LARGE_SECTION_WIDTH * 0.8f, 180);
+        positioningArea = new ObjectPositioningArea(X_4 + LARGE_SECTION_WIDTH / 2.0f, y - LABEL_Y_SPACING / 2.0f, LARGE_SECTION_WIDTH * 0.8f, 180, bg);
         editorSettings.addUIElement(positioningArea);
 
         y -= LABEL_Y_SPACING;
@@ -335,13 +353,20 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         y -= LABEL_Y_SPACING * 2;
 
-        musicVolume = new TextField(X_2 + 10, y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
+        TextField musicVolume = new TextField(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateMusicVolume);
-        effectVolume = new TextField(X_4 + 10, y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
+        TextField effectVolume = new TextField(X_4 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateEffectVolume);
 
         editorSettings.add(musicVolume);
         editorSettings.add(effectVolume);
+
+        y -= LABEL_Y_SPACING * 2;
+
+        ToggleButton lazerSnaps = new ToggleButton(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, "Use Lazer Snappings", font, SettingsMaster.lazerSnaps)
+                .setOnToggle(this::updateUseLazerSnappings);
+        editorSettings.add(lazerSnaps);
+
 
         y = LABEL_Y_START;
         Label skinLabel = editorSettings.addLabel(X_6, y, font, "Skin: ");
@@ -542,7 +567,11 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
     private static class ObjectPositioningArea implements UIElement {
         private float cX, cY, width, height, scale, dx, dy;
 
-        public ObjectPositioningArea(float cX, float cY, float maxWidth, float maxHeight) {
+        private final Texture bg;
+        private int bgWidth, bgHeight, bgOffsetX, bgOffsetY,
+                bgSrcWidth, bgSrcHeight, bgSrcOffsetX, bgSrcOffsetY;
+
+        public ObjectPositioningArea(float cX, float cY, float maxWidth, float maxHeight, Texture bg) {
             height = maxWidth * 12 / 16; //height if using maxWidth
             if (height > maxHeight) { //too big
                 width = maxHeight * 16 / 12;
@@ -558,6 +587,39 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
             dx = 0;
             dy = 0;
+
+            this.bg = bg;
+            if (bg != null) {
+                float bgScale = Math.max(width / bg.getWidth(), height / bg.getHeight());
+                bgWidth = (int) Math.ceil(bg.getWidth() * bgScale);
+                bgHeight = (int) Math.ceil(bg.getHeight() * bgScale);
+                
+                if (bgWidth > width) {
+                    bgSrcHeight = bg.getHeight();
+                    bgSrcOffsetY = 0;
+
+                    bgSrcWidth = (int) (bg.getWidth() * (width / bgWidth));
+                    bgSrcOffsetX = (int) ((bg.getWidth() - bgSrcWidth) * 0.5f);
+                    bgWidth = (int) width;
+                }
+                else if (bgHeight > height) {
+                    bgSrcWidth = bg.getWidth();
+                    bgSrcOffsetX = 0;
+
+                    bgSrcHeight = (int) (bg.getHeight() * (height / bgHeight));
+                    bgSrcOffsetY = (int) ((bg.getHeight() - bgSrcHeight) * 0.5f);
+                    bgHeight = (int) height;
+                }
+                else {
+                    bgSrcWidth = bg.getWidth();
+                    bgSrcHeight = bg.getHeight();
+                    bgSrcOffsetX = 0;
+                    bgSrcOffsetY = 0;
+                }
+
+                bgOffsetX = bgWidth / 2;
+                bgOffsetY = bgHeight / 2;
+            }
         }
 
         public boolean position(float gameX, float gameY, SettingsLayer source) {
@@ -612,11 +674,17 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         @Override
         public void render(SpriteBatch sb, ShapeRenderer sr) {
+            float left = cX - width / 2 + dx, right = cX + width / 2 + dx, top = cY + height / 2 + dy, bottom = cY - height / 2 + dy, temp = top;
+
+            if (bg != null) {
+                sb.setColor(Color.WHITE);
+                sb.draw(bg, left, bottom, bgOffsetX, bgOffsetY, bgWidth, bgHeight, 1, 1, 0, bgSrcOffsetX, bgSrcOffsetY, bgSrcWidth, bgSrcHeight, false, false);
+            }
+
             sb.end();
             //grid first
             sr.begin(ShapeRenderer.ShapeType.Line);
 
-            float left = cX - width / 2 + dx, right = cX + width / 2 + dx, top = cY + height / 2 + dy, bottom = cY - height / 2 + dy, temp = top;
             sr.setColor(Color.WHITE);
             sr.rect(left, bottom, width, height);
 
@@ -673,13 +741,18 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
             render(sb, sr);
         }
+
+        public boolean contains(int x, int y) {
+            return !(x < cX - width / 2.0f) && !(y < cY - height / 2.0f) && !(x > cX + width / 2.0f) && !(y > cY + height / 2.0f);
+        }
     }
 
     private final List<Button> positioningButtons = new ArrayList<>();
     private final List<Integer> activePositioning = new ArrayList<>();
     private final Label[] xPositions = new Label[4];
     private final Label[] yPositions = new Label[4];
-    TextField xField, yField, musicVolume, effectVolume;
+    private TextField xField, yField;
+
     private void togglePositioning(int index) {
         if (!positioningButtons.get(index).renderBorder) {
             positioningButtons.get(index).renderBorder = true;

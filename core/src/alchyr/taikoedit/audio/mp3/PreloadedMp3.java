@@ -49,7 +49,7 @@ public class PreloadedMp3 extends CustomAudio {
 
     @Override
     public float getLength() {
-        return bitstream.length;
+        return bitstream == null ? 0 : bitstream.length;
     }
 
     @Override

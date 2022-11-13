@@ -38,6 +38,12 @@ public class SettingsMaster {
     //May also be applied to all objects in future with a "reposition all" option?
     public static int donX = 64, donY = 64, bigDonX = 64, bigDonY = 320, katX = 448, katY = 64, bigKatX = 448, bigKatY = 320;
 
+    public static boolean lazerSnaps = true;
+
+    public static long roundPos(double pos) {
+        return lazerSnaps ? Math.round(pos) : (long) pos;
+    }
+
     public static void setLanguage(Language language) {
         boolean loadText = SettingsMaster.language != language;
         SettingsMaster.language = language;
@@ -67,6 +73,8 @@ public class SettingsMaster {
         return Y_OFFSET - screenY;
     }
 
+
+    private static final String settingVersion = "0";
     public static void load()
     {
         //Load settings.
@@ -77,43 +85,102 @@ public class SettingsMaster {
         if (h.exists()) {
             try {
                 String full = h.readString();
-                String[] params = full.split(":");
+                if (full.startsWith("v")) {
+                    full = full.substring(1);
+                    String[] params = full.split("\n"), keyVal;
+                    switch (params[0]) {
+                        case "0":
+                        default:
+                            for (int i = 1; i < params.length; ++i) {
+                                keyVal = params[i].split(":", 2);
+                                if (keyVal.length == 2) {
+                                    switch (keyVal[0]) {
+                                        case "Music":
+                                            musicVolume = Float.parseFloat(keyVal[1]);
+                                            break;
+                                        case "Effects":
+                                            effectVolume = Float.parseFloat(keyVal[1]);
+                                            break;
+                                        case "dX":
+                                            donX = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "dY":
+                                            donY = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "kX":
+                                            katX = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "kY":
+                                            katY = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "DX":
+                                            bigDonX = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "DY":
+                                            bigDonY = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "KX":
+                                            bigKatX = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "KY":
+                                            bigKatY = Integer.parseInt(keyVal[1]);
+                                            break;
+                                        case "Skin":
+                                            Skins.loadedSkin = keyVal[1];
+                                            break;
+                                        case "LazerSnaps":
+                                            lazerSnaps = Boolean.parseBoolean(keyVal[1]);
+                                            break;
+                                        default:
+                                            editorLogger.info("Unknown setting key \"" + keyVal[0] + "\" with value " + keyVal[1]);
+                                    }
+                                }
+                                else {
+                                    editorLogger.error("Invalid setting entry: " + params[i]);
+                                }
+                            }
+                            break;
+                    }
+                }
+                else {
+                    String[] params = full.split(":");
 
-                for (int i = 0; i < params.length; ++i) {
-                    switch (i) {
-                        case 0:
-                            musicVolume = Float.parseFloat(params[i]);
-                            break;
-                        case 1:
-                            effectVolume = Float.parseFloat(params[i]);
-                            break;
-                        case 2:
-                            donX = Integer.parseInt(params[i]);
-                            break;
-                        case 3:
-                            donY = Integer.parseInt(params[i]);
-                            break;
-                        case 4:
-                            katX = Integer.parseInt(params[i]);
-                            break;
-                        case 5:
-                            katY = Integer.parseInt(params[i]);
-                            break;
-                        case 6:
-                            bigDonX = Integer.parseInt(params[i]);
-                            break;
-                        case 7:
-                            bigDonY = Integer.parseInt(params[i]);
-                            break;
-                        case 8:
-                            bigKatX = Integer.parseInt(params[i]);
-                            break;
-                        case 9:
-                            bigKatY = Integer.parseInt(params[i]);
-                            break;
-                        case 10:
-                            Skins.loadedSkin = params[i].replace("](}", ":");
-                            break;
+                    for (int i = 0; i < params.length; ++i) {
+                        switch (i) {
+                            case 0:
+                                musicVolume = Float.parseFloat(params[i]);
+                                break;
+                            case 1:
+                                effectVolume = Float.parseFloat(params[i]);
+                                break;
+                            case 2:
+                                donX = Integer.parseInt(params[i]);
+                                break;
+                            case 3:
+                                donY = Integer.parseInt(params[i]);
+                                break;
+                            case 4:
+                                katX = Integer.parseInt(params[i]);
+                                break;
+                            case 5:
+                                katY = Integer.parseInt(params[i]);
+                                break;
+                            case 6:
+                                bigDonX = Integer.parseInt(params[i]);
+                                break;
+                            case 7:
+                                bigDonY = Integer.parseInt(params[i]);
+                                break;
+                            case 8:
+                                bigKatX = Integer.parseInt(params[i]);
+                                break;
+                            case 9:
+                                bigKatY = Integer.parseInt(params[i]);
+                                break;
+                            case 10:
+                                Skins.loadedSkin = params[i].replace("](}", ":").replace("})]", "|");
+                                break;
+                        }
                     }
                 }
             }
@@ -150,11 +217,19 @@ public class SettingsMaster {
     }
 
     private static String settingsString() {
-        return musicVolume + ":" + effectVolume + ":" +
-                donX + ":" + donY + ":" +
-                katX + ":" + katY + ":" +
-                bigDonX + ":" + bigDonY + ":" +
-                bigKatX + ":" + bigKatY + ":" +
-                Skins.currentSkin.toString().replace(":", "](}");
+        return "v" + settingVersion + '\n' +
+                "Music:" + musicVolume + '\n' +
+                "Effects:" + effectVolume + '\n' +
+                "dX:" + donX + '\n' +
+                "dY:" + donY + '\n' +
+                "kX:" + katX + '\n' +
+                "kY:" + katY + '\n' +
+                "DX:" + bigDonX + '\n' +
+                "DY:" + bigDonY + '\n' +
+                "KX:" + bigKatX + '\n' +
+                "KY:" + bigKatY + '\n' +
+                "LazerSnaps:" + lazerSnaps + '\n' +
+                "Skin:" + Skins.currentSkin.toString();
+        //.replace(":", "](}").replace("|", "})]");
     }
 }

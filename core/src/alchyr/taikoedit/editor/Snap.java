@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor;
 
 import alchyr.taikoedit.editor.views.ObjectView;
+import alchyr.taikoedit.management.SettingsMaster;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -47,7 +48,7 @@ public class Snap implements Comparable<Snap> {
     public Snap(double pos, int divisor)
     {
         this.precisePos = pos;
-        this.pos = Math.round(precisePos);
+        this.pos = SettingsMaster.roundPos(precisePos);
         this.divisor = divisor;
         this.hash = 0;
 
@@ -58,7 +59,7 @@ public class Snap implements Comparable<Snap> {
     public Snap(double pos)
     {
         this.precisePos = pos;
-        this.pos = Math.round(precisePos);
+        this.pos = SettingsMaster.roundPos(precisePos);
         this.divisor = 0;
     }
 
