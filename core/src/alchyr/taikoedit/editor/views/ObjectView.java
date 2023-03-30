@@ -34,8 +34,8 @@ import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class ObjectView extends MapView {
     public static final int HEIGHT = 150;
-    public static final int MEDIUM_HEIGHT = 30;
-    public static final int SMALL_HEIGHT = 15;
+    public static final int MEDIUM_HEIGHT = 22;
+    public static final int SMALL_HEIGHT = 14;
 
     //Selection
     private static final int MAX_SELECTION_DIST = 62;
@@ -101,7 +101,7 @@ public class ObjectView extends MapView {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time) //might have skipped backwards
+        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
         {
             //Play only the most recently passed HitObject list. This avoids spamming a bunch of sounds if fps is too low.
             /*Map.Entry<Integer, ArrayList<HitObject>> entry = map.getEditObjects().higherEntry(currentPos);
@@ -145,7 +145,7 @@ public class ObjectView extends MapView {
             for (Pair<Long, Long> breakSection : map.getBreaks()) {
                 startColor = endColor = faintBreakColor;
 
-                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
                 stack = map.objects.ceilingEntry(breakSection.b);
                 if (stack != null) {
@@ -155,7 +155,7 @@ public class ObjectView extends MapView {
                     if (stack.getKey() - breakSection.b > map.getBreakEndDelay())
                         endColor = fakeBreakColor;
 
-                    end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                    end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddleX();
                 }
                 else { //this is a cheaty break with no closing object.
                     end = SettingsMaster.getWidth();
@@ -164,7 +164,7 @@ public class ObjectView extends MapView {
                 if (end < 0)
                     continue;
 
-                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
                 stack = map.objects.floorEntry(breakSection.a);
                 if (stack != null) {
@@ -174,7 +174,7 @@ public class ObjectView extends MapView {
                     if (breakSection.a - startTime > 200)
                         startColor = fakeBreakColor;
 
-                    start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                    start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddleX();
                 }
                 else {
                     start = 0;
@@ -203,17 +203,17 @@ public class ObjectView extends MapView {
         //Divisors.
         for (Snap s : activeSnaps.values())
         {
-            s.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, HEIGHT);
+            s.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, HEIGHT);
         }
     }
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY, alpha);
+        o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY, alpha);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
-        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY);
+        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY);
     }
 
     @Override
@@ -463,7 +463,7 @@ public class ObjectView extends MapView {
         return null;
     }
 
-    public PositionalObject clickObject(float x, float y, boolean rightClick)
+    public PositionalObject getObjectAt(float x, float y)
     {
         NavigableMap<Long, ArrayList<HitObject>> selectable = map.getEditObjects();
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
@@ -799,18 +799,21 @@ public class ObjectView extends MapView {
 
         PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
         TreeMap<Long, Snap> snaps = map.getAllSnaps();
+        boolean resnap = !BindingGroup.alt();
 
         for (Map.Entry<Long, ArrayList<PositionalObject>> entry : copyObjects.entrySet())
         {
             targetPos = entry.getKey() + offset;
 
-            closest = snaps.get(targetPos);
-            if (closest == null)
-                closest = snaps.get(targetPos + 1);
-            if (closest == null)
-                closest = snaps.get(targetPos - 1);
-            if (closest != null)
-                targetPos = closest.pos;
+            if (resnap) {
+                closest = snaps.get(targetPos);
+                if (closest == null)
+                    closest = snaps.get(targetPos + 1);
+                if (closest == null)
+                    closest = snaps.get(targetPos - 1);
+                if (closest != null)
+                    targetPos = closest.pos;
+            }
 
             for (PositionalObject o : entry.getValue())
             {
@@ -851,7 +854,7 @@ public class ObjectView extends MapView {
 
     @Override
     public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddle());
+        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), SpinnerTool.get());

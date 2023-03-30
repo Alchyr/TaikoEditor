@@ -536,7 +536,7 @@ public class BeatmapDatabase {
 
             HashMap<String, Mapset> processed = new HashMap<>();
 
-            String folder;
+            String folder, songFile;
             File setDirectory, mapFile;
             ArrayList<MapInfo> maps;
             Mapset set;
@@ -544,6 +544,14 @@ public class BeatmapDatabase {
             while (data != null) {
                 try {
                     folder = data.getString("key");
+                    songFile = data.getString("songFile");
+                    FileHandle songFileHandle = Gdx.files.absolute(songFile);
+                    if (!songFileHandle.exists()) {
+                        logger.info("Song file \"" + songFile + "\" does not exist. Map will be reloaded.");
+                        data = data.next();
+                        continue;
+                    }
+
                     setDirectory = new File(folder);
                     if (setDirectory.exists() && setDirectory.isDirectory()) {
                         maps = new ArrayList<>();

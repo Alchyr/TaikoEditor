@@ -66,7 +66,7 @@ public class CursorHoverText {
     public void render(SpriteBatch sb, ShapeRenderer sr)
     {
         if (font != null && textColor.a > 0) {
-            float x = Gdx.input.getX() + (Gdx.input.getX() > SettingsMaster.getMiddle() ? -(width + TEXT_OFFSET) : TEXT_OFFSET);
+            float x = Gdx.input.getX() + (Gdx.input.getX() > SettingsMaster.getMiddleX() ? -(width + TEXT_OFFSET) : TEXT_OFFSET);
             float y = SettingsMaster.screenToGameY(Gdx.input.getY());
             y += (y > centerY ? -TEXT_OFFSET : TEXT_OFFSET);
             backColor.a = textColor.a;

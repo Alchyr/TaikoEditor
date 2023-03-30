@@ -17,8 +17,8 @@ public class DivisorOptions {
         autoGen.add(48);
     }
 
-    public final Set<Integer> snappingOptions;
-    public final List<Integer> activeSnappings;
+    public final Set<Integer> divisorOptions;
+    public final List<Integer> activeDivisors;
 
     private int currentSnapping;
 
@@ -26,8 +26,8 @@ public class DivisorOptions {
 
     public DivisorOptions()
     {
-        snappingOptions = new HashSet<>();
-        activeSnappings = new ArrayList<>();
+        divisorOptions = new HashSet<>();
+        activeDivisors = new ArrayList<>();
         dependents = new ArrayList<>();
 
         for (int i : BeatDivisors.commonSnappings)
@@ -42,36 +42,35 @@ public class DivisorOptions {
 
     public void addDivisor(int divisor)
     {
-        snappingOptions.add(divisor);
+        divisorOptions.add(divisor);
     }
 
     public void reset()
     {
-        activeSnappings.clear();
+        activeDivisors.clear();
         currentSnapping = 0;
     }
 
     //Enables this divisor and any subdivisors. Will not disable any already enabled divisors.
     public void enable(int divisor)
     {
-        snappingOptions.add(divisor);
+        divisorOptions.add(divisor);
 
-        for (Integer option : snappingOptions)
+        for (Integer option : divisorOptions)
         {
             if (divisor % option == 0)
             {
-                if (!activeSnappings.contains(option))
-                    activeSnappings.add(option);
+                if (!activeDivisors.contains(option))
+                    activeDivisors.add(option);
             }
         }
 
-        Collections.sort(activeSnappings);
-
-        if (activeSnappings.isEmpty())
+        activeDivisors.sort(Comparator.reverseOrder());
+        if (activeDivisors.isEmpty())
             currentSnapping = 0;
         else
         {
-            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeDivisors.get(0);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -82,14 +81,14 @@ public class DivisorOptions {
     //Disables this divisor and any divisors that rely on it.
     public void disable(int divisor)
     {
-        activeSnappings.removeIf((i)->i % divisor == 0);
-        Collections.sort(activeSnappings);
+        activeDivisors.removeIf((i)->i % divisor == 0);
 
-        if (activeSnappings.isEmpty())
+        activeDivisors.sort(Comparator.reverseOrder());
+        if (activeDivisors.isEmpty())
             currentSnapping = 0;
         else
         {
-            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeDivisors.get(0);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -103,32 +102,31 @@ public class DivisorOptions {
         if (divisor < 0)
             divisor = 0;
 
-        activeSnappings.clear();
+        activeDivisors.clear();
 
         if (divisor > 0)
         {
-            snappingOptions.add(divisor);
-            for (Integer option : snappingOptions)
+            divisorOptions.add(divisor);
+            for (Integer option : divisorOptions)
             {
                 if (divisor % option == 0)
                 {
-                    if (!activeSnappings.contains(option))
-                        activeSnappings.add(option);
+                    if (!activeDivisors.contains(option))
+                        activeDivisors.add(option);
                 }
                 else
                 {
-                    activeSnappings.remove(option);
+                    activeDivisors.remove(option);
                 }
             }
         }
 
-        Collections.sort(activeSnappings);
-
-        if (activeSnappings.isEmpty())
+        activeDivisors.sort(Comparator.reverseOrder());
+        if (activeDivisors.isEmpty())
             currentSnapping = 0;
         else
         {
-            currentSnapping = activeSnappings.get(activeSnappings.size() - 1);
+            currentSnapping = activeDivisors.get(0);
         }
 
         for (BeatDivisors divisors : dependents)
@@ -155,7 +153,7 @@ public class DivisorOptions {
         if (dec <= 0)
             return 0;
 
-        if (snappingOptions.contains(dec) || autoGen.contains(dec))
+        if (divisorOptions.contains(dec) || autoGen.contains(dec))
             return dec;
 
         Integer prev = autoGen.lower(currentSnapping);
@@ -165,7 +163,7 @@ public class DivisorOptions {
     }
     private int next() {
         int inc = currentSnapping + 1;
-        if (snappingOptions.contains(inc) || autoGen.contains(inc)) {
+        if (divisorOptions.contains(inc) || autoGen.contains(inc)) {
             return inc;
         }
         else {

@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -38,6 +39,7 @@ public class BindingGroup {
 
     private final Map<Integer, MouseHoldObject> mouseHolds = new ConcurrentHashMap<>(); //button : current active hold
     private final List<MouseInputInfo> mouseInputs = new ArrayList<>();
+    private final List<MouseInputInfo> doubleClickInputs = new ArrayList<>();
 
     private final Queue<VoidMethod> actionQueue = new ConcurrentLinkedQueue<>();
 
@@ -133,6 +135,7 @@ public class BindingGroup {
             binding.clearBinding();
         }
         mouseInputs.clear();
+        doubleClickInputs.clear();
         actionQueue.clear();
         return this;
     }
@@ -195,6 +198,13 @@ public class BindingGroup {
     }
     public void addMouseBind(BiFunction<Integer, Integer, Boolean> isValidClick, Consumer<Integer> onPress) {
         mouseInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), (pos, button)->{onPress.accept(button); return null;}));
+    }
+
+    public void addDoubleClick(TriFunction<Integer, Integer, Integer, Boolean> isValidClick, BiConsumer<Vector2, Integer> onPress) {
+        doubleClickInputs.add(new MouseInputInfo(isValidClick, (pos, button)->{onPress.accept(pos, button); return null;}));
+    }
+    public void addDoubleClick(BiFunction<Integer, Integer, Boolean> isValidClick, BiConsumer<Vector2, Integer> onPress) {
+        doubleClickInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), (pos, button)->{onPress.accept(pos, button); return null;}));
     }
 
     public ArrayList<InputBinding.InputInfo> bindingInputs(String bindingKey)
@@ -548,6 +558,24 @@ public class BindingGroup {
         if (hold != null)
             mouseHolds.put(button, hold);
     }
+
+    public boolean receiveDoubleClick(int gameX, int gameY, int button) {
+        MouseHoldObject hold = mouseHolds.remove(button);
+        if (hold != null) {
+            actionQueue.add(()->hold.onRelease(gameX, gameY));
+        }
+
+        for (MouseInputInfo info : doubleClickInputs)
+        {
+            if (info.condition.apply(gameX, gameY, button)) {
+                actionQueue.add(()->finalizeTouch(info, gameX, gameY, button));
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public boolean receiveTouchUp(int gameX, int gameY, int button) {
         MouseHoldObject hold = mouseHolds.remove(button);
         if (hold != null) {

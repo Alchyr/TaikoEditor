@@ -17,10 +17,14 @@ public class BeatDivisors {
 
     private EditorBeatmap timingMap; //The map whose timing will be used to generate objects.
 
+    //sets of snap points specific to divisors
     private final HashMap<Integer, HashSet<Snap>> divisorSnappings;
-    private TreeMap<Long, Snap> combinedSnaps;
-    private TreeMap<Long, Snap> allSnaps;
-    private TreeMap<Long, Snap> barlineSnaps;
+    private final Set<Integer> currentCombinedDivisors;
+
+    private TreeMap<Long, Snap> combinedSnaps; //combined snappings for current enabled divisors
+
+    private TreeMap<Long, Snap> allSnaps; //all snappings
+    private TreeMap<Long, Snap> barlineSnaps; //just barlines, every X 1/1
 
     private double lastStart, lastEnd;
     private NavigableMap<Long, Snap> activeSnaps;
@@ -37,6 +41,7 @@ public class BeatDivisors {
 
         divisorSnappings = new HashMap<>();
         combinedSnaps = new TreeMap<>();
+        currentCombinedDivisors = new HashSet<>();
         allSnaps = new TreeMap<>();
         barlineSnaps = new TreeMap<>();
 
@@ -45,14 +50,13 @@ public class BeatDivisors {
 
     public void refresh()
     {
-        combinedSnaps.clear();
-        allSnaps.clear();
+        //combinedSnaps.clear();
         generateCombinedSnaps();
     }
 
     public NavigableMap<Long, Snap> getSnaps(double startPos, double endPos)
     {
-        if (combinedSnaps.isEmpty() && !divisorOptions.activeSnappings.isEmpty())
+        if (combinedSnaps.isEmpty() && !divisorOptions.activeDivisors.isEmpty())
         {
             generateCombinedSnaps();
         }
@@ -86,7 +90,7 @@ public class BeatDivisors {
     }
     public TreeMap<Long, Snap> getSnaps()
     {
-        if (combinedSnaps.isEmpty() && !divisorOptions.activeSnappings.isEmpty())
+        if (combinedSnaps.isEmpty() && !divisorOptions.activeDivisors.isEmpty())
         {
             generateCombinedSnaps();
         }
@@ -103,14 +107,28 @@ public class BeatDivisors {
 
     private void generateCombinedSnaps()
     {
-        for (int divisor : divisorOptions.activeSnappings)
+        Set<Integer> missing = new HashSet<>();
+        for (Integer divisor : divisorOptions.activeDivisors) {
+            if (!currentCombinedDivisors.contains(divisor)) {
+                missing.add(divisor);
+            }
+            currentCombinedDivisors.remove(divisor);
+        }
+
+        for (int old : currentCombinedDivisors)
+            for (Snap s : getSnappings(old))
+                combinedSnaps.remove(s.pos);
+
+        for (int divisor : missing)
             for (Snap s : getSnappings(divisor))
                 combinedSnaps.put(s.pos, s);
 
-        for (int divisor : divisorOptions.snappingOptions)
-            for (Snap s : getSnappings(divisor)) {
-                allSnaps.put(s.pos, s);
-            }
+        /*for (int divisor : divisorOptions.activeDivisors)
+            for (Snap s : getSnappings(divisor))
+                combinedSnaps.put(s.pos, s);*/
+
+        currentCombinedDivisors.clear();
+        currentCombinedDivisors.addAll(divisorOptions.activeDivisors);
     }
 
 
@@ -124,7 +142,7 @@ public class BeatDivisors {
 
     public HashSet<Snap> getSnappings(int divisor)
     {
-        if (!divisorSnappings.containsKey(divisor))
+        if (!divisorSnappings.containsKey(divisor) || divisorSnappings.get(divisor).isEmpty())
         {
             generateSnappings(divisor);
             for (int existingDivisor : divisorSnappings.keySet())
@@ -147,9 +165,6 @@ public class BeatDivisors {
             divisorSnappings.put(divisor, snappings);
             return;
         }
-
-        if (divisorSnappings.containsKey(divisor))
-            divisorSnappings.get(divisor).clear();
         
         HashSet<Long> subSnaps = new HashSet<>(); //Contains all the points that shouldn't be repeated. HashSet as it is used entirely for contains() operations.
         for (Map.Entry<Integer, HashSet<Snap>> snaps : divisorSnappings.entrySet())
@@ -230,12 +245,15 @@ public class BeatDivisors {
                     Snap barline = new Snap(t, 0);
                     barlineSnaps.put(barline.pos, barline);
                     snapList.add(barline);
+                    allSnaps.merge(barline.pos, barline, (oldSnap, newSnap)->newSnap.divisor <= oldSnap.divisor ? newSnap : oldSnap);
                     continue;
                 }
 
                 skipLine = false;
             }
-            snapList.add(new Snap(t, divisor));
+            Snap snap = new Snap(t, divisor);
+            snapList.add(snap);
+            allSnaps.merge(snap.pos, snap, (oldSnap, newSnap)->newSnap.divisor <= oldSnap.divisor ? newSnap : oldSnap);
         }
     }
 
@@ -265,9 +283,12 @@ public class BeatDivisors {
                 Snap barline = new Snap(t, 0);
                 barlineSnaps.put(barline.pos, barline);
                 snapList.add(barline);
+                allSnaps.merge(barline.pos, barline, (oldSnap, newSnap)->newSnap.divisor <= oldSnap.divisor ? newSnap : oldSnap);
             }
             else {
-                snapList.add(new Snap(t, divisor));
+                Snap snap = new Snap(t, divisor);
+                snapList.add(snap);
+                allSnaps.merge(snap.pos, snap, (oldSnap, newSnap)->newSnap.divisor <= oldSnap.divisor ? newSnap : oldSnap);
             }
         }
     }

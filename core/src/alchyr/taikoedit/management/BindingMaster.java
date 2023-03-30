@@ -55,7 +55,7 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Delete", new InputBinding.InputInfo(Input.Keys.FORWARD_DEL), new InputBinding.InputInfo(Input.Keys.BACKSPACE)));
         creating.addBinding(InputBinding.create("Copy", new InputBinding.InputInfo(Input.Keys.C, true)));
         creating.addBinding(InputBinding.create("Cut", new InputBinding.InputInfo(Input.Keys.X, true)));
-        creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, true)));
+        creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, InputBinding.InputInfo.Maybe.TRUE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.FALSE)));
         creating.addBinding(InputBinding.create("Reverse", new InputBinding.InputInfo(Input.Keys.G, true)));
         creating.addBinding(InputBinding.create("ClearSelect", new InputBinding.InputInfo(Input.Keys.GRAVE)));
         creating.addBinding(InputBinding.create("Bookmark", new InputBinding.InputInfo(Input.Keys.B, true)));
@@ -109,8 +109,10 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Messy", new InputBinding.InputInfo(Input.Keys.H, true)));
         creating.addBinding(InputBinding.create("Resnap", new InputBinding.InputInfo(Input.Keys.R, true, true, false)));
 
+        creating.addBinding(InputBinding.create("PositionLines", new InputBinding.InputInfo(Input.Keys.Y, true, true, true)));
+
         //used for testing.
-        //creating.addBinding(InputBinding.create("DEBUG", new InputBinding.InputInfo(Input.Keys.Q, true, true, true)));
+        //creating.addBinding(InputBinding.create("DEBUG", new InputBinding.InputInfo(Input.Keys.K, true, true, true)));
 
         if (TaikoEditor.DIFFCALC)
             creating.addBinding(InputBinding.create("DIFFCALC", new InputBinding.InputInfo(Input.Keys.D, true, true, false)));

@@ -217,8 +217,8 @@ public class SVFunctionTool extends EditorTool {
                 {
                     previewView.renderObject(end, sb, sr, previewColor.a);
 
-                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddle());
-                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddle());
+                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddleX());
+                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddleX());
 
                     if (startPosition < endPosition)
                     {

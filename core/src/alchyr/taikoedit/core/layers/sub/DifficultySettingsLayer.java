@@ -85,13 +85,13 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         labels = new ArrayList<>();
         textFields = new ArrayList<>();
 
-        saveButton = new Button(SettingsMaster.getMiddle() + 100, 100, "Save", assetMaster.getFont("aller medium")).setClick(this::save);
-        cancelButton = new Button(SettingsMaster.getMiddle() - 100, 100, "Cancel", assetMaster.getFont("aller medium")).setClick(this::cancel);
+        saveButton = new Button(SettingsMaster.getMiddleX() + 100, 100, "Save", assetMaster.getFont("aller medium")).setClick(this::save);
+        cancelButton = new Button(SettingsMaster.getMiddleX() - 100, 100, "Cancel", assetMaster.getFont("aller medium")).setClick(this::cancel);
 
         textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
 
         //left half for mapset settings, right half for difficulty settings
-        float leftX = 70, rightX = SettingsMaster.getMiddle() + leftX, leftCenter = SettingsMaster.getWidth() / 4.0f, rightCenter = SettingsMaster.getMiddle() + leftCenter;
+        float leftX = 70, rightX = SettingsMaster.getMiddleX() + leftX, leftCenter = SettingsMaster.getWidth() / 4.0f, rightCenter = SettingsMaster.getMiddleX() + leftCenter;
 
 
         //Metadata stuff
@@ -128,24 +128,24 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         labels.add(new Label(rightCenter, y, big, "Difficulty", Label.LabelAlign.CENTER));
 
         y -= 60;
-        diffName = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "Name:", map.getName(), METADATA_LIMIT, font);
+        diffName = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "Name:", map.getName(), METADATA_LIMIT, font);
         textFields.add(diffName.setOnEnter((s)->{diffName.disable(); return true;}));
 
         y -= 40;
-        hp = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "HP:", oneDecimal.format(map.getFullMapInfo().hp), 4, font).setType(TextField.TextType.NUMERIC);
+        hp = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "HP:", oneDecimal.format(map.getFullMapInfo().hp), 4, font).setType(TextField.TextType.NUMERIC);
         hp.setOnEndInput(this::testDiffValue);
         textFields.add(hp.setOnEnter((s)->{hp.disable(); return true;}));
         y -= 30;
-        hpSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        hpSlider = new Slider(rightCenter, y, SettingsMaster.getMiddleX() - 100, 0, 10, 0.5f, 0.1f);
         hpSlider.setValue(map.getFullMapInfo().hp);
         hpSlider.onValueChange(this::setHP);
 
         y -= 50;
-        od = new TextField(rightX, y, SettingsMaster.getMiddle() - leftX, "OD:", oneDecimal.format(map.getFullMapInfo().od), 4, font).setType(TextField.TextType.NUMERIC);
+        od = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "OD:", oneDecimal.format(map.getFullMapInfo().od), 4, font).setType(TextField.TextType.NUMERIC);
         od.setOnEndInput(this::testDiffValue);
         textFields.add(od.setOnEnter((s)->{od.disable(); return true;}));
         y -= 30;
-        odSlider = new Slider(rightCenter, y, SettingsMaster.getMiddle() - 100, 0, 10, 0.5f, 0.1f);
+        odSlider = new Slider(rightCenter, y, SettingsMaster.getMiddleX() - 100, 0, 10, 0.5f, 0.1f);
         odSlider.setValue(map.getFullMapInfo().od);
         odSlider.onValueChange(this::setOD);
 
@@ -226,7 +226,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
         sb.setColor(dividerColor);
-        sb.draw(pix, SettingsMaster.getMiddle(), 0, 1, SettingsMaster.getHeight() + 5);
+        sb.draw(pix, SettingsMaster.getMiddleX(), 0, 1, SettingsMaster.getHeight() + 5);
 
         for (Label l : labels)
             l.render(sb, sr);

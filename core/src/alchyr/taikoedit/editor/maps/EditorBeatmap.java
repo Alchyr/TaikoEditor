@@ -1859,7 +1859,11 @@ public class EditorBeatmap {
         for (Pair<Long, Long> breakPeriod : getBreaks()) {
             test = null;
 
-            longest = objects.floorEntry(breakPeriod.b).getValue().stream().max(Comparator.comparingLong(HitObject::getEndPos));
+            Map.Entry<Long, ArrayList<HitObject>> preObject = objects.floorEntry(breakPeriod.b);
+            if (preObject == null)
+                return false;
+
+            longest = preObject.getValue().stream().max(Comparator.comparingLong(HitObject::getEndPos));
             if (longest.isPresent()) {
                 test = longest.get().getEndPos();
             }

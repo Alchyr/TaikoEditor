@@ -336,13 +336,15 @@ public class MapSelect implements Scrollable {
                     firstRender = i;
                 
                 if (!hovering && mouseX >= SELECT_START_X && mouseX < divider && group.hb.y2() >= mouseY) { //cursor could be within this group
+                    float groupSpace = LINE_GAP * group.expandPos;
+                    int lineGap = (int) (LINE_GAP * group.expandPos);
                     if (group.hb.y() - 2.5f < mouseY) {
                         hovering = true;
                         hovered.set(group.hb.x(), group.hb.y() - 1, group.hb.getWidth(), LINE_GAP);
                     }
-                    else if (y - 2.5f < mouseY && group.expandPos > 0) {
-                        int index = (int) (((mouseY - (group.hb.y() - 2.5f)) * -1) / (LINE_GAP * group.expandPos));
-                        if (index >= 0 && index < group.sets.size() || (index-- == group.sets.size() && ((int)(((mouseY - (group.hb.y() - 2.5f)) * -1) / (LINE_GAP * group.expandPos)) % (int)(LINE_GAP * group.expandPos)) < 3)) {
+                    else if (y - 2.5f < mouseY && groupSpace > 0 && lineGap > 0) {
+                        int index = (int) (((mouseY - (group.hb.y() - 2.5f)) * -1) / groupSpace);
+                        if (index >= 0 && index < group.sets.size() || (index-- == group.sets.size() && ((int)(((mouseY - (group.hb.y() - 2.5f)) * -1) / groupSpace) % lineGap) < 3)) {
                             hovering = true;
                             hovered.set(group.hb.x(), group.hb.y2() - 30 - ((index * LINE_GAP + 13) * group.expandPos) + (9 * (1.0f - group.expandPos)), group.hb.getWidth(), LINE_GAP);
                         }

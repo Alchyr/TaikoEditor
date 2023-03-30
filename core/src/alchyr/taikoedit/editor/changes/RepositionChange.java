@@ -10,6 +10,7 @@ import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 //Repositioning dons and kats to match setting position
 public class RepositionChange extends MapChange {
@@ -67,6 +68,16 @@ public class RepositionChange extends MapChange {
         for (ArrayList<Hit> stack : repositioned.values()) {
             for (Hit h : stack) {
                 h.updatePosition();
+            }
+        }
+
+        return this;
+    }
+
+    public MapChange perform(Consumer<Hit> repositioner) {
+        for (ArrayList<Hit> stack : repositioned.values()) {
+            for (Hit h : stack) {
+                repositioner.accept(h);
             }
         }
 

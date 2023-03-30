@@ -54,13 +54,13 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
         this.text = text;
 
         if (cancel) {
-            cancelButton = new Button(SettingsMaster.getMiddle() - BUTTON_SPACING, middleY - BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
-            denyButton = new Button(SettingsMaster.getMiddle(), middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
-            confirmButton = new Button(SettingsMaster.getMiddle() + BUTTON_SPACING, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            cancelButton = new Button(SettingsMaster.getMiddleX() - BUTTON_SPACING, middleY - BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
+            denyButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
+            confirmButton = new Button(SettingsMaster.getMiddleX() + BUTTON_SPACING, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
         }
         else {
-            denyButton = new Button(SettingsMaster.getMiddle() - BUTTON_SPACING / 2, middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
-            confirmButton = new Button(SettingsMaster.getMiddle() + BUTTON_SPACING / 2, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            denyButton = new Button(SettingsMaster.getMiddleX() - BUTTON_SPACING / 2, middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
+            confirmButton = new Button(SettingsMaster.getMiddleX() + BUTTON_SPACING / 2, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
             cancelButton = null;
         }
 
@@ -95,7 +95,7 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
         sb.setColor(backColor);
         sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
-        textRenderer.renderTextCentered(sb, text, SettingsMaster.getMiddle(), middleY, Color.WHITE);
+        textRenderer.renderTextCentered(sb, text, SettingsMaster.getMiddleX(), middleY, Color.WHITE);
 
         denyButton.render(sb, sr);
         confirmButton.render(sb, sr);

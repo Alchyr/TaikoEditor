@@ -3,22 +3,18 @@ package alchyr.taikoedit.editor.tools;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.RimChange;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -108,7 +104,7 @@ public class FakeSliderTool extends EditorTool {
 
     @Override
     public boolean instantUse(MapView view) {
-        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
+        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddleX()));
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
         if (closest != null)

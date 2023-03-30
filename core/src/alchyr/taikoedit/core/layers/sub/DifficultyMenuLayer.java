@@ -101,7 +101,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
 
         openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium")).setClick(this::open);
 
-        startLinePos = SettingsMaster.getMiddle() / 3.0f;
+        startLinePos = SettingsMaster.getMiddleX() / 3.0f;
         calculateFirstLine();
         calculateSecondLine();
         calculateDifficulties();

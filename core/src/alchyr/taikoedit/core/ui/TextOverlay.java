@@ -26,7 +26,7 @@ public class TextOverlay {
     public TextOverlay(BitmapFont font, int centerY, int thickness)
     {
         this.font = font;
-        cX = SettingsMaster.getMiddle();
+        cX = SettingsMaster.getMiddleX();
         cY = centerY;
         bY = centerY - thickness / 2.0f;
 

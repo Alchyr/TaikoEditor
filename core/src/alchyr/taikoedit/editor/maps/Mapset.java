@@ -1,5 +1,7 @@
 package alchyr.taikoedit.editor.maps;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 import java.io.File;
@@ -214,7 +216,14 @@ public class Mapset {
     }
 
     public String getSongFile() {
-        return songFile;
+        FileHandle file = Gdx.files.absolute(songFile);
+        if (file.exists()) {
+            return songFile;
+        }
+        else {
+
+            return "";
+        }
     }
 
     public boolean isEmpty()

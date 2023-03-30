@@ -141,7 +141,7 @@ public class GreenLineTool extends EditorTool {
         if (hold != null)
             return false;
 
-        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
+        long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddleX()));
         Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
         if (closest != null)

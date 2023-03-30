@@ -1139,8 +1139,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
     public NavigableMap<Long, ArrayList<V>> descendingSubMap(Long fromKey, boolean fromInclusive, Long toKey, boolean toInclusive) {
         return new DescendingSubMap<>(this,
-                        false, fromKey, fromInclusive,
-                        false, toKey, toInclusive);
+                false, fromKey, fromInclusive,
+                false, toKey, toInclusive);
     }
     public NavigableMap<Long, ArrayList<V>> descendingSubMap(Long toKey, boolean toInclusive) {
         return new DescendingSubMap<>(this,
@@ -1163,7 +1163,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * @since 1.6
      */
     public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
-                                    Long toKey,   boolean toInclusive) {
+                                                  Long toKey,   boolean toInclusive) {
         return new AscendingSubMap<>(this,
                 false, fromKey, fromInclusive,
                 false, toKey,   toInclusive);
@@ -1411,7 +1411,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return size() != oldSize;
         }
         public NavigableSet<Long> subSet(Long fromElement, boolean fromInclusive,
-                                      Long toElement,   boolean toInclusive) {
+                                         Long toElement,   boolean toInclusive) {
             return new KeySet(m.subMap(fromElement, fromInclusive,
                     toElement,   toInclusive));
         }
@@ -1687,8 +1687,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             else
             {
                 e = (fromStart ?  m.getFirstEntry() :
-                                (loInclusive ? m.getCeilingEntry(lo) :
-                                        m.getHigherEntry(lo)));
+                        (loInclusive ? m.getCeilingEntry(lo) :
+                                m.getHigherEntry(lo)));
             }
             return (e == null || tooHigh(e.key)) ? null : e;
         }
@@ -1743,7 +1743,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         final PositionalObjectTreeMap.Entry<V> absHighFence() {
             return (toEnd ? null :
                     (extended ? m.getHigherThanHigherEntry(hi) :
-                        (hiInclusive ? m.getHigherEntry(hi) : m.getCeilingEntry(hi))));
+                            (hiInclusive ? m.getHigherEntry(hi) : m.getCeilingEntry(hi))));
         }
 
         /** Return the absolute low fence for descending traversal  */
@@ -2132,7 +2132,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
-                                        Long toKey,   boolean toInclusive) {
+                                                      Long toKey,   boolean toInclusive) {
             if (!inRange(fromKey, fromInclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             if (!inRange(toKey, toInclusive))
@@ -2222,7 +2222,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public NavigableMap<Long,ArrayList<V>> subMap(Long fromKey, boolean fromInclusive,
-                                        Long toKey,   boolean toInclusive) {
+                                                      Long toKey,   boolean toInclusive) {
             if (!inRange(fromKey, fromInclusive))
                 throw new IllegalArgumentException("fromKey out of range");
             if (!inRange(toKey, toInclusive))
@@ -2817,10 +2817,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      */
     @SuppressWarnings("unchecked")
     private Entry<V> buildFromSorted(int level, int lo, int hi,
-                                                               int redLevel,
-                                                               Iterator<?> it,
-                                                               java.io.ObjectInputStream str,
-                                                                ArrayList<V> defaultVal)
+                                     int redLevel,
+                                     Iterator<?> it,
+                                     java.io.ObjectInputStream str,
+                                     ArrayList<V> defaultVal)
             throws  java.io.IOException, ClassNotFoundException {
         /*
          * Strategy: The root is the middlemost element. To get to it, we

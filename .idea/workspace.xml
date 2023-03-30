@@ -4,57 +4,47 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="updoot">
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/autorefreshoff.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/autorefreshoffhover.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/autorefreshon.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/autorefreshonhover.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/dropdown.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/dropdownhover.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/edit.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/edithover.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/VolumeFunctionLayer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/DropdownBox.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/VolumeFunctionTool.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/com/badlogic/gdx/backends/lwjgl3/audio/DeviceSwapping.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/hs_err_pid22168.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="one day i'll do consistent commits">
+      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/LinePositioningLayer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tests/Wavetapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/interfaces/Weighted.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/data/AssetLists.json" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/data/AssetLists.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/localization/ENG/General.json" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/localization/ENG/General.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/diffcalc/taiko/difficulty/skills/Continuous.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/diffcalc/taiko/difficulty/skills/Continuous.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/TODO LIST.txt" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/TODO LIST.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/CustomAudio.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/CustomAudio.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/decoders/LayerIIIDecoder.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/decoders/LayerIIIDecoder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/AdjustedInputProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/AdjustedInputProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BindingGroup.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BindingGroup.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/InputBinding.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/InputBinding.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BoundInputProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BoundInputProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLoadingLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLoadingLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/SettingsLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/SettingsLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/ConfirmationLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/ConfirmationLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/CreateDifficultyLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/CreateDifficultyLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/DifficultyMenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/DifficultyMenuLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/DifficultySettingsLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/DifficultySettingsLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/GetHotkeyLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/GetHotkeyLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/SvFunctionLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/SvFunctionLayer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/Dropdown.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/Dropdown.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/UpdatingLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/UpdatingLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/VolumeFunctionLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/VolumeFunctionLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/CursorHoverText.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/CursorHoverText.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/Page.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/Page.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/TextOverlay.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/TextOverlay.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/BeatDivisors.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/BeatDivisors.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/DivisorOptions.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/DivisorOptions.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Snap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Snap.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Deletion.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Deletion.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/LineAddition.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/LineAddition.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Movement.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Movement.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ObjectAddition.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ObjectAddition.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Replacement.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Replacement.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Reverse.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/Reverse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ValueModificationChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ValueModificationChange.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ValueSetChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/ValueSetChange.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeModificationChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeModificationChange.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/RepositionChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/RepositionChange.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/BeatmapDatabase.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/BeatmapDatabase.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/EditorBeatmap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/EditorBeatmap.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/FakeSliderTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/FakeSliderTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/GreenLineTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/GreenLineTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/HitTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/HitTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/KiaiTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/KiaiTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/PlacementTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/PlacementTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SVFunctionTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SVFunctionTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SelectionTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SelectionTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/VolumeFunctionTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/VolumeFunctionTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/DifficultyView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/DifficultyView.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GameplayView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GameplayView.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GimmickView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GimmickView.java" afterDir="false" />
@@ -62,8 +52,8 @@
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ObjectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ObjectView.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ViewSet.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/ViewSet.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/BindingMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/BindingMaster.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/DesktopLauncher.java" beforeDir="false" afterPath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/DesktopLauncher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/releasing.txt" beforeDir="false" afterPath="$PROJECT_DIR$/releasing.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SettingsMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SettingsMaster.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObjectTreeMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/structures/PositionalObjectTreeMap.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,8 +111,11 @@
   <component name="GithubDefaultAccount">
     <option name="defaultAccountId" value="b43ab0c5-ee90-4ce9-b81a-1be7adaf8ad9" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProblemsViewState">
-    <option name="selectedIndex" value="1" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectId" id="1VNtFCeFs50rf4bNZlRPa8kpWzZ" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
@@ -131,19 +124,11 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Games/Multithreaded/Squarenice" />
-    <property name="project.structure.last.edited" value="Modules" />
-    <property name="project.structure.proportion" value="0.15" />
-    <property name="project.structure.side.proportion" value="0.57471263" />
-    <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
-    <property name="settings.editor.selected.configurable" value="org.jetbrains.plugins.github.ui.GithubSettingsConfigurable" />
-    <property name="show.unlinked.gradle.project.popup" value="true" />
-  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;settings.editor.selected.configurable&quot;: &quot;inlay.hints&quot;
+  }
+}</component>
   <component name="RecentsManager">
     <key name="CreateClassDialog.RecentsKey">
       <recent name="alchyr.diffcalc" />
@@ -163,14 +148,14 @@
       <recent name="alchyr.taikoedit.TaikoEditor" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="alchyr.taikoedit.util.interfaces" />
       <recent name="alchyr.taikoedit.core.layers.sub" />
       <recent name="alchyr.taikoedit.editor.tools" />
       <recent name="alchyr.taikoedit.management.assets" />
       <recent name="alchyr.taikoedit.core.layers" />
-      <recent name="alchyr.taikoedit.util.structures" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DesktopLauncher (direct open test)">
+  <component name="RunManager" selected="Application.DesktopLauncher">
     <configuration name="DesktopLauncher (direct open test)" type="Application" factoryName="Application" singleton="false">
       <option name="MAIN_CLASS_NAME" value="alchyr.taikoedit.desktop.DesktopLauncher" />
       <module name="TaikoEditor.desktop.main" />
@@ -453,7 +438,49 @@
       <option name="project" value="LOCAL" />
       <updated>1653220853757</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="updooty">
+      <created>1660763382429</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1660763382429</updated>
+    </task>
+    <task id="LOCAL-00019" summary="updooty">
+      <created>1660763461999</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1660763461999</updated>
+    </task>
+    <task id="LOCAL-00020" summary="another reasonable sized commit">
+      <created>1667192449573</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1667192449573</updated>
+    </task>
+    <task id="LOCAL-00021" summary="icon">
+      <created>1667211949229</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1667211949230</updated>
+    </task>
+    <task id="LOCAL-00022" summary="kiai stuff, icon">
+      <created>1667659186590</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1667659186590</updated>
+    </task>
+    <task id="LOCAL-00023" summary="wheeeeeeeeeEEEEEee">
+      <created>1668375049742</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1668375049742</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -466,7 +493,6 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
@@ -484,7 +510,13 @@
     <MESSAGE value="3.2.2&#10;&#10;cleaning up skin stuff" />
     <MESSAGE value="3.2.2&#10;&#10;vnum" />
     <MESSAGE value="updoot" />
-    <option name="LAST_COMMIT_MESSAGE" value="updoot" />
+    <MESSAGE value="updooty" />
+    <MESSAGE value="another reasonable sized commit" />
+    <MESSAGE value="icon" />
+    <MESSAGE value="kiai stuff, icon" />
+    <MESSAGE value="wheeeeeeeeeEEEEEee" />
+    <MESSAGE value="one day i'll do consistent commits" />
+    <option name="LAST_COMMIT_MESSAGE" value="one day i'll do consistent commits" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -493,6 +525,11 @@
           <properties class="java.lang.NullPointerException" package="java.lang" />
           <option name="timeStamp" value="82" />
         </breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/JDK/src.zip!/java/lang/ClassLoader.java</url>
+          <line>1299</line>
+          <option name="timeStamp" value="86" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <pin-to-top-manager>
@@ -502,8 +539,7 @@
     </pin-to-top-manager>
     <watches-manager>
       <configuration name="GradleRunConfiguration">
-        <watch expression="Gdx.graphics.getDeltaTime() * 12" language="JAVA" />
-        <watch expression="layers" language="JAVA" />
+        <watch expression="Pools.listPool" language="JAVA" />
       </configuration>
     </watches-manager>
   </component>

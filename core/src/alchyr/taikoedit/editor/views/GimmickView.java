@@ -13,6 +13,7 @@ import alchyr.taikoedit.editor.changes.RepositionChange;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
+import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.tools.*;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.EditorTime;
@@ -27,6 +28,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -74,8 +76,9 @@ public class GimmickView extends MapView {
         super(ViewType.GIMMICK_VIEW, parent, beatmap, HEIGHT);
         lastSounded = 0;
 
-        visibleTypes = new HashSet<>();
-        visibleTypes.addAll(Arrays.asList(HitObject.HitObjectType.values()));
+        filters = new ArrayList<>();
+        hiddenTypes = new HashSet<>();
+        filters.add((h)->hiddenTypes.contains(h.type));
 
         breaks = beatmap.autoBreaks;
 
@@ -116,15 +119,20 @@ public class GimmickView extends MapView {
     }
 
     //Object Filtering
-    private boolean hits = true, sliders = true, spinners = true;
-    private Set<HitObject.HitObjectType> visibleTypes;
+    private boolean sliders = true, spinners = true;
+    private final List<Predicate<HitObject>> filters;
+    private final Set<HitObject.HitObjectType> hiddenTypes;
     private boolean visible(HitObject h) {
-        return visibleTypes.contains(h.type);
+        for (Predicate<HitObject> filter : filters)
+            if (filter.test(h))
+                return false;
+
+        return true;
     }
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time) //might have skipped backwards
+        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -160,7 +168,7 @@ public class GimmickView extends MapView {
             for (Pair<Long, Long> breakSection : map.getBreaks()) {
                 startColor = endColor = faintBreakColor;
 
-                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
                 stack = map.objects.ceilingEntry(breakSection.b);
                 if (stack != null) {
@@ -170,7 +178,7 @@ public class GimmickView extends MapView {
                     if (stack.getKey() - breakSection.b > map.getBreakEndDelay())
                         endColor = fakeBreakColor;
 
-                    end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                    end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddleX();
                 }
                 else { //this is a cheaty break with no closing object.
                     end = SettingsMaster.getWidth();
@@ -179,7 +187,7 @@ public class GimmickView extends MapView {
                 if (end < 0)
                     continue;
 
-                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
                 stack = map.objects.floorEntry(breakSection.a);
                 if (stack != null) {
@@ -189,7 +197,7 @@ public class GimmickView extends MapView {
                     if (breakSection.a - startTime > 200)
                         startColor = fakeBreakColor;
 
-                    start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddle();
+                    start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddleX();
                 }
                 else {
                     start = 0;
@@ -218,17 +226,17 @@ public class GimmickView extends MapView {
         //Divisors.
         for (Snap s : activeSnaps.values())
         {
-            s.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, HEIGHT);
+            s.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, HEIGHT);
         }
     }
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY, alpha);
+        o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY, alpha);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
-        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), objectY);
+        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY);
     }
 
     private NavigableMap<Long, ArrayList<HitObject>> prevObjects = null;
@@ -511,7 +519,7 @@ public class GimmickView extends MapView {
         return null;
     }
 
-    public PositionalObject clickObject(float x, float y, boolean rightClick)
+    public PositionalObject getObjectAt(float x, float y)
     {
         NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep(time);
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
@@ -832,18 +840,35 @@ public class GimmickView extends MapView {
         }
     }
 
+    private static final Predicate<HitObject> noKats = (h)->h instanceof Hit && ((Hit) h).isRim();
+    private static final Predicate<HitObject> noDons = (h)->h instanceof Hit && !((Hit) h).isRim();
+    private int hitMode = 0; //0 = all, 1 = none, 2 = dons, 3 = kats
     private void toggleHits() {
         clearSelection();
         prevObjects = null; //refresh visible objects
-        if (hits) {
-            hits = false;
-            visibleTypes.remove(HitObject.HitObjectType.CIRCLE);
-            parent.showText("Hits hidden.");
-        }
-        else {
-            hits = true;
-            visibleTypes.add(HitObject.HitObjectType.CIRCLE);
-            parent.showText("Hits shown.");
+        switch (hitMode) {
+            case 0:
+                ++hitMode;
+                hiddenTypes.add(HitObject.HitObjectType.CIRCLE);
+                parent.showText("Hits hidden.");
+                break;
+            case 1:
+                ++hitMode;
+                hiddenTypes.remove(HitObject.HitObjectType.CIRCLE);
+                parent.showText("Dons shown.");
+                filters.add(noKats);
+                break;
+            case 2:
+                filters.remove(noKats);
+                filters.add(noDons);
+                parent.showText("Kats shown.");
+                ++hitMode;
+                break;
+            default:
+                hitMode = 0;
+                filters.remove(noDons);
+                parent.showText("Hits shown.");
+                break;
         }
     }
     private void toggleSliders() {
@@ -851,12 +876,12 @@ public class GimmickView extends MapView {
         prevObjects = null; //refresh visible objects
         if (sliders) {
             sliders = false;
-            visibleTypes.remove(HitObject.HitObjectType.SLIDER);
+            hiddenTypes.add(HitObject.HitObjectType.SLIDER);
             parent.showText("Sliders hidden.");
         }
         else {
             sliders = true;
-            visibleTypes.add(HitObject.HitObjectType.SLIDER);
+            hiddenTypes.remove(HitObject.HitObjectType.SLIDER);
             parent.showText("Sliders shown.");
         }
     }
@@ -865,12 +890,12 @@ public class GimmickView extends MapView {
         prevObjects = null; //refresh visible objects
         if (spinners) {
             spinners = false;
-            visibleTypes.remove(HitObject.HitObjectType.SPINNER);
+            hiddenTypes.add(HitObject.HitObjectType.SPINNER);
             parent.showText("Spinners hidden.");
         }
         else {
             spinners = true;
-            visibleTypes.add(HitObject.HitObjectType.SPINNER);
+            hiddenTypes.remove(HitObject.HitObjectType.SPINNER);
             parent.showText("Spinners shown.");
         }
     }
@@ -958,7 +983,7 @@ public class GimmickView extends MapView {
 
     @Override
     public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddle());
+        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), FakeSliderTool.get(), SpinnerTool.get());

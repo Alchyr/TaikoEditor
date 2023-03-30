@@ -113,7 +113,7 @@ public abstract class MapView {
         return (int) ((time - this.preciseTime) * EditorLayer.viewScale + offset);
     }
     public float getBasePosition() {
-        return SettingsMaster.getMiddle();
+        return SettingsMaster.getMiddleX();
     }
 
     public int setPos(int y)
@@ -238,7 +238,7 @@ public abstract class MapView {
             clearSelection();
         }
         else {
-            PositionalObject close = clickObject(x, y, false);
+            PositionalObject close = clickObject(x, y);
 
             if (close != null) {
                 deleteObject(close);
@@ -246,8 +246,8 @@ public abstract class MapView {
             }
         }
     }
-    public boolean deletePrecise(float x, float y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
-        PositionalObject close = clickObject(x, y, false);
+    public boolean rightClick(float x, float y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
+        PositionalObject close = clickObject(x, y);
 
         if (close != null) {
             if (close.selected && hasSelection()) {
@@ -314,7 +314,10 @@ public abstract class MapView {
     }
     public void dragRelease() { //method called when mouse released without entering a dragging mode
     }
-    public abstract PositionalObject clickObject(float x, float y, boolean rightClick);
+    public PositionalObject clickObject(float x, float y) {
+        return getObjectAt(x, y);
+    }
+    public abstract PositionalObject getObjectAt(float x, float y);
     public abstract boolean clickedEnd(PositionalObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
     public void select(PositionalObject p) //Add a single object to selection.
     {
@@ -340,7 +343,7 @@ public abstract class MapView {
             TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
             int changed = 0;
 
-            map.objects.removeAll(selectedObjects);
+            getEditMap().removeAll(selectedObjects);
 
             for (Map.Entry<Long, ArrayList<PositionalObject>> objs : selectedObjects.entrySet())
             {
@@ -391,21 +394,21 @@ public abstract class MapView {
                 resnapped.put(newSnap, objs.getValue());
             }
 
-            map.objects.addAll(resnapped);
+            getEditMap().addAll(resnapped);
             parent.showText("Resnapped " + changed + " objects.");
 
             refreshSelection();
         }
         else {
-            PositionalObjectTreeMap<HitObject> resnapped = new PositionalObjectTreeMap<>();
+            PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
             TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
             int changed = 0;
 
-            for (Map.Entry<Long, ArrayList<HitObject>> objs : map.objects.entrySet())
+            for (Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> objs : getEditMap().entrySet())
             {
                 if (allSnaps.containsKey(objs.getKey()))
                 {
-                    resnapped.put(objs.getKey(), objs.getValue());
+                    resnapped.put(objs.getKey(), (ArrayList<PositionalObject>) objs.getValue());
                     continue;
                 }
 
@@ -440,18 +443,18 @@ public abstract class MapView {
 
                 if (newSnap != objs.getKey())
                 {
-                    for (HitObject h : objs.getValue())
+                    for (PositionalObject h : objs.getValue())
                     {
                         h.setPos(newSnap);
                     }
                     changed += objs.getValue().size();
                 }
 
-                resnapped.put(newSnap, objs.getValue());
+                resnapped.put(newSnap, (ArrayList<PositionalObject>) objs.getValue());
             }
 
-            map.objects.clear();
-            map.objects.addAll(resnapped);
+            getEditMap().clear();
+            getEditMap().addAll(resnapped);
             parent.showText("Resnapped " + changed + " objects.");
         }
     }

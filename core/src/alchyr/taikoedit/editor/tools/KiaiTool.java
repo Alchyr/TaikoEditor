@@ -77,7 +77,7 @@ public class KiaiTool extends EditorTool {
             boolean kiai, first = true;
             Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> pointIterator = previewView.map.allPoints.descendingSubMap(Long.MIN_VALUE, true, previewPos, true).entrySet().iterator();
             TimingPoint next;
-            long start = previewView.getPositionFromTime(previewPos, SettingsMaster.getMiddle()), end = start;
+            long start = previewView.getPositionFromTime(previewPos, SettingsMaster.getMiddleX()), end = start;
             if (pointIterator.hasNext()) {
                 next = GeneralUtils.listLast(pointIterator.next().getValue());
                 kiai = next.kiai;
@@ -87,7 +87,7 @@ public class KiaiTool extends EditorTool {
                         break; //can't go into this section at all
 
                     first = false;
-                    start = previewView.getPositionFromTime(next.getPos(), SettingsMaster.getMiddle());
+                    start = previewView.getPositionFromTime(next.getPos(), SettingsMaster.getMiddleX());
 
                     next = pointIterator.hasNext() ? GeneralUtils.listLast(pointIterator.next().getValue()) : null;
                 }
@@ -100,7 +100,7 @@ public class KiaiTool extends EditorTool {
             if (pointIterator.hasNext()) {
                 next = GeneralUtils.listLast(pointIterator.next().getValue());
                 while (end < SettingsMaster.getWidth() && next != null) {
-                    end = previewView.getPositionFromTime(next.getPos(), SettingsMaster.getMiddle());
+                    end = previewView.getPositionFromTime(next.getPos(), SettingsMaster.getMiddleX());
                     if (!next.selected) {
                         break;
                     }
@@ -191,7 +191,7 @@ public class KiaiTool extends EditorTool {
             }
         }
         else {
-            double time = view.getTimeFromPosition(SettingsMaster.getMiddle());
+            double time = view.getTimeFromPosition(SettingsMaster.getMiddleX());
             Map.Entry<Long, ArrayList<TimingPoint>> stack = view.map.allPoints.floorEntry((long) time);
 
             if (stack != null) {

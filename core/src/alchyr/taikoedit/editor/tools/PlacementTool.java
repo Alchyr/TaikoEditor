@@ -51,7 +51,7 @@ public abstract class PlacementTool extends EditorTool {
             if (v.containsY(y))
             {
                 MapView hovered = v.getView(y);
-                Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX(), SettingsMaster.getMiddle()), MAX_SNAP_OFFSET);
+                Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX(), SettingsMaster.getMiddleX()), MAX_SNAP_OFFSET);
 
                 if (closest != null)
                 {

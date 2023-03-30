@@ -99,7 +99,7 @@ public class SelectionTool extends EditorTool {
 
     @Override
     public boolean consumesRightClick() {
-        return true; // mode != SelectionToolMode.NONE;
+        return mode != SelectionToolMode.NONE;
     }
 
     //First check -> clicking on an object? If ctrl is held and it's selected, deselect it. Otherwise, select it.
@@ -138,7 +138,7 @@ public class SelectionTool extends EditorTool {
             case NONE:
                 boolean delete = button == Input.Buttons.RIGHT;
                 selectingView = view;
-                dragObject = selectingView.clickObject(x, y, delete);
+                dragObject = selectingView.clickObject(x, y);
                 boolean shift = (modifiers & InputBinding.InputInfo.SHIFT_ID) != 0;
                 boolean canDrag = true;
                 boolean canSelect = false;
@@ -379,7 +379,7 @@ public class SelectionTool extends EditorTool {
         {
             if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL) //Render selection effect on objects you are dragging over before they're actually selected
             {
-                int start = selectingView.getPositionFromTime(clickStartTime, SettingsMaster.getMiddle());
+                int start = selectingView.getPositionFromTime(clickStartTime, SettingsMaster.getMiddleX());
 
                 if (start < selectionEnd)
                 {

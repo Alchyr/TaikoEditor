@@ -213,7 +213,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
             col = (index % 3) - 1;
             row = index / 3;
             int finalIndex = index;
-            formulaButtons.add(new ImageButton(SettingsMaster.getMiddle() + col * FORMULA_SIZE, FORMULA_START_Y - row * FORMULA_SIZE,
+            formulaButtons.add(new ImageButton(SettingsMaster.getMiddleX() + col * FORMULA_SIZE, FORMULA_START_Y - row * FORMULA_SIZE,
                     formulaTextures.get(formula.a), formulaHoverTextures.get(formula.a),
                     formula.b, assetMaster.getFont("aller medium"))
                     .setClick((b)->selectFormula(finalIndex)).setAction(formula.b).setFlip(false, flipY));

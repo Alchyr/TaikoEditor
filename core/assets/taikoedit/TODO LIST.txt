@@ -44,26 +44,11 @@ Snaps may not generate correctly 100% of the time?
 - should be fixed. Was an issue with snaps that aren't initially generated being removed from other sets when generated later.
 It was silly.
 
-Selection tool shift + click to select all between currently selection and clicked point
-If on left, from left end of selection, on right, from right end of selection (doesn't affect existing selection)
-If in the middle, left middle: Selects from left side. Right middle, selects from right side. (smaller side)
-alt - do nothing if in the middle?
-
-
-Double-click to jump to an object
-
-
-
-NOTE - Timing generation does not match stable?
-I think stable generates one beat at a time, skipping to the next beat directly rather than incrementally
 
 
 
 EXTRA STUFF:
 Alternate song select - Simply file open dialog, without preloading all maps (= no load time)
-Loading osu! skins
-
-Snaps beyond 1/16? Using a custom set of snappings?
 
 Limited selection - ex. only select kats or only select dons
 

@@ -34,11 +34,15 @@ public class EffectView extends MapView implements TextInputReceiver {
     //Drag line graph to quickly adjust sv?
     //Select a section to do effects like interpolation (smooth line) or something similar?
 
-    public static final int HEIGHT = 300;
-    public static final int SV_AREA = (HEIGHT - 80) / 2;
+    public static final int HEIGHT = 240;
+    private static final int MARGIN = 40;
+    public static final int SV_AREA = (HEIGHT - (MARGIN * 2)) / 2;
+    private static final int BOTTOM_VALUE_Y = MARGIN + 10;
+    private static final int TOP_VALUE_Y = HEIGHT - (MARGIN + 1);
 
-    private static final int VALUE_LABEL_BOTTOM = 245;
-    private static final int VALUE_LABEL_TOP = 265;
+    //For clicking value of a timing point
+    private static final int VALUE_LABEL_TOP = TOP_VALUE_Y + 2;
+    private static final int VALUE_LABEL_BOTTOM = TOP_VALUE_Y - 12;
 
     //Selection
     private static final int SELECTION_DIST = 10, ADJUST_DIST = 30;
@@ -70,9 +74,6 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     //Hitsounds of map
     private long lastSounded;
-
-    //Bad Jank Input Method
-    private boolean deleteLineValue = false;
 
     public EffectView(EditorLayer parent, EditorBeatmap beatmap) {
         super(ViewType.EFFECT_VIEW, parent, beatmap, HEIGHT);
@@ -128,7 +129,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddle());
+        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     @Override
@@ -147,8 +148,6 @@ public class EffectView extends MapView implements TextInputReceiver {
             blipTimer = 0.4f;
             renderBlip = !renderBlip;
         }
-
-        deleteLineValue = false;
 
         if (adjustMode == AdjustMode.ACTIVE && !parent.tools.getCurrentTool().equals(getToolset().getDefaultTool())) {
             endAdjust();
@@ -169,7 +168,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time && parent.getViewSet(map).contains((o)->o.type == ViewType.OBJECT_VIEW)) //might have skipped backwards
+        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25 && parent.getViewSet(map).contains((o)->o.type == ViewType.OBJECT_VIEW)) //might have skipped backwards
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -206,7 +205,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         //Snaps go on top of the lines for this one.
         for (Snap s : activeSnaps.values())
         {
-            s.halfRender(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, 40);
+            s.halfRender(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, 40);
         }
 
         if (mode) {
@@ -252,7 +251,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         //Render graph for last point
         if (timing != null && (effect == null || timing.getPos() > effect.getPos())) { //Rendering the last point of the map
             sr.setColor(timing.kiai ? kiai : green);
-            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle());
+            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX());
             if (drawPos < SettingsMaster.getWidth() && atEnd(timing.getPos())) //Last point is a timing point. position 0.
             {
                 sr.line(drawPos, midY,
@@ -261,7 +260,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
         else if (effect != null) {
             sr.setColor(effect.kiai ? kiai : green);
-            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle());
+            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX());
             if (drawPos < SettingsMaster.getWidth() && atEnd(effect.getPos())) //Last point is a timing point. position 0.
             {
                 if (effect.value >= 1)
@@ -287,11 +286,11 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (lastPoint != null) {
                     if (lastPoint.getPos() - timing.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
                     {
-                        sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle())), midY,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle())), midY);
+                        sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX())), midY,
+                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY);
                     } else {
-                        sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle()), midY,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                        sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY,
+                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                     }
                 }
                 lastPoint = timing;
@@ -319,11 +318,11 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (lastPoint != null) {
                     if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
                     {
-                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition);
+                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
+                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
                     } else {
-                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + newGraphPosition,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
+                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                     }
                 }
                 lastPoint = effect;
@@ -350,11 +349,11 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (lastPoint != null) {
                     if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
                     {
-                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition);
+                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
+                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
                     } else {
-                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + newGraphPosition,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
+                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                     }
                 }
                 lastPoint = effect;
@@ -387,11 +386,11 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (lastPoint != null) {
                 if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
                 {
-                    sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition,
-                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle())), midY + newGraphPosition);
+                    sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
+                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
                 } else {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + newGraphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
+                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                 }
             }
             lastPoint = effect;
@@ -412,11 +411,11 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (lastPoint != null) {
                 if (lastPoint.getPos() - timing.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
                 {
-                    sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle())), midY,
-                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle())), midY);
+                    sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX())), midY,
+                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY);
                 } else {
-                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle()), midY + newGraphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
+                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                 }
             }
             lastPoint = timing;
@@ -434,7 +433,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (lastPoint != null && atStart(lastPoint.getPos()))
         {
             //sv at start of map before first timing point is fixed at 1x
-            int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle());
+            int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
             if (pos > 0)
                 sr.line(0, midY, pos, midY);
         }
@@ -503,7 +502,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         //Render graph for last point
         if (timing != null && (effect == null || timing.getPos() > effect.getPos())) { //Rendering the last point of the map
-            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle());
+            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX());
             if (drawPos < SettingsMaster.getWidth() && atEnd(timing.getPos())) //Last point is a timing point. position 0.
             {
                 graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
@@ -512,7 +511,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
         }
         else if (effect != null) {
-            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle());
+            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX());
             if (drawPos < SettingsMaster.getWidth() && atEnd(effect.getPos())) //Last point is a timing point. position 0.
             {
                 graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
@@ -528,8 +527,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
 
                 if (lastPoint != null) {
-                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                 }
                 lastPoint = timing;
 
@@ -544,8 +543,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
 
                 if (lastPoint != null) {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                 }
                 lastPoint = effect;
 
@@ -560,8 +559,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
 
                 if (lastPoint != null) {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
                 }
                 lastPoint = effect;
 
@@ -582,8 +581,8 @@ public class EffectView extends MapView implements TextInputReceiver {
             graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
 
             if (lastPoint != null) {
-                sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddle()), midY + graphPosition,
-                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
             }
             lastPoint = effect;
 
@@ -599,8 +598,8 @@ public class EffectView extends MapView implements TextInputReceiver {
             graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
 
             if (lastPoint != null) {
-                sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddle()), midY + graphPosition,
-                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
             }
             lastPoint = timing;
 
@@ -616,7 +615,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (lastPoint != null && atStart(lastPoint.getPos()))
         {
             sr.line(0, midY + graphPosition,
-                    getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddle()), midY + graphPosition);
+                    getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
         }
 
         sr.end();
@@ -670,9 +669,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (timing.getPos() > effect.getPos()) { //Timing next
                 if (lastPoint == null) { //First point.
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     renderLabel(sb, twoDecimal.format(1),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     bpmLabelSpacing = LABEL_SPACING;
                     svLabelSpacing = LABEL_SPACING;
                 }
@@ -683,13 +682,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                     if (bpmLabelSpacing <= 0)
                     {
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                         bpmLabelSpacing = LABEL_SPACING;
                     }
                     if (svLabelSpacing <= 0)
                     {
                         renderLabel(sb, twoDecimal.format(1),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -706,14 +705,14 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (adjust != null && effect.getPos() <= lastRenderable) { //selected object special case
                     if (effect.equals(adjust)) {
                         renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                         adjust = null;
                     }
                 }
                 else if (lastPoint == null) {
                     renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     svLabelSpacing = LABEL_SPACING;
                 }
                 else {
@@ -722,7 +721,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     if (svLabelSpacing <= 0)
                     {
                         renderLabel(sb, twoDecimal.format(effect.value),
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -740,12 +739,12 @@ public class EffectView extends MapView implements TextInputReceiver {
                     //timing point, handled normally
                     if (lastPoint == null)
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     else {
                         bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
                         if (bpmLabelSpacing <= 0) {
                             renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                    (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                    (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                             bpmLabelSpacing = LABEL_SPACING;
                         }
                     }
@@ -753,16 +752,16 @@ public class EffectView extends MapView implements TextInputReceiver {
                     //effect point
                     if (effect.equals(adjust)) {
                         renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                         adjust = null;
                     }
                 }
                 else if (lastPoint == null) {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     svLabelSpacing = LABEL_SPACING;
                     bpmLabelSpacing = LABEL_SPACING;
                 }
@@ -771,13 +770,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                     svLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
                     if (bpmLabelSpacing <= 0) {
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                         bpmLabelSpacing = LABEL_SPACING;
                     }
                     if (svLabelSpacing <= 0)
                     {
                         renderLabel(sb, twoDecimal.format(effect.value),
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -803,14 +802,14 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (adjust != null && effect.getPos() <= lastRenderable) {
                 if (effect.equals(adjust)) {
                     renderAdjustableLabel(sb, effect,
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     svLabelSpacing = LABEL_SPACING;
                     adjust = null;
                 }
             }
             else if (lastPoint == null) {
                 renderLabel(sb, twoDecimal.format(effect.value),
-                        (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                        (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                 svLabelSpacing = LABEL_SPACING;
             }
             else {
@@ -819,7 +818,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (svLabelSpacing <= 0)
                 {
                     renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     svLabelSpacing = LABEL_SPACING;
                 }
             }
@@ -840,9 +839,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
             if (lastPoint == null) {
                 renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                        (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                 renderLabel(sb, twoDecimal.format(1),
-                        (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                 bpmLabelSpacing = LABEL_SPACING;
                 svLabelSpacing = LABEL_SPACING;
             }
@@ -853,13 +852,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (bpmLabelSpacing <= 0)
                 {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     bpmLabelSpacing = LABEL_SPACING;
                 }
                 if (svLabelSpacing <= 0)
                 {
                     renderLabel(sb, twoDecimal.format(1),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     svLabelSpacing = LABEL_SPACING;
                 }
             }
@@ -898,9 +897,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (timing.getPos() > effect.getPos()) { //Timing next
                 if (lastPoint == null) { //First point.
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     renderLabel(sb, volume.format(timing.volume),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     bpmLabelSpacing = LABEL_SPACING;
                     volumeLabelSpacing = LABEL_SPACING;
                 }
@@ -911,13 +910,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                     if (bpmLabelSpacing <= 0)
                     {
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                         bpmLabelSpacing = LABEL_SPACING;
                     }
                     if (volumeLabelSpacing <= 0)
                     {
                         renderLabel(sb, volume.format(timing.volume),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -934,14 +933,14 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (adjust != null && effect.getPos() <= lastRenderable) { //selected object special case
                     if (effect.equals(adjust)) {
                         renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                         adjust = null;
                     }
                 }
                 else if (lastPoint == null) {
                     renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                 }
                 else {
@@ -950,7 +949,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     if (volumeLabelSpacing <= 0)
                     {
                         renderLabel(sb, volume.format(effect.volume),
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -968,12 +967,12 @@ public class EffectView extends MapView implements TextInputReceiver {
                     //timing point, handled normally
                     if (lastPoint == null)
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     else {
                         bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
                         if (bpmLabelSpacing <= 0) {
                             renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                    (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                    (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                             bpmLabelSpacing = LABEL_SPACING;
                         }
                     }
@@ -981,16 +980,16 @@ public class EffectView extends MapView implements TextInputReceiver {
                     //effect point
                     if (effect.equals(adjust)) {
                         renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                         adjust = null;
                     }
                 }
                 else if (lastPoint == null) {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                     bpmLabelSpacing = LABEL_SPACING;
                 }
@@ -999,13 +998,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                     volumeLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
                     if (bpmLabelSpacing <= 0) {
                         renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                         bpmLabelSpacing = LABEL_SPACING;
                     }
                     if (volumeLabelSpacing <= 0)
                     {
                         renderLabel(sb, volume.format(effect.volume),
-                                (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                     }
                 }
@@ -1031,14 +1030,14 @@ public class EffectView extends MapView implements TextInputReceiver {
             if (adjust != null && effect.getPos() <= lastRenderable) {
                 if (effect.equals(adjust)) {
                     renderAdjustableLabel(sb, effect,
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                     adjust = null;
                 }
             }
             else if (lastPoint == null) {
                 renderLabel(sb, volume.format(effect.volume),
-                        (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                        (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                 volumeLabelSpacing = LABEL_SPACING;
             }
             else {
@@ -1047,7 +1046,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (volumeLabelSpacing <= 0)
                 {
                     renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddle() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                 }
             }
@@ -1068,9 +1067,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
             if (lastPoint == null) {
                 renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                        (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                 renderLabel(sb, volume.format(timing.volume),
-                        (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                 bpmLabelSpacing = LABEL_SPACING;
                 volumeLabelSpacing = LABEL_SPACING;
             }
@@ -1081,13 +1080,13 @@ public class EffectView extends MapView implements TextInputReceiver {
                 if (bpmLabelSpacing <= 0)
                 {
                     renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 50);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
                     bpmLabelSpacing = LABEL_SPACING;
                 }
                 if (volumeLabelSpacing <= 0)
                 {
                     renderLabel(sb, volume.format(timing.volume),
-                            (int) (SettingsMaster.getMiddle() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + 259);
+                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                 }
             }
@@ -1145,23 +1144,23 @@ public class EffectView extends MapView implements TextInputReceiver {
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
         if (o instanceof TimingPoint) {
             if (((TimingPoint) o).uninherited) {
-                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, red, alpha);
+                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, red, alpha);
             }
             else if (map.timingPoints.containsKey(o.getPos())) {
-                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, yellow, alpha);
+                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, yellow, alpha);
             }
             else {
-                o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, alpha);
+                o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, alpha);
             }
         }
         else {
-            o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom, alpha);
+            o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, alpha);
         }
     }
 
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
-        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddle(), bottom);
+        o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom);
     }
 
     @Override
@@ -1295,15 +1294,8 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public void deleteObject(PositionalObject o) {
-        if (adjustMode == AdjustMode.POSSIBLE && deleteLineValue && o.equals(adjustPoint)) {
-            select(o);
-            startAdjust(adjustPoint);
-            deleteLineValue = false;
-        }
-        else {
-            endAdjust();
-            this.map.delete(MapChange.ChangeType.EFFECT, o);
-        }
+        endAdjust();
+        this.map.delete(MapChange.ChangeType.EFFECT, o);
     }
     @Override
     public void deleteSelection() {
@@ -1440,7 +1432,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     @Override
     public void dragRelease() {
         if (adjustMode == AdjustMode.POSSIBLE && selectedObjects != null && adjustPoint != null) {
-            startAdjust(adjustPoint);
+            startAdjust(adjustPoint, false);
         }
         else {
             endAdjust();
@@ -1448,11 +1440,13 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public PositionalObject clickObject(float x, float y, boolean rightClick) {
+    public PositionalObject clickObject(float x, float y) {
+        endAdjust();
+        return getObjectAt(x, y);
+    }
+    public PositionalObject getObjectAt(float x, float y) {
         //Check if y location is on sv label area
         //If so, allow wider x area for clicking.
-        endAdjust();
-
         NavigableMap<Long, ArrayList<TimingPoint>> selectable = map.getEditEffectPoints();
         if (selectable == null || y < bottom || y > top)
             return null;
@@ -1461,8 +1455,8 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         if (y > bottom + VALUE_LABEL_BOTTOM && y < bottom + VALUE_LABEL_TOP) {
             adjustMode = AdjustMode.POSSIBLE;
-            deleteLineValue = rightClick;
         }
+        //TODO - This method doesn't scale properly with viewscale.
 
         if (selectable.containsKey((long) time)) {
             ArrayList<TimingPoint> selectableObjects = selectable.get((long) time);
@@ -1552,6 +1546,36 @@ public class EffectView extends MapView implements TextInputReceiver {
         return false;
     }
 
+    @Override
+    public boolean rightClick(float x, float y) {
+        PositionalObject close = clickObject(x, y);
+
+        if (close != null) {
+            if (close.selected && hasSelection()) {
+                if (adjustMode == AdjustMode.POSSIBLE && close instanceof TimingPoint) {
+                    startAdjust((TimingPoint) close, true);
+                }
+                else {
+                    deleteSelection();
+                    clearSelection();
+                }
+            }
+            else {
+                if (adjustMode == AdjustMode.POSSIBLE && close instanceof TimingPoint) {
+                    clearSelection();
+                    select(close);
+                    startAdjust((TimingPoint) close, true);
+                }
+                else {
+                    deleteObject(close);
+                    clearSelection();
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     public void testNewSvLimit(double newLimit)
     {
         if (newLimit > peakSV)
@@ -1601,10 +1625,10 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     private boolean changed = false;
 
-    private void startAdjust(TimingPoint p) {
+    private void startAdjust(TimingPoint p, boolean clearValue) {
         adjustPoint = p;
         adjustMode = AdjustMode.ACTIVE;
-        textInput = deleteLineValue ? "" : (mode ? precise.format(p.value) : volume.format(p.volume));
+        textInput = clearValue ? "" : (mode ? precise.format(p.value) : volume.format(p.volume));
         blipOffsetX = textRenderer.setFont(font).getWidth(textInput) + BLIP_BUFFER;
         renderBlip = true;
         blipTimer = 0.4f;

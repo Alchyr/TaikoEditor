@@ -116,12 +116,17 @@ public class MusicWrapper implements Music.OnCompletionListener {
                         dispose();
                     }
                 }
+                else {
+                    dispose();
+                }
             }
             catch (InterruptedException ignored) {
                 editorLogger.info("Cancelled loading " + songFile);
+                dispose();
             }
             catch (Exception e) {
                 e.printStackTrace();
+                dispose();
             }
         }, this::getProgress, ()->hasMusic);
         loadingThreads.add(loadingThread);
@@ -312,7 +317,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
                 //editorLogger.info("Music updated position.");
                 if (!seeked) {
                     double gap = time - last;
-                    if (gap < 0.1 && gap > 0) {
+                    if (gap > 0 && gap < 0.1) {
                         if (initGap) {
                             if (updateGap.avg() == 0) {
                                 updateGap.add(gap);

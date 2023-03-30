@@ -61,8 +61,8 @@ public class GetHotkeyLayer extends ProgramLayer implements InputLayer {
         this.keyNames = keyNameArray;
         this.hotkeyText = inputInfo == null ? "" : inputInfo.toString(keyNameArray);
 
-        instructionLabel = new Label(SettingsMaster.getMiddle(), INSTRUCTION_Y, assetMaster.getFont("default"), "Input new hotkey.", Label.LabelAlign.CENTER);
-        cancelButton = new Button(SettingsMaster.getMiddle(), BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
+        instructionLabel = new Label(SettingsMaster.getMiddleX(), INSTRUCTION_Y, assetMaster.getFont("default"), "Input new hotkey.", Label.LabelAlign.CENTER);
+        cancelButton = new Button(SettingsMaster.getMiddleX(), BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
 
         processor.bind();
     }
@@ -92,7 +92,7 @@ public class GetHotkeyLayer extends ProgramLayer implements InputLayer {
         sb.setColor(backColor);
         sb.draw(pix, 0, 0, SettingsMaster.getWidth(), SettingsMaster.getHeight() + 5);
 
-        textRenderer.renderTextCentered(sb, hotkeyText, SettingsMaster.getMiddle(), MIDDLE_Y, Color.WHITE);
+        textRenderer.renderTextCentered(sb, hotkeyText, SettingsMaster.getMiddleX(), MIDDLE_Y, Color.WHITE);
 
         instructionLabel.render(sb, sr);
         cancelButton.render(sb, sr);

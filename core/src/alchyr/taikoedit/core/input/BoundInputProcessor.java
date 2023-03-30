@@ -50,6 +50,10 @@ public abstract class BoundInputProcessor extends AdjustedInputProcessor {
     public boolean onTouchDown(int gameX, int gameY, int pointer, int button) {
         return bindings.receiveTouchDown(gameX, gameY, button) || defaultReturn;
     }
+    @Override
+    public boolean onDoubleClick(int gameX, int gameY, int pointer, int button) {
+        return bindings.receiveDoubleClick(gameX, gameY, button); //no default return as it will move onto onTouchDown if false
+    }
 
     @Override
     public boolean onTouchUp(int gameX, int gameY, int pointer, int button) {

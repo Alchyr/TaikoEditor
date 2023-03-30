@@ -4,7 +4,6 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
-import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.layers.sub.VolumeFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.changes.LineAddition;
@@ -212,8 +211,8 @@ public class VolumeFunctionTool extends EditorTool {
                 {
                     previewView.renderObject(end, sb, sr, previewColor.a);
 
-                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddle());
-                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddle());
+                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddleX());
+                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddleX());
 
                     if (startPosition < endPosition)
                     {

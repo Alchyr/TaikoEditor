@@ -21,7 +21,7 @@ public class EditorLoadingLayer extends LoadingLayer {
         area = assetMaster.get("base:load_area");
         bar = assetMaster.get("base:load_bar");
 
-        x = SettingsMaster.getMiddle() - MID_X;
+        x = SettingsMaster.getMiddleX() - MID_X;
         y = SettingsMaster.getHeight() / 2f - MID_Y;
 
         super.initialize();

@@ -135,7 +135,7 @@ public class HitTool extends EditorTool {
             return false; //Don't swap off of selection tool when modifying selected objects
         }
         else {
-            long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddle()));
+            long time = Math.round(view.getTimeFromPosition(SettingsMaster.getMiddleX()));
             Snap closest = view.getClosestSnap(time, MAX_SNAP_OFFSET * 2);
 
             if (closest != null)

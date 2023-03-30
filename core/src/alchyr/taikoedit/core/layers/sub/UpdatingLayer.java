@@ -15,12 +15,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.*;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
@@ -125,7 +122,7 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
         Gdx.gl.glClearColor(backColor.r, backColor.g, backColor.b, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        textRenderer.renderTextCentered(sb, text, SettingsMaster.getMiddle(), middleY, Color.WHITE);
+        textRenderer.renderTextCentered(sb, text, SettingsMaster.getMiddleX(), middleY, Color.WHITE);
     }
 
     private void receiveInput() {

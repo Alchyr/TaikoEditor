@@ -591,31 +591,18 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             this.bg = bg;
             if (bg != null) {
                 float bgScale = Math.max(width / bg.getWidth(), height / bg.getHeight());
-                bgWidth = (int) Math.ceil(bg.getWidth() * bgScale);
-                bgHeight = (int) Math.ceil(bg.getHeight() * bgScale);
-                
-                if (bgWidth > width) {
-                    bgSrcHeight = bg.getHeight();
-                    bgSrcOffsetY = 0;
+                bgScale *= 1.28;
 
-                    bgSrcWidth = (int) (bg.getWidth() * (width / bgWidth));
-                    bgSrcOffsetX = (int) ((bg.getWidth() - bgSrcWidth) * 0.5f);
-                    bgWidth = (int) width;
-                }
-                else if (bgHeight > height) {
-                    bgSrcWidth = bg.getWidth();
-                    bgSrcOffsetX = 0;
+                bgWidth = Math.round(bg.getWidth() * bgScale);
+                bgHeight = Math.round(bg.getHeight() * bgScale);
 
-                    bgSrcHeight = (int) (bg.getHeight() * (height / bgHeight));
-                    bgSrcOffsetY = (int) ((bg.getHeight() - bgSrcHeight) * 0.5f);
-                    bgHeight = (int) height;
-                }
-                else {
-                    bgSrcWidth = bg.getWidth();
-                    bgSrcHeight = bg.getHeight();
-                    bgSrcOffsetX = 0;
-                    bgSrcOffsetY = 0;
-                }
+                bgSrcHeight = (int) (bg.getHeight() * (height / bgHeight));
+                bgSrcOffsetY = (int) ((bg.getHeight() - bgSrcHeight) * 0.5f);
+                bgHeight = (int) height;
+
+                bgSrcWidth = (int) (bg.getWidth() * (width / bgWidth));
+                bgSrcOffsetX = (int) ((bg.getWidth() - bgSrcWidth) * 0.5f);
+                bgWidth = (int) width;
 
                 bgOffsetX = bgWidth / 2;
                 bgOffsetY = bgHeight / 2;

@@ -6,12 +6,14 @@ import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
 import alchyr.taikoedit.core.layers.sub.DifficultyMenuLayer;
+import alchyr.taikoedit.core.layers.sub.LinePositioningLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.Dropdown;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
+import alchyr.taikoedit.editor.tests.Wavetapper;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
@@ -31,6 +33,7 @@ import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -430,11 +433,19 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
 
         //Map views
-        for (EditorBeatmap map : activeMaps)
-        {
+        Iterator<EditorBeatmap> mapIterator = activeMaps.iterator();
+        EditorBeatmap map;
+        while (mapIterator.hasNext()) {
+            map = mapIterator.next();
             ViewSet set = mapViews.get(map);
             if (set != null)
                 set.render(sb, sr);
+            else {
+                editorLogger.error("MAP IN ACTIVE MAPS WITH NO VIEWS: " + map.getName());
+                editorLogger.error("Dirty: " + map.dirty);
+                editorLogger.info("Removing from active maps.");
+                mapIterator.remove();
+            }
         }
 
         tools.renderCurrentTool(sb, sr);
@@ -751,6 +762,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             if (!mapViews.get(newView.map).contains((o)->o.type == newView.type)) {
                 newView.update(currentPos, Math.round(currentPos * 1000), 0, false);
                 mapViews.get(newView.map).addView(newView);
+                setPrimaryView(newView);
             }
         }
     }
@@ -864,20 +876,23 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     public void setPrimaryView(MapView newPrimary)
     {
-        if (primaryView != null) {
-            primaryView.notPrimary();
-        }
+        //if initialized
+        if (timeline != null) {
+            if (primaryView != null) {
+                primaryView.notPrimary();
+            }
 
-        primaryView = newPrimary;
-        if (primaryView != null)
-        {
-            timeline.setMap(primaryView.map);
-            tools.changeToolset(primaryView);
-            primaryView.primary();
-        }
-        else
-        {
-            timeline.setMap(null);
+            primaryView = newPrimary;
+            if (primaryView != null)
+            {
+                timeline.setMap(primaryView.map);
+                tools.changeToolset(primaryView);
+                primaryView.primary();
+            }
+            else
+            {
+                timeline.setMap(null);
+            }
         }
     }
 
@@ -985,7 +1000,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         if (newScale > 0.93f && newScale < 1.07f)
             newScale = 1;
         viewScale = Math.min(Math.max(0.1f, newScale), 500.0f);
-        viewTime = (int) ((SettingsMaster.getMiddle() + 500) / viewScale);
+        viewTime = (int) ((SettingsMaster.getMiddleX() + 500) / viewScale);
     }
 
     private void updateScrollOffset()
@@ -1198,6 +1213,20 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         processor.releaseInput(false);
     }
 
+    //Utility method(s)
+    private boolean objectExists(int x, int y) {
+        for (EditorBeatmap m : activeMaps)
+        {
+            ViewSet set = mapViews.get(m);
+            if (set != null && set.containsY(y))
+            {
+                if (set.objectExists(x, y)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     public static class EditorProcessor extends TextInputProcessor {
         private final EditorLayer sourceLayer;
@@ -1348,7 +1377,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 if (sourceLayer.primaryView != null)
                 {
                     releaseMouse(true);
-                    sourceLayer.primaryView.delete(SettingsMaster.getMiddle(), (sourceLayer.primaryView.bottom + sourceLayer.primaryView.top) / 2);
+                    sourceLayer.primaryView.delete(SettingsMaster.getMiddleX(), (sourceLayer.primaryView.bottom + sourceLayer.primaryView.top) / 2);
                 }
             });
 
@@ -1384,11 +1413,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bindings.bind("0", ()->sourceLayer.tools.selectToolIndex(9));
 
             //NOTE: DEBUG
-            /*bindings.bind("DEBUG", ()->{
+            bindings.bind("DEBUG", ()->{
                 if (sourceLayer.primaryView != null)
                 {
+                    Wavetapper.generate(sourceLayer.primaryView.map);
                     //Current function: Doubles sv in a certain section
-                    long startTime = 1034780, endTime = 1078140;
+                    /*long startTime = 1034780, endTime = 1078140;
                     SortedMap<Long, ArrayList<TimingPoint>> section = sourceLayer.primaryView.map.effectPoints.subMap(startTime, endTime);
 
                     for (ArrayList<TimingPoint> point : section.values())
@@ -1397,15 +1427,22 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                         {
                             p.value *= 2;
                         }
-                    }
+                    }*/
                 }
-            });*/
+            });
 
             if (DIFFCALC)
                 bindings.bind("DIFFCALC", ()->{
                    if (sourceLayer.primaryView != null)
                        sourceLayer.getViewSet(sourceLayer.primaryView.map).calculateDifficulty();
                 });
+
+            bindings.bind("PositionLines", ()->{
+                if (sourceLayer.primaryView != null) {
+                    sourceLayer.clean();
+                    TaikoEditor.addLayer(new LinePositioningLayer(this.sourceLayer, sourceLayer.primaryView.map));
+                }
+            });
 
             //------------ Mouse Bindings ------------
             //Dropdown
@@ -1458,6 +1495,28 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                             }
                         }
                         return null;
+                    });
+            bindings.addDoubleClick((x, y, b) -> (b == Input.Buttons.LEFT)
+                            && (y > sourceLayer.minimumVisibleY && y <= sourceLayer.timelineY)
+                            && (sourceLayer.objectExists(x, y)),
+                    (p, button) -> {
+                        sourceLayer.topBarDropdown.close();
+                        for (EditorBeatmap m : sourceLayer.activeMaps)
+                        {
+                            ViewSet set = sourceLayer.mapViews.get(m);
+                            if (set == null || !set.containsY(p.y))
+                                continue;
+
+                            MapView clicked = set.getView(p.y);
+                            if (clicked == null)
+                                continue;
+
+                            PositionalObject o = clicked.getObjectAt(p.x, p.y);
+                            if (o == null)
+                                continue;
+
+                            music.seekMs(o.getPos());
+                        }
                     });
             //tools
             bindings.addMouseBind((x, y, b)->true,

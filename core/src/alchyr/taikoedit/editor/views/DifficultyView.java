@@ -108,16 +108,16 @@ public class DifficultyView extends MapView {
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 250, Color.WHITE);
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 200);
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 150);
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 100);
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY + 50);
-        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddle() + (float) (o.getPos() - preciseTime) * viewScale, textY);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 250, Color.WHITE);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 200);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 150);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).COMBINED_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 100);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_BASE), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 50);
+        textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY);
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
-        //o.renderSelection(sb, sr, time, viewScale, SettingsMaster.getMiddle(), objectY);
+        //o.renderSelection(sb, sr, time, viewScale, SettingsMaster.getMiddleX(), objectY);
     }
 
     @Override
@@ -288,8 +288,8 @@ public class DifficultyView extends MapView {
         }
     }
 
-    public PositionalObject clickObject(float x, float y, boolean rightClick)
-    {
+    @Override
+    public PositionalObject getObjectAt(float x, float y) {
         return null;
     }
 
@@ -413,7 +413,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddle());
+        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get());

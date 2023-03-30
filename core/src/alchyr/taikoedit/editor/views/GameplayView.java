@@ -299,7 +299,7 @@ public class GameplayView extends MapView {
     private long lastSounded; //purely for audio in primaryUpdate
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time) //might have skipped backwards
+        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards, make sure didn't skip too far
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -349,7 +349,7 @@ public class GameplayView extends MapView {
         //end time is always pos, the start time of the object.
         if (h.type == HitObject.HitObjectType.SPINNER && h.getGameplayEndPos() - h.gameplayStart > 5000)
             //Dunno osu's logic to decide when to fade spinners in, this is merely an approximation for convenience
-            alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 750) / 250.0, 0.0, 1.0);
+            alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 1000) / 500.0, 0.0, 1.0);
 
         h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
     }
@@ -543,7 +543,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public PositionalObject clickObject(float x, float y, boolean rightClick) {
+    public PositionalObject getObjectAt(float x, float y) {
         return null;
     }
 

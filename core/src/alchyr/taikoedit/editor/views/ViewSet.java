@@ -143,7 +143,7 @@ public class ViewSet {
                     }
 
                     if (button == Input.Buttons.RIGHT && (owner.tools.getCurrentTool() == null || !owner.tools.getCurrentTool().consumesRightClick())) {
-                        if (view.deletePrecise(x, y)) {
+                        if (view.rightClick(x, y)) {
                             returnVal = MouseHoldObject.nothing;
                         }
                     }
@@ -257,6 +257,10 @@ public class ViewSet {
     public boolean isEmpty()
     {
         return views.isEmpty();
+    }
+
+    public boolean objectExists(int x, int y) {
+        return contains((view)->view.getObjectAt(x, y) != null);
     }
 
     public void dispose()

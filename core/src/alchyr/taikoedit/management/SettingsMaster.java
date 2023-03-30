@@ -2,16 +2,13 @@ package alchyr.taikoedit.management;
 
 import alchyr.taikoedit.management.assets.skins.Skins;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
-
-import java.util.HashMap;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 public class SettingsMaster {
-    private static int WIDTH, HEIGHT, Y_OFFSET, MIDDLE;
+    private static int WIDTH, HEIGHT, Y_OFFSET, X_MIDDLE;
 
     public static float SCALE = 1.0f;
 
@@ -38,7 +35,7 @@ public class SettingsMaster {
     //May also be applied to all objects in future with a "reposition all" option?
     public static int donX = 64, donY = 64, bigDonX = 64, bigDonY = 320, katX = 448, katY = 64, bigKatX = 448, bigKatY = 320;
 
-    public static boolean lazerSnaps = true;
+    public static boolean lazerSnaps = false;
 
     public static long roundPos(double pos) {
         return lazerSnaps ? Math.round(pos) : (long) pos;
@@ -59,8 +56,8 @@ public class SettingsMaster {
     public static int getWidth() {
         return WIDTH;
     }
-    public static int getMiddle() {
-        return MIDDLE;
+    public static int getMiddleX() {
+        return X_MIDDLE;
     }
 
     public static int getHeight() {
@@ -204,7 +201,7 @@ public class SettingsMaster {
     public static void updateDimensions()
     {
         WIDTH = Gdx.graphics.getWidth();
-        MIDDLE = WIDTH / 2;
+        X_MIDDLE = WIDTH / 2;
         HEIGHT = Gdx.graphics.getHeight();
         if (HEIGHT == Gdx.graphics.getDisplayMode().height + 1) //borderless fullscreen workaround
             --HEIGHT;
