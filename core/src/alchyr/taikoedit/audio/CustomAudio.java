@@ -17,6 +17,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static org.lwjgl.openal.AL10.*;
 import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
@@ -56,6 +60,7 @@ public abstract class CustomAudio extends OpenALMusic {
 
     //playback
     protected final int[] bufferIDs = new int[bufferCount];
+    protected final Set<Integer> bufferTracker = new TreeSet<>(), activeBuffers = new HashSet<>();
     protected final FloatArray renderedSecondsQueue = new FloatArray(bufferCount);
     protected IntBuffer buffers;
     protected int sourceID = -1;
@@ -86,6 +91,8 @@ public abstract class CustomAudio extends OpenALMusic {
     public FileHandle getFile() {
         return file;
     }
+
+    public abstract String getAudioType();
 
     public abstract void preload();
 
@@ -153,10 +160,8 @@ public abstract class CustomAudio extends OpenALMusic {
         //update = false;
 
         alSourceStop(sourceID);
-        while (alGetSourcei(sourceID, AL_BUFFERS_PROCESSED) > 0)
-        {
-            alSourceUnqueueBuffers(sourceID);
-        }
+        alSourcei(sourceID, AL_BUFFER, 0); //Detach all buffers
+
         renderedSecondsQueue.clear();
         buffers.clear();
         buffers.put(bufferIDs); //Ensure buffer IDs are always the same 4
@@ -178,6 +183,10 @@ public abstract class CustomAudio extends OpenALMusic {
 
 
         boolean filled = false;
+
+        activeBuffers.clear();
+        for (int buffer : bufferIDs)
+            bufferTracker.add(buffer);
 
         int i = 0;
         for (; i < bufferCount; i++) {
@@ -281,6 +290,11 @@ public abstract class CustomAudio extends OpenALMusic {
                 setPan(pan, volume);
 
                 boolean filled = false; // Check if there's anything to actually play.
+
+                activeBuffers.clear();
+                for (int buffer : bufferIDs)
+                    bufferTracker.add(buffer);
+
                 for (int i = 0; i < bufferCount; i++) { //Fill and queue buffers until there is nothing left to queue or no more buffers
                     int bufferID = buffers.get(i);
                     if (!fill(bufferID)) break;
@@ -335,8 +349,24 @@ public abstract class CustomAudio extends OpenALMusic {
         while (alGetSourcei(sourceID, AL_BUFFERS_PROCESSED) > 0) {
             int bufferID = alSourceUnqueueBuffers(sourceID);
             if (bufferID == AL_INVALID_VALUE) break;
-            //TaikoEditor.editorLogger.info("Unenqueued buffer " + bufferID);
+
             if (renderedSecondsQueue.size > 0) renderedSeconds = renderedSecondsQueue.pop();
+
+            if (activeBuffers.add(bufferID)) {
+                if (activeBuffers.size() == bufferCount)
+                    activeBuffers.clear();
+            }
+            else {
+                //saw same buffer twice without seeing all buffers.
+                //Not all buffers are queued/same buffer queued more than once
+
+                //Same buffer queued more than once = do not requeue this buffer and continue
+                //Not all buffers queued = queue the missing buffer
+                TaikoEditor.editorLogger.info("Buffer error occurred: " + bufferID);
+                continue;
+            }
+
+            //TaikoEditor.editorLogger.info("Unenqueued buffer " + bufferID);
             if (end)
                 continue; //Stop filling buffers, but continue to unenqueue them all as there is nothing left to play.
             if (fill(bufferID))
@@ -344,13 +374,36 @@ public abstract class CustomAudio extends OpenALMusic {
                 alSourceQueueBuffers(sourceID, bufferID);
                 //TaikoEditor.editorLogger.info("Queued buffer " + bufferID);
             }
-            else
+            else { //no more data
                 end = true;
+            }
         }
 
-        if (end && alGetSourcei(sourceID, AL_BUFFERS_QUEUED) == 0) {
-            stopAtEnd();
-            if (onCompletionListener != null) onCompletionListener.onCompletion(this);
+        if (alGetSourcei(sourceID, AL_BUFFERS_QUEUED) == 0) {
+            if (end) {
+                stopAtEnd();
+                if (onCompletionListener != null) onCompletionListener.onCompletion(this);
+            }
+            else {
+                //Weird buffer problem. Re-queue all buffers.
+                int i = 0;
+                boolean filled = false;
+                for (; i < bufferCount; i++) {
+                    int bufferID = buffers.get(i);
+                    if (!fill(bufferID)) break;
+                    filled = true;
+                    alSourceQueueBuffers(sourceID, bufferID); //Queue buffers as far as possible
+                }
+                for (; i < bufferCount; i++) {
+                    int bufferID = buffers.get(i);
+                    empty(bufferID);
+                    alSourceQueueBuffers(sourceID, bufferID);
+                }
+                if (!filled) {
+                    stopAtEnd();
+                    if (onCompletionListener != null) onCompletionListener.onCompletion(this);
+                }
+            }
         }
 
         // A buffer underflow will cause the source to stop.

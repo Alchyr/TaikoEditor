@@ -107,19 +107,10 @@ public class BeatDivisors {
 
     private void generateCombinedSnaps()
     {
-        Set<Integer> missing = new HashSet<>();
-        for (Integer divisor : divisorOptions.activeDivisors) {
-            if (!currentCombinedDivisors.contains(divisor)) {
-                missing.add(divisor);
-            }
-            currentCombinedDivisors.remove(divisor);
-        }
+        currentCombinedDivisors.clear();
+        combinedSnaps.clear();
 
-        for (int old : currentCombinedDivisors)
-            for (Snap s : getSnappings(old))
-                combinedSnaps.remove(s.pos);
-
-        for (int divisor : missing)
+        for (int divisor : divisorOptions.activeDivisors)
             for (Snap s : getSnappings(divisor))
                 combinedSnaps.put(s.pos, s);
 

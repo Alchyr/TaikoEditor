@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.views;
 
-import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
@@ -8,14 +9,12 @@ import alchyr.taikoedit.editor.changes.BreakAdjust;
 import alchyr.taikoedit.editor.changes.BreakRemoval;
 import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.changes.RepositionChange;
-import alchyr.taikoedit.editor.tools.*;
-import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
-import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.editor.tools.*;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.EditorTime;
-import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
@@ -27,12 +26,16 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.editorLogger;
-import static alchyr.taikoedit.TaikoEditor.music;
+import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class ObjectView extends MapView {
+    public static final String ID = "obj";
+    @Override
+    public String typeString() {
+        return ID;
+    }
+
     public static final int HEIGHT = 150;
     public static final int MEDIUM_HEIGHT = 22;
     public static final int SMALL_HEIGHT = 14;
@@ -71,6 +74,8 @@ public class ObjectView extends MapView {
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:breaks"), assetMaster.get("editor:breaksh")).setClick(this::toggleBreaks).setAction("Toggle Break Visibility"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:position"), assetMaster.get("editor:positionh")).setClick(this::reposition).setAction("Reposition Objects"));
+
+        addLockPositionButton();
     }
 
     public void close(int button)
@@ -101,7 +106,7 @@ public class ObjectView extends MapView {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
+        if (isPrimary && lockOffset == 0 && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
         {
             //Play only the most recently passed HitObject list. This avoids spamming a bunch of sounds if fps is too low.
             /*Map.Entry<Integer, ArrayList<HitObject>> entry = map.getEditObjects().higherEntry(currentPos);
@@ -217,8 +222,8 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
-        return map.getEditObjects(pos - EditorLayer.viewTime, pos + EditorLayer.viewTime);
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+        return map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
     }
 
     @Override
@@ -465,7 +470,7 @@ public class ObjectView extends MapView {
 
     public PositionalObject getObjectAt(float x, float y)
     {
-        NavigableMap<Long, ArrayList<HitObject>> selectable = map.getEditObjects();
+        NavigableMap<Long, ArrayList<HitObject>> selectable = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
             return null;
 
@@ -675,34 +680,6 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(TaikoEditor.music.isPlaying() ? time + 250 : time);
-        if (next == null)
-            return null;
-        if (next.getKey() - time < 2)
-        {
-            next = map.getCurrentSnaps().higherEntry(next.getKey());
-            if (next == null)
-                return null;
-        }
-        return next.getValue();
-    }
-
-    @Override
-    public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(TaikoEditor.music.isPlaying() ? time - 250 : time);
-        if (previous == null)
-            return null;
-        if (time - previous.getKey() < 2)
-        {
-            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
-            if (previous == null)
-                return null;
-        }
-        return previous.getValue();
-    }
-
-    @Override
     public Snap getClosestSnap(double time, float limit) {
         long rounded = Math.round(time);
         if (map.getCurrentSnaps().containsKey(rounded))
@@ -850,11 +827,6 @@ public class ObjectView extends MapView {
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
             this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
         }
-    }
-
-    @Override
-    public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), SpinnerTool.get());

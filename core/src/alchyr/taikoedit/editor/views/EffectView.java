@@ -29,6 +29,12 @@ import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class EffectView extends MapView implements TextInputReceiver {
+    public static final String ID = "eff";
+    @Override
+    public String typeString() {
+        return ID;
+    }
+
     //Kiai, sv
     //SV can be represented using a line graph?
     //Drag line graph to quickly adjust sv?
@@ -61,10 +67,12 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     public boolean mode = true; //true = sv, false = volume
 
+    public boolean timingEnabled = false;
+
     //SV Graph
     private static final int SMOOTH_GRAPH_DISTANCE = 300; //Further apart than this, no smooth graph
     private static final int LABEL_SPACING = 36;
-    private final DecimalFormat svFormat = new DecimalFormat("0.000x", osuSafe);
+    private static final DecimalFormat svFormat = new DecimalFormat("0.000x", osuSafe);
     private double peakSV, minSV;
     private String peakSVText, minSVText;
     private boolean renderLabels = true; //TODO: Add way to disable labels. Toggle button on overlay?
@@ -80,6 +88,8 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:mode"), assetMaster.get("editor:modeh")).setClick(this::swapMode).setAction("Swap Modes"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:timing"), assetMaster.get("editor:timingh")).setClick(this::swapTimingEnabled).setAction("Edit Timing"));
+        addLockPositionButton();
 
         font = assetMaster.getFont("aller small");
 
@@ -111,6 +121,12 @@ public class EffectView extends MapView implements TextInputReceiver {
         parent.tools.changeToolset(this);
     }
 
+    public void swapTimingEnabled(int button)
+    {
+        timingEnabled = !timingEnabled;
+        parent.showText(timingEnabled ? "Timing editing enabled." : "Timing editing disabled.");
+    }
+
     @Override
     public int setPos(int y) {
         super.setPos(y);
@@ -128,14 +144,10 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
-    }
-
-    @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
         //return graph points
-        return map.getEditEffectPoints(pos - EditorLayer.viewTime, pos + EditorLayer.viewTime);
+        return timingEnabled ? map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime)
+                : map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
     }
 
     @Override
@@ -168,7 +180,8 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25 && parent.getViewSet(map).contains((o)->o.type == ViewType.OBJECT_VIEW)) //might have skipped backwards
+        if (isPrimary && lockOffset == 0 && isPlaying && lastSounded < time && time - lastSounded < 25
+                && parent.getViewSet(map).contains((o)->o.type == ViewType.OBJECT_VIEW))
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -190,12 +203,14 @@ public class EffectView extends MapView implements TextInputReceiver {
         sb.draw(pix, 0, midY + SV_AREA, SettingsMaster.getWidth(), 1);
         sb.draw(pix, 0, midY - SV_AREA, SettingsMaster.getWidth(), 1);
 
-        TimingPoint t;
-        for (ArrayList<TimingPoint> points : map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
-            t = GeneralUtils.listLast(points);
+        if (!timingEnabled) {
+            TimingPoint t;
+            for (ArrayList<TimingPoint> points : map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
+                t = GeneralUtils.listLast(points);
 
-            if (!map.effectPoints.containsKey(t.getPos())) {
-                renderObject(t, sb, sr, 1);
+                if (!map.effectPoints.containsKey(t.getPos())) {
+                    renderObject(t, sb, sr, 1);
+                }
             }
         }
     }
@@ -229,7 +244,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             return;
 
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints().values().iterator();
+        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
         Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         //*********************GRAPH*********************
@@ -481,7 +496,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             return;
 
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints().values().iterator();
+        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
         Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         //*********************GRAPH*********************
@@ -645,13 +660,14 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     private void renderValueLabels(SpriteBatch sb, TimingPoint adjust) {
+        //TODO - adjust for rendering adjusting timing value
         long lastRenderable = adjust == null ? 0 : adjust.getPos() + (long)(LABEL_SPACING / viewScale);
         double svLabelSpacing = 0;
         double bpmLabelSpacing = 0;
 
         TimingPoint effect = null, timing = null, lastPoint = null;
 
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints().values().iterator();
+        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
         Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         if (effectPointIterator.hasNext())
@@ -879,7 +895,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         TimingPoint effect = null, timing = null, lastPoint = null;
 
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints().values().iterator();
+        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
         Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         if (effectPointIterator.hasNext())
@@ -1164,34 +1180,6 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(music.isPlaying() ? time + 250 : time);
-        if (next == null)
-            return null;
-        if (next.getKey() - time < 2)
-        {
-            next = map.getCurrentSnaps().higherEntry(next.getKey());
-            if (next == null)
-                return null;
-        }
-        return next.getValue();
-    }
-
-    @Override
-    public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(music.isPlaying() ? time - 250 : time);
-        if (previous == null)
-            return null;
-        if (time - previous.getKey() < 2)
-        {
-            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
-            if (previous == null)
-                return null;
-        }
-        return previous.getValue();
-    }
-
-    @Override
     public Snap getClosestSnap(double time, float limit) {
         long rounded = Math.round(time);
         if (map.getCurrentSnaps().containsKey(rounded))
@@ -1447,7 +1435,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     public PositionalObject getObjectAt(float x, float y) {
         //Check if y location is on sv label area
         //If so, allow wider x area for clicking.
-        NavigableMap<Long, ArrayList<TimingPoint>> selectable = map.getEditEffectPoints();
+        NavigableMap<Long, ArrayList<TimingPoint>> selectable = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
         if (selectable == null || y < bottom || y > top)
             return null;
 

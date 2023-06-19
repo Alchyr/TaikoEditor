@@ -179,6 +179,7 @@ public class DesktopLauncher {
 
 				try {
 					pWriter = new PrintWriter(f);
+					pWriter.println("Version: " + TaikoEditor.VERSION);
 					pWriter.println("Error occurred on main thread:");
 					e.printStackTrace(pWriter);
 

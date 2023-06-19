@@ -1,8 +1,18 @@
 package alchyr.taikoedit.management;
 
+import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -47,7 +57,6 @@ public class SettingsMaster {
         if (loadText)
             LocalizationMaster.updateLocalization();
     }
-
     public enum Language {
         ENG
     }
@@ -72,12 +81,15 @@ public class SettingsMaster {
 
 
     private static final String settingVersion = "0";
-    public static void load()
+    private static FileHandle generalSettingsFile() {
+        return Gdx.files.local("settings/settings.cfg");
+    }
+    public static void loadGeneralSettings()
     {
         //Load settings.
         setLanguage(Language.ENG);
 
-        FileHandle h = Gdx.files.local("settings/settings.cfg");
+        FileHandle h = generalSettingsFile();
 
         if (h.exists()) {
             try {
@@ -186,8 +198,8 @@ public class SettingsMaster {
             }
         }
     }
-    public static void save() {
-        FileHandle h = Gdx.files.local("settings/settings.cfg");
+    public static void saveGeneralSettings() {
+        FileHandle h = generalSettingsFile();
 
         try {
             h.writeString(settingsString(), false);
@@ -228,5 +240,110 @@ public class SettingsMaster {
                 "LazerSnaps:" + lazerSnaps + '\n' +
                 "Skin:" + Skins.currentSkin.toString();
         //.replace(":", "](}").replace("|", "})]");
+    }
+
+
+    //Mapset-specific settings
+    private static final SettingsFileProcessor<Mapset> mapSettingsProcessor = new SettingsFileProcessor<Mapset>("map")
+            .addMapping("Offset", Float::parseFloat, (val, params)->TaikoEditor.music.setOffset(val), (set, params)->TaikoEditor.music.getOffset())
+            .addMapping("Position", Double::parseDouble, (val, params)->TaikoEditor.music.seekSecond(val), (set, params)->TaikoEditor.music.getSecondTime())
+            .addMapping("ViewsetInfo", (s)->s, (val, params)->((EditorLayer) params[0]).loadViewsetInfo(val), (set, params)->((EditorLayer) params[0]).getViewsetInfo());
+    private static FileHandle mapSettingsFile(Mapset set) {
+        String setDirectory = set.getDirectory().getName();
+        if (setDirectory.isEmpty())
+            return null;
+        if (setDirectory.length() > 32) {
+            setDirectory = setDirectory.replace("beatmap-", "");
+            setDirectory = setDirectory.replace(" ", "");
+        }
+        if (setDirectory.length() > 32)
+            setDirectory = setDirectory.substring(0, 32);
+        return Gdx.files.local("settings/maps/" + setDirectory + ".cfg");
+    }
+    public static void loadMapSettings(EditorLayer editor, Mapset set) {
+        mapSettingsProcessor.readFile(mapSettingsFile(set), editor);
+    }
+    public static void saveMapSettings(EditorLayer editor, Mapset set) {
+        mapSettingsProcessor.writeFile(mapSettingsFile(set), set, editor);
+    }
+
+
+    private static class SettingsFileProcessor<V> {
+        private final Map<String, SettingMapping<?, V>> settingMappings;
+        private final String typeName;
+
+        public SettingsFileProcessor(String typeName) {
+            this.typeName = typeName;
+            settingMappings = new HashMap<>();
+        }
+
+        public <N> SettingsFileProcessor<V> addMapping(String key, Function<String, N> processor, BiConsumer<N, Object[]> setter, BiFunction<V, Object[], N> provider) {
+            settingMappings.put(key, new SettingMapping<>(processor, setter, provider));
+            return this;
+        }
+
+        public void readFile(FileHandle h, Object... params) {
+            if (h == null || !h.exists()) {
+                editorLogger.info("No " + typeName + " settings file at " + h);
+                return;
+            }
+
+            try {
+                String full = h.readString();
+                String[] entries = full.split("\n"), keyVal;
+                for (String entry : entries) {
+                    keyVal = entry.split(":", 2);
+                    if (keyVal.length == 2) {
+                        SettingMapping<?, V> mapping = settingMappings.get(keyVal[0]);
+                        if (mapping != null) {
+                            mapping.process(keyVal, params);
+                        }
+                        else {
+                            editorLogger.info("Unknown " + typeName + " settings key \"" + keyVal[0] + "\" with value " + keyVal[1]);
+                        }
+                    } else {
+                        editorLogger.error("Invalid " + typeName + " settings entry: " + entry);
+                    }
+                }
+            }
+            catch (Exception e) {
+                editorLogger.info("Failed to read " + typeName + " settings file " + h, e);
+            }
+        }
+        public void writeFile(FileHandle h, V src, Object... params) {
+            try {
+                StringBuilder data = new StringBuilder();
+                for (Map.Entry<String, SettingMapping<?, V>> mapping : settingMappings.entrySet()) {
+                    if (data.length() != 0)
+                        data.append('\n');
+                    data.append(mapping.getKey()).append(":").append(mapping.getValue().value(src, params));
+                }
+                h.writeString(data.toString(), false);
+                editorLogger.info("Saved " + typeName + " settings to " + h);
+            }
+            catch (Exception e) {
+                editorLogger.info("Failed to save " + typeName + " settings file.", e);
+            }
+        }
+
+        static class SettingMapping<V, W> {
+            final Function<String, V> processor;
+            final BiConsumer<V, Object[]> setter;
+            final BiFunction<W, Object[], V> provider;
+
+            SettingMapping(Function<String, V> processor, BiConsumer<V, Object[]> setter, BiFunction<W, Object[], V> provider) {
+                this.processor = processor;
+                this.setter = setter;
+                this.provider = provider;
+            }
+
+            void process(String[] keyVal, Object... params) {
+                setter.accept(processor.apply(keyVal[1]), params);
+            }
+
+            String value(W src, Object... params) {
+                return String.valueOf(provider.apply(src, params));
+            }
+        }
     }
 }

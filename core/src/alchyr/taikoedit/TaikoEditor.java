@@ -47,9 +47,9 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 336; //x.x.x -> xxx
+    public static final int VERSION = 340; //x.x.x -> xxx
 
-    public static final boolean DIFFCALC = true; //ctrl+alt+d
+    public static final boolean DIFFCALC = false; //ctrl+alt+d
 
     public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
 
@@ -184,7 +184,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
         assetMaster.loadAssetLists();
         assetMaster.addSpecialLoaders();
-        SettingsMaster.load();
+        SettingsMaster.loadGeneralSettings();
         LocalizationMaster.loadDefaultFolder();
 
         BindingMaster.initialize();
@@ -245,6 +245,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
                     try {
                         pWriter = new PrintWriter(f);
+                        pWriter.println("Version: " + TaikoEditor.VERSION);
                         pWriter.println("Error occurred during update:");
                         e.printStackTrace(pWriter);
 

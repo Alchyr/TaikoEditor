@@ -116,7 +116,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private final MapInfo initial;
     private final ArrayList<MapView> addLater;
 
-    private DivisorOptions divisorOptions; //Always shared
+    private final DivisorOptions divisorOptions; //Always shared
     private BeatDivisors universalDivisor; //Sometimes shared
     private double currentPos; //current second position in song.
 
@@ -143,6 +143,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         mapViews = new HashMap<>();
         activeMaps = new ArrayList<>();
         addLater = new ArrayList<>();
+
+        divisorOptions = new DivisorOptions();
+        divisorOptions.reset();
 
         this.type = backgroundImg == null || backgroundImg.isEmpty() ? LAYER_TYPE.UPDATE_STOP : LAYER_TYPE.FULL_STOP;
     }
@@ -349,7 +352,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         else //started with a diff open
         {
             organizeViews(); //Positions views and sets primary view, determines scroll
-            if (!activeMaps.get(0).autoBreaks) {
+            if (activeMaps.stream().anyMatch(map->!map.autoBreaks)) {
                 textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
             }
         }
@@ -570,8 +573,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private boolean closed = false;
     private void returnToSrc() {
         if (!closed) {
+            SettingsMaster.saveMapSettings(this, set);
             closed = true;
             activeEditor = null;
+            music.setOffset(0);
             TaikoEditor.removeLayer(this);
             if (src instanceof LoadedLayer) {
                 TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
@@ -616,9 +621,51 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 .addLayers(true, this)
                 .addTask(this::stopMusic)
                 .newSet().addTracker(music::getProgress, music::hasMusic, true)
-                .addTask(true, this::loadBeatmap)
                 .addTask(true, ()->{ music.play(); music.pause(); })
-                .addTask(true, ()->music.seekSecond(0));
+                .addTask(true, ()->music.seekSecond(0))
+                .addTask(true, ()->SettingsMaster.loadMapSettings(EditorLayer.this, set))
+                .addTask(true, this::loadBeatmap);
+    }
+
+    public void loadViewsetInfo(String val) {
+        String[] maps = val.split("-");
+        for (String map : maps) {
+            String[] mapInfo = map.split("\\+");
+            if (mapInfo.length < 2)
+                continue;
+            MapInfo toOpen = set.getMaps().stream().filter((info)->mapInfo[0].equals(safeify(info.getDifficultyName()))).findFirst().orElse(null);
+            if (toOpen == null) {
+                editorLogger.info("Failed to find previous open difficulty \"" + mapInfo[0] + "\"");
+                continue;
+            }
+
+            EditorBeatmap newMap = new EditorBeatmap(set, toOpen);
+            addMap(newMap);
+
+            for (int i = 1; i < mapInfo.length; ++i) {
+                MapView newView = MapView.fromTypeString(mapInfo[i], this, newMap);
+                if (newView != null)
+                    addView(newView, false);
+            }
+        }
+    }
+    public String getViewsetInfo() {
+        StringBuilder data = new StringBuilder();
+        for (EditorBeatmap map : activeMaps) {
+            ViewSet viewset = mapViews.get(map);
+            if (!viewset.isEmpty()) {
+                if (data.length() != 0)
+                    data.append('-');
+                data.append(safeify(map.getName()));
+                for (MapView view : viewset.getViews())
+                    data.append('+').append(view.typeString());
+            }
+        }
+        return data.toString();
+    }
+    private static String safeify(String s) {
+        s = s.replaceAll("[-+]", "");
+        return s;
     }
 
     private void stopMusic()
@@ -629,14 +676,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void loadBeatmap()
     {
-        divisorOptions = new DivisorOptions();
-        divisorOptions.reset();
-
         if (initial != null) {
-            prepSingleDiff(initial);
+            if (activeMaps.stream().noneMatch(map -> map.is(initial))) {
+                prepSingleDiff(initial);
+            }
         }
-        else if (set.getMaps().size() == 1) //If single difficulty, load automatically
-        {
+        else if (activeMaps.isEmpty() && set.getMaps().size() == 1) {
+            //No saved editor info, didn't choose an initial map, only one difficulty in set
             prepSingleDiff(set.getMaps().get(0));
         }
 
@@ -653,6 +699,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
         else
         {
+            if (backgroundImg == null) {
+                backgroundImg = activeMaps.get(0).getFullMapInfo().getBackground();
+            }
             divisorOptions.set(activeMaps.get(0).getDefaultDivisor());
         }
         editorLogger.info("Loaded beatmap successfully.");
@@ -660,27 +709,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
     private void prepSingleDiff(MapInfo info) {
         EditorBeatmap newMap = new EditorBeatmap(set, info);
-        backgroundImg = newMap.getFullMapInfo().getBackground();
-
-        if (!set.sameSong)
-        {
-            newMap.generateDivisor(divisorOptions);
-        }
-        else
-        {
-            if (universalDivisor == null)
-            {
-                universalDivisor = newMap.generateDivisor(divisorOptions);
-            }
-            else
-            {
-                newMap.setDivisorObject(universalDivisor);
-            }
-        }
+        addMap(newMap, 0);
 
         addObjectView(newMap, false);
         addEffectView(newMap, false);
-        activeMaps.add(newMap);
     }
 
     public EditorBeatmap getEditorBeatmap(MapInfo info)
@@ -690,33 +722,15 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             if (map.is(info))
                 return map;
         }
+
         EditorBeatmap newMap = new EditorBeatmap(set, info);
-
-        if (!set.sameSong)
-        {
-            newMap.generateDivisor(divisorOptions);
-        }
-        else
-        {
-            if (universalDivisor == null)
-            {
-                universalDivisor = newMap.generateDivisor(divisorOptions);
-            }
-            else
-            {
-                newMap.setDivisorObject(universalDivisor);
-            }
-        }
-
-        activeMaps.add(newMap);
-
-        if (!newMap.autoBreaks) {
-            textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
-        }
+        addMap(newMap);
         return newMap;
     }
     public void addMap(EditorBeatmap newMap) {
-
+        addMap(newMap, -1);
+    }
+    public void addMap(EditorBeatmap newMap, int index) {
         if (!set.sameSong)
         {
             newMap.generateDivisor(divisorOptions);
@@ -733,7 +747,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
         }
 
-        activeMaps.add(newMap);
+        if (index < 0 || index > activeMaps.size())
+            activeMaps.add(newMap);
+        else
+            activeMaps.add(index, newMap);
+
+        if (!newMap.autoBreaks && textOverlay != null) {
+            textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
+        }
     }
 
     //View control
@@ -749,21 +770,21 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     {
         if (delayed)
         {
-            if (!mapViews.containsKey(newView.map) || !mapViews.get(newView.map).contains((o)->o.type == newView.type))
-                addLater.add(newView);
-            else
-                newView.dispose();
+            //if (!mapViews.get(newView.map).contains((o)->o.type == newView.type))
+            addLater.add(newView);
+            //else
+                //newView.dispose();
         }
         else
         {
             if (!mapViews.containsKey(newView.map))
                 mapViews.put(newView.map, new ViewSet(this, newView.map));
 
-            if (!mapViews.get(newView.map).contains((o)->o.type == newView.type)) {
-                newView.update(currentPos, Math.round(currentPos * 1000), 0, false);
-                mapViews.get(newView.map).addView(newView);
-                setPrimaryView(newView);
-            }
+            //if (!mapViews.get(newView.map).contains((o)->o.type == newView.type)) {
+            newView.update(currentPos, Math.round(currentPos * 1000), 0, false);
+            mapViews.get(newView.map).addView(newView);
+            setPrimaryView(newView);
+            //}
         }
     }
     public void removeView(MapView toRemove)
@@ -946,25 +967,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
 
         for (MapInfo info : toOpen) {
             EditorBeatmap newMap = new EditorBeatmap(set, info);
-
-            if (!set.sameSong)
-            {
-                newMap.generateDivisor(divisorOptions);
-            }
-            else
-            {
-                if (universalDivisor == null)
-                {
-                    universalDivisor = newMap.generateDivisor(divisorOptions);
-                }
-                else
-                {
-                    newMap.setDivisorObject(universalDivisor);
-                }
-            }
+            addMap(newMap);
 
             addObjectView(newMap, true);
-            activeMaps.add(newMap);
         }
     }
     private void cutPrimary() {
@@ -1041,7 +1046,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                 music.seekSecond(currentPos - 1);
             else
             {
-                Snap s = primaryView.getPreviousSnap();
+                Snap s = primaryView.getPreviousSnap((long) (currentPos * 1000));
                 if (s == null)
                 {
                     music.seekSecond(0);
@@ -1062,7 +1067,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
         Snap s = primaryView.getClosestSnap((currentPos - 1) * 1000, 900);
         if (s == null)
-            s = primaryView.getPreviousSnap();
+            s = primaryView.getPreviousSnap((long) (currentPos * 1000));
 
         if (s == null)
         {
@@ -1101,7 +1106,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
                     music.seekSecond(currentPos + 1);
                 else
                 {
-                    Snap s = primaryView.getNextSnap();
+                    Snap s = primaryView.getNextSnap((long) (currentPos * 1000));
                     if (s == null)
                     {
                         music.seekSecond(music.getSecondLength());
@@ -1123,7 +1128,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         }
         Snap s = primaryView.getClosestSnap((currentPos + 1) * 1000, 900);
         if (s == null)
-            s = primaryView.getNextSnap();
+            s = primaryView.getNextSnap((long) (currentPos * 1000));
 
         if (s == null)
         {

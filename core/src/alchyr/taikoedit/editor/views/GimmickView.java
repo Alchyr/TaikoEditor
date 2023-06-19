@@ -1,6 +1,5 @@
 package alchyr.taikoedit.editor.views;
 
-import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
@@ -30,12 +29,17 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.editorLogger;
-import static alchyr.taikoedit.TaikoEditor.music;
+import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class GimmickView extends MapView {
+    public static final String ID = "gmk";
+    @Override
+    public String typeString() {
+        return ID;
+    }
+
+
     public static final int HEIGHT = 150;
     public static final int MEDIUM_HEIGHT = 30;
     public static final int SMALL_HEIGHT = 15;
@@ -90,6 +94,7 @@ public class GimmickView extends MapView {
         addOverlayButton(new ImageButton(assetMaster.get("editor:slider"), assetMaster.get("editor:sliderh")).setClick(this::toggleSliders).setAction("Toggle Slider Visibility"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:spinner"), assetMaster.get("editor:spinnerh")).setClick(this::toggleSpinners).setAction("Toggle Spinner Visibility"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:position"), assetMaster.get("editor:positionh")).setClick(this::reposition).setAction("Reposition Objects"));
+        addLockPositionButton();
     }
 
     public void close(int button)
@@ -132,7 +137,7 @@ public class GimmickView extends MapView {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
+        if (isPrimary && lockOffset == 0 && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -242,8 +247,8 @@ public class GimmickView extends MapView {
     private NavigableMap<Long, ArrayList<HitObject>> prevObjects = null;
     private final PositionalObjectTreeMap<HitObject> filtered = new PositionalObjectTreeMap<>();
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
-        NavigableMap<Long, ArrayList<HitObject>> objs = map.getEditObjects(pos - EditorLayer.viewTime, pos + EditorLayer.viewTime);
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+        NavigableMap<Long, ArrayList<HitObject>> objs = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
 
         /*if (objs.equals(prevObjects)) {
             return filtered.descendingMap();
@@ -279,7 +284,7 @@ public class GimmickView extends MapView {
 
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = prep(time);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = prep();
 
         if (source.isEmpty())
             return null;
@@ -521,7 +526,7 @@ public class GimmickView extends MapView {
 
     public PositionalObject getObjectAt(float x, float y)
     {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep(time);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep();
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
             return null;
 
@@ -733,34 +738,6 @@ public class GimmickView extends MapView {
             return dist < SMALL_SELECTION_DIST;
         }
         return false;
-    }
-
-    @Override
-    public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(TaikoEditor.music.isPlaying() ? time + 250 : time);
-        if (next == null)
-            return null;
-        if (next.getKey() - time < 2)
-        {
-            next = map.getCurrentSnaps().higherEntry(next.getKey());
-            if (next == null)
-                return null;
-        }
-        return next.getValue();
-    }
-
-    @Override
-    public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(TaikoEditor.music.isPlaying() ? time - 250 : time);
-        if (previous == null)
-            return null;
-        if (time - previous.getKey() < 2)
-        {
-            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
-            if (previous == null)
-                return null;
-        }
-        return previous.getValue();
     }
 
     @Override
@@ -981,10 +958,6 @@ public class GimmickView extends MapView {
         }
     }
 
-    @Override
-    public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
-    }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), FakeSliderTool.get(), SpinnerTool.get());
     public Toolset getToolset()

@@ -31,6 +31,11 @@ public class PreloadedMp3 extends CustomAudio {
     }
 
     @Override
+    public String getAudioType() {
+        return "mp3";
+    }
+
+    @Override
     public void preload() {
         try
         {

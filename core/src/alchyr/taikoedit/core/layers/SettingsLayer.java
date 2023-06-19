@@ -182,7 +182,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
             SettingsMaster.setMusicVolume(vol);
 
-            SettingsMaster.save();
+            SettingsMaster.saveGeneralSettings();
         }
         catch (Exception ignored) {
         }
@@ -196,7 +196,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
             SettingsMaster.effectVolume = vol;
 
-            SettingsMaster.save();
+            SettingsMaster.saveGeneralSettings();
         }
         catch (Exception ignored) {
         }
@@ -205,7 +205,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
     private void updateUseLazerSnappings(boolean useLazerSnappings) {
         SettingsMaster.lazerSnaps = useLazerSnappings;
-        SettingsMaster.save();
+        SettingsMaster.saveGeneralSettings();
 
         if (EditorLayer.activeEditor != null) {
             textOverlay.setText("Reopen map to update snappings.", 2.0f);
@@ -379,7 +379,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
                             if (current.state == SkinProvider.LoadState.LOADED) {
                                 Skins.currentSkin = current;
                                 TaikoEditor.onMain(old::unload);
-                                SettingsMaster.save();
+                                SettingsMaster.saveGeneralSettings();
                             }
                             else {
                                 skinSelect.setOption(old);
@@ -643,7 +643,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
                 }
             }
 
-            SettingsMaster.save();
+            SettingsMaster.saveGeneralSettings();
 
             return true;
         }
@@ -817,7 +817,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
                 }
             }
 
-            SettingsMaster.save();
+            SettingsMaster.saveGeneralSettings();
         }
         catch (NumberFormatException e) {
             f.setText("");
@@ -847,7 +847,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
                 }
             }
 
-            SettingsMaster.save();
+            SettingsMaster.saveGeneralSettings();
         }
         catch (NumberFormatException e) {
             f.setText("");

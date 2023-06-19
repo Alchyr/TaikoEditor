@@ -24,6 +24,12 @@ import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class DifficultyView extends MapView {
+    public static final String ID = "diff";
+    @Override
+    public String typeString() {
+        return ID;
+    }
+
     public static final int HEIGHT = 350;
 
     private static final Color backColor = new Color(0.0f, 0.0f, 0.0f, 0.7f);
@@ -76,15 +82,8 @@ public class DifficultyView extends MapView {
 
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < preciseTime) //might have skipped backwards
+        if (isPrimary && lockOffset == 0 && isPlaying && lastSounded < preciseTime && preciseTime - lastSounded < 25) //might have skipped backwards
         {
-            //Play only the most recently passed HitObject list. This avoids spamming a bunch of sounds if fps is too low.
-            /*Map.Entry<Integer, ArrayList<HitObject>> entry = map.getEditObjects().higherEntry(currentPos);
-            if (entry != null && entry.getKey() > lastSounded)
-            {
-                for (HitObject o : entry.getValue())
-                    o.playSound();
-            }*/
 
             //To play ALL hitobjects passed.
             for (ArrayList<HitObject> objects : map.objects.subMap((long) lastSounded, false, time, true).values())
@@ -121,8 +120,8 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
-        return map.getEditObjects(pos - EditorLayer.viewTime, pos + EditorLayer.viewTime);
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+        return map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
     }
 
     @Override
@@ -299,34 +298,6 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(music.isPlaying() ? time + 250 : time);
-        if (next == null)
-            return null;
-        if (next.getKey() - time < 2)
-        {
-            next = map.getCurrentSnaps().higherEntry(next.getKey());
-            if (next == null)
-                return null;
-        }
-        return next.getValue();
-    }
-
-    @Override
-    public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(music.isPlaying() ? time - 250 : time);
-        if (previous == null)
-            return null;
-        if (time - previous.getKey() < 2)
-        {
-            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
-            if (previous == null)
-                return null;
-        }
-        return previous.getValue();
-    }
-
-    @Override
     public Snap getClosestSnap(double time, float limit) {
         long rounded = Math.round(time);
         if (map.getCurrentSnaps().containsKey(rounded))
@@ -409,11 +380,6 @@ public class DifficultyView extends MapView {
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
             this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
         }
-    }
-
-    @Override
-    public double getTimeFromPosition(float x) {
-        return getTimeFromPosition(x, SettingsMaster.getMiddleX());
     }
 
     private static final Toolset toolset = new Toolset(SelectionTool.get());

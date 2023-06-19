@@ -23,10 +23,15 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return music.loadProgress();
     }
 
-    private static final float BASE_OFFSET = -0.083f;
-    public float mp3Offset = BASE_OFFSET;
-    public float oggOffset = 0;
+    private static final Map<String, Float> baseOffsetMap = new HashMap<>();
+    static {
+        baseOffsetMap.put("mp3", -0.083f);
+        baseOffsetMap.put("ogg", 0f);
+    }
     public float activeOffset = 0;
+    private static float getBaseOffset(CustomAudio music) {
+        return music == null ? 0 : baseOffsetMap.getOrDefault(music.getAudioType(), 0f);
+    }
 
     private transient boolean hasMusic = false; //has a successfully loaded track
 
@@ -141,6 +146,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
         for (SuccessFailThread t : loadingThreads)
             t.setFollowup(null, false);
     }
+
     public static class SuccessFailThread extends TrackedThread {
         final Supplier<Boolean> success;
         private Consumer<SuccessFailThread> followup;
@@ -203,12 +209,10 @@ public class MusicWrapper implements Music.OnCompletionListener {
             {
                 switch (musicFile.extension().toLowerCase(Locale.ROOT)) {
                     case "mp3":
-                        activeOffset = mp3Offset;
                         this.music = (PreloadedMp3) Gdx.audio.newMusic(musicFile);
                         music.setOnCompletionListener(this);
                         break;
                     case "ogg":
-                        activeOffset = oggOffset;
                         this.music = (PreloadOgg) Gdx.audio.newMusic(musicFile);
                         music.setOnCompletionListener(this);
                         break;
@@ -223,6 +227,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
                     editorLogger.error("No Audio Device");
                 }
                 else {
+                    activeOffset = getBaseOffset(music);
                     music.preload();
                 }
             }
@@ -488,9 +493,20 @@ public class MusicWrapper implements Music.OnCompletionListener {
         if (music != null)
             music.snapOffset -= change;
     }
+    public void setOffset(float value) {
+        float diff = activeOffset;
+        activeOffset = getBaseOffset(music) + value;
+        diff = activeOffset - diff;
+        if (music != null)
+            music.snapOffset += diff;
+    }
+
+    public float getOffset() {
+        return activeOffset - getBaseOffset(music);
+    }
     public int getDisplayOffset()
     {
-        return (music instanceof PreloadedMp3) ? Math.round((activeOffset - BASE_OFFSET) * 1000) : Math.round((activeOffset - oggOffset) * 1000);
+        return Math.round((activeOffset - getBaseOffset(music)) * 1000);
     }
 
     @Override

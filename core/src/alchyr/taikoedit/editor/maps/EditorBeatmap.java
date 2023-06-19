@@ -12,6 +12,7 @@ import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.views.GameplayView;
 import alchyr.taikoedit.management.MapMaster;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.util.structures.Pair;
@@ -54,6 +55,9 @@ public class EditorBeatmap {
     private NavigableMap<Long, ArrayList<HitObject>> editObjects;
     private long lastObjectStart = Long.MIN_VALUE, lastObjectEnd = Long.MIN_VALUE;
 
+    private NavigableMap<Long, ArrayList<TimingPoint>> editPoints;
+    private long lastEditPointStart = Long.MIN_VALUE, lastEditPointEnd = Long.MIN_VALUE;
+
     private NavigableMap<Long, ArrayList<TimingPoint>> editEffectPoints;
     private long lastEffectPointStart = Long.MIN_VALUE, lastEffectPointEnd = Long.MIN_VALUE;
 
@@ -65,10 +69,12 @@ public class EditorBeatmap {
     //This should also be used to ensure that if sameSong is true, timing changes will be kept synced with the other difficulties.
     //Not necessary, timing will never be implemented for offset reasons.
 
-    //Not the most "ideal" method, but it's quick and easy.
-    private EffectView effectView = null;
-    private GameplayView gameplayView = null;
+
     private Timeline timeline = null;
+
+    //Not the most "ideal" method, but it's quick and easy.
+    private List<EffectView> effectViews = new ArrayList<>();
+    private List<GameplayView> gameplayViews = new ArrayList<>();
 
 
     //Loading map from file
@@ -383,10 +389,18 @@ public class EditorBeatmap {
             return 1200;
         }
         else if (fullMapInfo.ar < 5f) {
-            return Math.round(1200 + 600 * (5 - fullMapInfo.ar) / 5.0);
+            if (SettingsMaster.lazerSnaps) {
+                return Math.round(1200 + 600 * (5 - fullMapInfo.ar) / 5.0);
+            }
+            else {
+                return (long) Math.floor(1200 + 600 * (5 - fullMapInfo.ar) / 5.0);
+            }
+        }
+        else if (SettingsMaster.lazerSnaps) {
+            return Math.round(1200 - 750 * (fullMapInfo.ar - 5.0) / 5.0);
         }
         else {
-            return Math.round(1200 - 750 * (fullMapInfo.ar - 5.0) / 5.0);
+            return (long) Math.floor(1200 - 750 * (fullMapInfo.ar - 5.0) / 5.0);
         }
     }
     public List<Pair<Long, Long>> getBreaks() { return fullMapInfo.breakPeriods; }
@@ -1355,7 +1369,7 @@ public class EditorBeatmap {
         }
     }
     public void updateEffectPoints(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed) {
-        if (effectView != null) {
+        if (!effectViews.isEmpty()) {
             if (removed != null) {
                 TimingPoint temp;
                 for (Map.Entry<Long, ? extends List<?>> p : removed) {
@@ -1374,7 +1388,8 @@ public class EditorBeatmap {
                     updateVolume(pos);
                 }
 
-                effectView.recheckSvLimits();
+                for (EffectView effectView : effectViews)
+                    effectView.recheckSvLimits();
             }
             else if (added != null) {
                 TimingPoint effective;
@@ -1382,7 +1397,8 @@ public class EditorBeatmap {
                     if (!e.getValue().isEmpty()) {
                         effective = (TimingPoint) GeneralUtils.listLast(e.getValue());
                         addedPoint(e.getKey(), effective);
-                        effectView.testNewSvLimit(effective.value);
+                        for (EffectView effectView : effectViews)
+                            effectView.testNewSvLimit(effective.value);
                         updateVolume(e.getKey());
                     }
                 }
@@ -1396,27 +1412,39 @@ public class EditorBeatmap {
 
     //Used when only values of green lines are adjusted
     public void updateSv() {
-        if (effectView != null) {
+        for (EffectView effectView : effectViews) {
             effectView.recheckSvLimits();
         }
     }
     public void updateEffectPoints(TimingPoint added, List<Pair<Long, ArrayList<TimingPoint>>> removed) {
-        if (effectView != null) {
+        if (!effectViews.isEmpty()) {
             updateEffectPoints(Collections.singleton(new Pair<>(added.getPos(), Collections.singletonList(added))), removed);
         }
     }
     public void updateEffectPoints(List<Pair<Long, ArrayList<TimingPoint>>> added, TimingPoint removed) {
-        if (effectView != null) {
+        if (!effectViews.isEmpty()) {
             updateEffectPoints(added, Collections.singleton(new Pair<>(removed.getPos(), Collections.singletonList(removed))));
         }
     }
 
     public void gameplayChanged() {
-        if (gameplayView != null && gameplayView.autoRefresh())
-            gameplayView.calculateTimes();
+        for (GameplayView view : gameplayViews) {
+            if (view.autoRefresh())
+                view.calculateTimes();
+        }
     }
 
-    //Effects
+    //Timing Points
+    public NavigableMap<Long, ArrayList<TimingPoint>> getEditPoints(long startPos, long endPos)
+    {
+        if (startPos != lastEditPointStart || endPos != lastEditPointEnd)
+        {
+            lastEditPointStart = startPos;
+            lastEditPointEnd = endPos;
+            editPoints = allPoints.extendedDescendingSubMap(startPos, endPos);
+        }
+        return editPoints;
+    }
     public NavigableMap<Long, ArrayList<TimingPoint>> getEditEffectPoints(long startPos, long endPos)
     {
         if (startPos != lastEffectPointStart || endPos != lastEffectPointEnd)
@@ -1427,10 +1455,6 @@ public class EditorBeatmap {
         }
         return editEffectPoints;
     }
-    public NavigableMap<Long, ArrayList<TimingPoint>> getEditEffectPoints()
-    {
-        return editEffectPoints;
-    }
     public NavigableMap<Long, ArrayList<TimingPoint>> getSubEffectMap(long startPos, long endPos)
     {
         return effectPoints.descendingSubMap(startPos, true, endPos, true);
@@ -1438,25 +1462,21 @@ public class EditorBeatmap {
 
     public void bindEffectView(EffectView view)
     {
-        this.effectView = view;
+        if (!effectViews.contains(view))
+            effectViews.add(view);
     }
     public void removeEffectView(EffectView view)
     {
-        if (this.effectView.equals(view))
-        {
-            this.effectView = null;
-        }
+        effectViews.remove(view);
     }
     public void bindGameplayView(GameplayView view)
     {
-        this.gameplayView = view;
+        if (!gameplayViews.contains(view))
+            gameplayViews.add(view);
     }
     public void removeGameplayView(GameplayView view)
     {
-        if (this.gameplayView.equals(view))
-        {
-            this.gameplayView = null;
-        }
+        gameplayViews.remove(view);
     }
     public void setTimeline(Timeline line) {
         this.timeline = line;
@@ -1570,6 +1590,20 @@ public class EditorBeatmap {
                         break;
                     case "[HitObjects]":
                         section = 6;
+                        //Done with points
+                        allPoints.clear();
+                        allPoints.addAll(timingPoints);
+                        allPoints.addAll(effectPoints);
+
+                        TimingPoint next;
+                        for (List<TimingPoint> pointStack : allPoints.values()) {
+                            next = pointStack.get(pointStack.size() - 1);
+                            if (next.volume != volume) {
+                                volume = next.volume;
+                                volumeMap.put(next.getPos(), volume);
+                            }
+                        }
+
                         //Prepare to track sv for the purpose of calculating slider length
                         svRate = fullMapInfo.sliderMultiplier;
                         timing = timingPoints.entrySet().iterator();
@@ -1782,13 +1816,11 @@ public class EditorBeatmap {
 
                         long lastTimingPos = Long.MIN_VALUE;
                         long lastEffectPos = Long.MIN_VALUE;
-                        int timingVolume = 100;
 
                         while (timing != null && nextTiming != null && nextTiming.getKey() <= currentPos)
                         {
                             temp = GeneralUtils.listLast(nextTiming.getValue());
                             currentBPM = temp.value;
-                            volume = timingVolume = temp.volume;
                             lastTimingPos = nextTiming.getKey();
                             svRate = fullMapInfo.sliderMultiplier; //return to base sv
 
@@ -1796,34 +1828,28 @@ public class EditorBeatmap {
                                 nextTiming = timing.next();
                             else
                                 nextTiming = null;
-
-                            volumeMap.put(lastTimingPos, volume);
                         }
                         while (effect != null && nextEffect != null && nextEffect.getKey() <= currentPos)
                         {
                             temp = GeneralUtils.listLast(nextEffect.getValue());
                             lastEffectPos = nextEffect.getKey();
                             svRate = fullMapInfo.sliderMultiplier * temp.value;
-                            volume = temp.volume;
 
                             if (effect.hasNext())
                                 nextEffect = effect.next();
                             else
                                 nextEffect = null;
-
-                            volumeMap.put(lastEffectPos, volume); //green lines override volume of red lines on the same position.
                         }
                         if (lastEffectPos < lastTimingPos)
                         {
                             svRate = fullMapInfo.sliderMultiplier; //return to base sv and volume of the timing point
-                            volume = timingVolume;
                         }
 
                         if (h.type == HitObject.HitObjectType.SLIDER)
                         {
                             ((Slider)h).calculateDuration(currentBPM, svRate);
                         }
-                        h.volume = volume / 100.0f;
+                        updateVolume(h);
                         objects.add(h);
                         break;
                 }
@@ -1831,9 +1857,7 @@ public class EditorBeatmap {
         }
 
         if (volumeMap.isEmpty()) //wtf no points at all
-            volumeMap.put(Long.MAX_VALUE, 60);
-        allPoints.addAll(timingPoints);
-        allPoints.addAll(effectPoints);
+            volumeMap.put(Long.MAX_VALUE, volume);
 
         boolean kiai = false, nextKiai;
         for (Map.Entry<Long, ArrayList<TimingPoint>> stack : allPoints.entrySet()) {

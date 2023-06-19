@@ -216,6 +216,36 @@
       "class": "Texture"
     },
     {
+      "name": "timing",
+      "file": "taikoedit/images/editor/ui/timing.png",
+      "class": "Texture"
+    },
+    {
+      "name": "timingh",
+      "file": "taikoedit/images/editor/ui/timinghover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "locked",
+      "file": "taikoedit/images/editor/ui/lock.png",
+      "class": "Texture"
+    },
+    {
+      "name": "lockedh",
+      "file": "taikoedit/images/editor/ui/lockhover.png",
+      "class": "Texture"
+    },
+    {
+      "name": "unlocked",
+      "file": "taikoedit/images/editor/ui/unlock.png",
+      "class": "Texture"
+    },
+    {
+      "name": "unlockedh",
+      "file": "taikoedit/images/editor/ui/unlockhover.png",
+      "class": "Texture"
+    },
+    {
       "name": "refresh",
       "file": "taikoedit/images/editor/ui/refresh.png",
       "class": "Texture"

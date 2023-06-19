@@ -1,15 +1,14 @@
 package alchyr.taikoedit.editor.views;
 
-import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.changes.MapChange;
-import alchyr.taikoedit.editor.tools.*;
-import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.tools.Toolset;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -29,10 +28,15 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 /* TODO LIST
  *
- * On map change, update necessary data
  * Spinners should fade in, not stay permanently
  */
 public class GameplayView extends MapView {
+    public static final String ID = "gmp";
+    @Override
+    public String typeString() {
+        return ID;
+    }
+
     //Objects that should be rendered are all those where given a current time, their start time is before it and their end time is after it.
     private final TreeMap<Long, ArrayList<HitObject>> startTimes; //A sorted set based on object start times
     private final TreeMap<Long, ArrayList<HitObject>> endTimes; //A sorted set based on object end times
@@ -91,6 +95,7 @@ public class GameplayView extends MapView {
             }
         });
         addOverlayButton(autoRefreshButton);
+        addLockPositionButton();
 
         startTimes = new TreeMap<>();
         endTimes = new TreeMap<>();
@@ -299,7 +304,7 @@ public class GameplayView extends MapView {
     private long lastSounded; //purely for audio in primaryUpdate
     @Override
     public void primaryUpdate(boolean isPlaying) {
-        if (isPrimary && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards, make sure didn't skip too far
+        if (isPrimary && lockOffset == 0 && isPlaying && lastSounded < time && time - lastSounded < 25) //might have skipped backwards, make sure didn't skip too far
         {
             for (ArrayList<HitObject> objects : map.objects.subMap(lastSounded, false, time, true).values())
             {
@@ -312,10 +317,6 @@ public class GameplayView extends MapView {
         lastSounded = time;
     }
 
-    @Override
-    public void update(double exactPos, long msPos, float elapsed, boolean canHover) {
-        super.update(exactPos, msPos, elapsed, canHover);
-    }
 
     @Override
     public void renderBase(SpriteBatch sb, ShapeRenderer sr) {
@@ -361,83 +362,55 @@ public class GameplayView extends MapView {
     long lastPos = Long.MIN_VALUE;
     private final ArrayList<Snap> barlines = new ArrayList<>();
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos) {
+    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
         Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> objectIterator = visibleObjects.entrySet().iterator();
         Map.Entry<Long, ArrayList<PositionalObject>> stack;
 
-        if (lastPos < pos) { //moved forward. Can check just a few.
+        if (lastPos < time) { //moved forward. Can check just a few.
             //Remove expired objects
             while (objectIterator.hasNext()) {
                 stack = objectIterator.next();
 
-                if (((HitObject) stack.getValue().get(0)).getGameplayEndPos() < pos) {
+                if (((HitObject) stack.getValue().get(0)).getGameplayEndPos() < time) {
                     objectIterator.remove();
                 }
             }
-            barlines.removeIf((snap)->snap.pos+(snap.pos-barlineStartMap.get(snap)) / 2 < pos);
+            barlines.removeIf((snap)->snap.pos+(snap.pos-barlineStartMap.get(snap)) / 2 < time);
 
-            for (ArrayList<HitObject> hits : startTimes.subMap(lastPos, false, pos, true).values()) {
+            for (ArrayList<HitObject> hits : startTimes.subMap(lastPos, false, time, true).values()) {
                 for (HitObject h : hits)
-                    if (h.getEndPos() >= pos)
+                    if (h.getEndPos() >= time)
                         visibleObjects.add(h);
             }
-            for (Snap s : barlineStartTimes.subMap(lastPos, false, pos, true).values()) {
-                if (s.pos >= pos)
+            for (Snap s : barlineStartTimes.subMap(lastPos, false, time, true).values()) {
+                if (s.pos >= time)
                     barlines.add(s);
             }
         }
-        else if (pos < lastPos) {
+        else if (time < lastPos) {
             //Moved backwards.
             while (objectIterator.hasNext()) {
                 stack = objectIterator.next();
 
-                if (((HitObject) stack.getValue().get(0)).gameplayStart > pos) { //objects that aren't active yet
+                if (((HitObject) stack.getValue().get(0)).gameplayStart > time) { //objects that aren't active yet
                     objectIterator.remove();
                 }
             }
-            barlines.removeIf((snap)->barlineStartMap.get(snap) > pos);
+            barlines.removeIf((snap)->barlineStartMap.get(snap) > time);
 
-            for (ArrayList<HitObject> hits : endTimes.subMap(pos, true, lastPos, false).values()) {
+            for (ArrayList<HitObject> hits : endTimes.subMap(time, true, lastPos, false).values()) {
                 for (HitObject h : hits)
-                    if (h.gameplayStart <= pos)
+                    if (h.gameplayStart <= time)
                         visibleObjects.add(h);
             }
-            for (Snap s : map.getBarlineSnaps().subMap(pos, true, lastPos, false).values()) {
-                if (barlineStartMap.get(s) <= pos)
+            for (Snap s : map.getBarlineSnaps().subMap(time, true, lastPos, false).values()) {
+                if (barlineStartMap.get(s) <= time)
                     barlines.add(s);
             }
         }
 
-        lastPos = pos;
+        lastPos = time;
         return visibleObjects.descendingMap(); //descending version to ensure reverse rendering order for correct overlapping
-    }
-
-    @Override
-    public Snap getNextSnap() {
-        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(TaikoEditor.music.isPlaying() ? time + 250 : time);
-        if (next == null)
-            return null;
-        if (next.getKey() - time < 2)
-        {
-            next = map.getCurrentSnaps().higherEntry(next.getKey());
-            if (next == null)
-                return null;
-        }
-        return next.getValue();
-    }
-
-    @Override
-    public Snap getPreviousSnap() {
-        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(TaikoEditor.music.isPlaying() ? time - 250 : time);
-        if (previous == null)
-            return null;
-        if (time - previous.getKey() < 2)
-        {
-            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
-            if (previous == null)
-                return null;
-        }
-        return previous.getValue();
     }
 
     @Override

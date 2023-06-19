@@ -25,6 +25,11 @@ public class PreloadOgg extends CustomAudio {
     }
 
     @Override
+    public String getAudioType() {
+        return "ogg";
+    }
+
+    @Override
     public void preload() {
         try
         {

@@ -215,13 +215,16 @@ public class Mapset {
         return songMeta;
     }
 
+    public File getDirectory() {
+        return directory;
+    }
+
     public String getSongFile() {
         FileHandle file = Gdx.files.absolute(songFile);
         if (file.exists()) {
             return songFile;
         }
         else {
-
             return "";
         }
     }

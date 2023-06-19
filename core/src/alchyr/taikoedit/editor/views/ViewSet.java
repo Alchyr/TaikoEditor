@@ -25,9 +25,8 @@ import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ViewSet {
     private final EditorLayer owner;
-    private final ArrayList<MapView> views;
-    private final TreeMap<MapView.ViewType, ArrayList<MapView>> organizedViews;
-    private final HashMap<MapView.ViewType, NavigableMap<Long, ArrayList<? extends PositionalObject>>> viewObjects;
+    private final List<MapView> views;
+    private final HashMap<MapView, NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>>> viewObjects;
     private final EditorBeatmap map;
 
     private final HashMap<HitObject, TaikoDifficultyHitObject> difficultyInfo = new HashMap<>();
@@ -45,7 +44,6 @@ public class ViewSet {
         difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
 
         views = new ArrayList<>();
-        organizedViews = new TreeMap<>();
         viewObjects = new HashMap<>();
     }
     public void updateDiffNamePosition() {
@@ -54,10 +52,10 @@ public class ViewSet {
 
     public void update(double exactPos, long pos, float elapsed, boolean isPlaying, boolean canHover)
     {
-        prep(pos);
         for (MapView view : views)
         {
             view.update(exactPos, pos, elapsed, canHover);
+            viewObjects.put(view, view.prep());
             view.primaryUpdate(isPlaying);
         }
     }
@@ -68,14 +66,10 @@ public class ViewSet {
             view.renderBase(sb, sr); //render the stuff that goes under objects
         }
 
-        for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet()) {
-            ArrayList<MapView> views = viewSet.getValue();
-            int index; //ensure same types of views are rendered together
-            for (ArrayList<? extends PositionalObject> objects : viewObjects.getOrDefault(viewSet.getKey(), Collections.emptyNavigableMap()).values()) {
+        for (MapView view : views) {
+            for (ArrayList<? extends PositionalObject> objects : viewObjects.getOrDefault(view, Collections.emptyNavigableMap()).values()) {
                 for (PositionalObject o : objects) {
-                    for (index = 0; index < views.size(); ++index) {
-                        views.get(index).renderObject(o, sb, sr);
-                    }
+                    view.renderObject(o, sb, sr);
                 }
             }
         }
@@ -116,7 +110,7 @@ public class ViewSet {
         return y >= views.get(views.size() - 1).bottom;
     }
 
-    public ArrayList<MapView> getViews() {
+    public List<MapView> getViews() {
         return views;
     }
 
@@ -172,15 +166,6 @@ public class ViewSet {
         return views.get(0);
     }
 
-    @SuppressWarnings("unchecked")
-    public void prep(long pos)
-    {
-        for (Map.Entry<MapView.ViewType, ArrayList<MapView>> viewSet : organizedViews.entrySet())
-        {
-            viewObjects.put(viewSet.getKey(), (NavigableMap<Long, ArrayList<? extends PositionalObject>>) viewSet.getValue().get(0).prep(pos)); //Each type should only be prepped once
-        }
-    }
-
     public int reposition(int y)
     {
         for (MapView view : views)
@@ -190,7 +175,7 @@ public class ViewSet {
         return y;
     }
 
-    private ImageButton propertiesButton = new ImageButton(assetMaster.get("editor:properties"), assetMaster.get("editor:propertiesh")).setClick(this::properties).setAction("Properties");
+    private final ImageButton propertiesButton = new ImageButton(assetMaster.get("editor:properties"), assetMaster.get("editor:propertiesh")).setClick(this::properties).setAction("Properties");
     public void addView(MapView toAdd)
     {
         if (toAdd.map.equals(map))
@@ -199,10 +184,6 @@ public class ViewSet {
                 toAdd.addOverlayButton(propertiesButton);
             }
             views.add(toAdd);
-            if (!organizedViews.containsKey(toAdd.type))
-                organizedViews.put(toAdd.type, new ArrayList<>());
-
-            organizedViews.get(toAdd.type).add(toAdd);
 
             //Causes updates to occur on map changes
             if (toAdd instanceof EffectView) {
@@ -224,15 +205,7 @@ public class ViewSet {
         }
         toRemove.clearSelection();
         views.remove(toRemove);
-        if (organizedViews.containsKey(toRemove.type))
-        {
-            organizedViews.get(toRemove.type).remove(toRemove);
-            if (organizedViews.get(toRemove.type).isEmpty())
-            {
-                organizedViews.remove(toRemove.type);
-                viewObjects.remove(toRemove.type);
-            }
-        }
+        viewObjects.remove(toRemove);
 
         if (toRemove instanceof EffectView) {
             map.removeEffectView((EffectView) toRemove);
@@ -270,7 +243,6 @@ public class ViewSet {
             view.dispose();
         }
         views.clear();
-        organizedViews.clear();
         viewObjects.clear();
     }
 

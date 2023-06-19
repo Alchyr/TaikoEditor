@@ -7,20 +7,21 @@ import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.function.BiFunction;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 public abstract class MapView {
     public enum ViewType {
@@ -30,6 +31,22 @@ public abstract class MapView {
         EFFECT_VIEW,
         GAMEPLAY_VIEW,
         DIFFICULTY_VIEW
+    }
+    public abstract String typeString();
+    public static MapView fromTypeString(String typeString, EditorLayer editor, EditorBeatmap map) {
+        switch (typeString) {
+            case ObjectView.ID:
+                return new ObjectView(editor, map);
+            case EffectView.ID:
+                return new EffectView(editor, map);
+            case GameplayView.ID:
+                return new GameplayView(editor, map);
+            case GimmickView.ID:
+                return new GimmickView(editor, map);
+            case DifficultyView.ID: //No
+            default:
+                return null;
+        }
     }
 
     // prep -> update -> primaryUpdate for primary view -> rendering
@@ -42,12 +59,20 @@ public abstract class MapView {
     EditorLayer parent;
     public EditorBeatmap map;
     public final ViewType type; //Views of the same time should use the same set of objects in the same order
+    //Note for future people looking at this: No longer relevant as any view can be placed in a unique position, so each view always handles their objects individually.
+    //This makes the ViewType enum useless and inconvenient, but I'm too lazy to change it now.
 
     protected boolean isPrimary;
 
     //Position within song in milliseconds
     protected double preciseTime = 0;
     protected long time = 0;
+    protected boolean positionLocked = false;
+    protected double lockOffset = 0;
+
+    private static final DecimalFormat svFormat = new DecimalFormat("0", osuSafe);
+    private final BitmapFont offsetFont = assetMaster.getFont("aller medium");
+
 
     //Base position values
     public int y;
@@ -99,18 +124,60 @@ public abstract class MapView {
         overlayWidth += b.getWidth();
     }
 
+    protected void addLockPositionButton() {
+        Texture unlocked = assetMaster.get("editor:unlocked");
+        Texture unlockedh = assetMaster.get("editor:unlockedh");
+        Texture locked = assetMaster.get("editor:locked");
+        Texture lockedh = assetMaster.get("editor:lockedh");
+        ImageButton lockPositionButton = new ImageButton(unlocked, unlockedh).setAction("Lock");
+        lockPositionButton.setClick((key)->{
+            if (key == Input.Buttons.RIGHT) {
+                lockPositionButton.setTextures(unlocked, unlockedh);
+                lockOffset = 0;
+                lockPositionButton.setAction("Lock");
+                this.positionLocked = false;
+            }
+            else {
+                if (lockPositionButton.action.startsWith("Unlock")) {
+                    lockPositionButton.setTextures(unlocked, unlockedh);
+                    if (lockOffset != 0)
+                        lockPositionButton.setAction("Lock (Right click to reset)");
+                    else
+                        lockPositionButton.setAction("Lock");
+
+                    this.positionLocked = false;
+                }
+                else {
+                    lockPositionButton.setTextures(locked, lockedh);
+                    if (lockOffset != 0)
+                        lockPositionButton.setAction("Unlock (Right click to reset)");
+                    else
+                        lockPositionButton.setAction("Unlock");
+
+                    this.positionLocked = true;
+                }
+            }
+        });
+        addOverlayButton(lockPositionButton);
+    }
+
     public double getPreciseTime()
     {
         return preciseTime;
     }
-    public abstract double getTimeFromPosition(float x); //milliseconds
+
+    //time is in milliseconds
+    public double getTimeFromPosition(float x) {
+        return getTimeFromPosition(x, SettingsMaster.getMiddleX()); //Overriden for views that aren't center based
+    }
     protected double getTimeFromPosition(float x, int offset)
     {
-        return (preciseTime + (x - offset) / EditorLayer.viewScale);
+        return (getPreciseTime() + (x - offset) / EditorLayer.viewScale);
     }
+
     public int getPositionFromTime(double time, int offset)
     {
-        return (int) ((time - this.preciseTime) * EditorLayer.viewScale + offset);
+        return (int) ((time - this.getPreciseTime()) * EditorLayer.viewScale + offset);
     }
     public float getBasePosition() {
         return SettingsMaster.getMiddleX();
@@ -135,7 +202,7 @@ public abstract class MapView {
     }
     public MouseHoldObject clickOverlay(float x, float y, int button)
     {
-        if (button == Input.Buttons.LEFT && x <= overlayWidth && y >= bottom + overlayY)
+        if (x <= overlayWidth && y >= bottom + overlayY)
         {
             for (ImageButton b : overlayButtons)
             {
@@ -161,7 +228,7 @@ public abstract class MapView {
     //Prep -> update -> rendering
 
     //Ensure map is ready for rendering. Exact details will depend on the view.
-    public abstract NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep(long pos);
+    public abstract NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep();
     public void setOffset(int offset)
     {
         this.yOffset = offset;
@@ -171,8 +238,13 @@ public abstract class MapView {
     }
     public void update(double exactPos, long msPos, float elapsed, boolean canHover)
     {
-        preciseTime = exactPos * 1000.0f;
-        time = msPos;
+        if (positionLocked) {
+            lockOffset = preciseTime - (exactPos * 1000.0f);
+        }
+        else {
+            preciseTime = (exactPos * 1000.0f) + lockOffset;
+            time = msPos + (long) lockOffset;
+        }
         for (ImageButton b : overlayButtons) {
             b.update(elapsed);
             if (!canHover)
@@ -223,10 +295,37 @@ public abstract class MapView {
                 x += b.getWidth();
             }
         }
+        if (lockOffset != 0) {
+            sb.setColor(Color.WHITE);
+            textRenderer.setFont(offsetFont).renderTextCentered(sb, svFormat.format(lockOffset), SettingsMaster.getMiddleX(), bottom + (height / 2f), Color.WHITE);
+        }
     }
 
-    public abstract Snap getPreviousSnap();
-    public abstract Snap getNextSnap();
+    public Snap getPreviousSnap(long pos) {
+        Map.Entry<Long, Snap> previous = map.getCurrentSnaps().lowerEntry(music.isPlaying() ? pos - 250 : pos);
+        if (previous == null)
+            return null;
+        while (pos - previous.getKey() < 2)
+        {
+            previous = map.getCurrentSnaps().lowerEntry(previous.getKey());
+            if (previous == null)
+                return null;
+        }
+        return previous.getValue();
+    }
+
+    public Snap getNextSnap(long pos) {
+        Map.Entry<Long, Snap> next = map.getCurrentSnaps().higherEntry(music.isPlaying() ? pos + 250 : pos);
+        if (next == null)
+            return null;
+        if (next.getKey() - pos < 2)
+        {
+            next = map.getCurrentSnaps().higherEntry(next.getKey());
+            if (next == null)
+                return null;
+        }
+        return next.getValue();
+    }
     public abstract Snap getClosestSnap(double time, float limit); //time in ms, limit as max ms gap
     public abstract boolean noSnaps();
 
