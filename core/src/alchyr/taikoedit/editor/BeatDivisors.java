@@ -53,6 +53,14 @@ public class BeatDivisors {
         //combinedSnaps.clear();
         generateCombinedSnaps();
     }
+    public void reset()
+    {
+        divisorSnappings.clear();
+        combinedSnaps.clear();
+        allSnaps.clear();
+        barlineSnaps.clear();
+        generateCombinedSnaps();
+    }
 
     public NavigableMap<Long, Snap> getSnaps(double startPos, double endPos)
     {
@@ -118,7 +126,6 @@ public class BeatDivisors {
             for (Snap s : getSnappings(divisor))
                 combinedSnaps.put(s.pos, s);*/
 
-        currentCombinedDivisors.clear();
         currentCombinedDivisors.addAll(divisorOptions.activeDivisors);
     }
 

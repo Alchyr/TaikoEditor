@@ -13,6 +13,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -40,6 +42,7 @@ public class TextField implements UIElement, TextInputReceiver {
     private String label;
     public String text;
     private final BitmapFont font;
+    private final Set<Character> filtered = new HashSet<>();
 
     private int charLimit;
 
@@ -100,9 +103,14 @@ public class TextField implements UIElement, TextInputReceiver {
         return this;
     }
 
+    public TextField filter(char c) {
+        filtered.add(c);
+        return this;
+    }
+
     @Override
     public boolean acceptCharacter(char c) {
-        if (!enabled)
+        if (!enabled || filtered.contains(c))
             return false;
 
         switch (type) {

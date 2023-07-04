@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 
@@ -12,18 +13,21 @@ public class ValueSetChange extends MapChange {
     private final PositionalObjectTreeMap<PositionalObject> modifiedObjects;
     private final HashMap<PositionalObject, Double> originalValues;
     private final double newValue;
+    private final boolean redLines;
 
-    public ValueSetChange(EditorBeatmap map, PositionalObjectTreeMap<PositionalObject> modifiedObjects, double newValue)
+    public ValueSetChange(EditorBeatmap map, boolean redLines, PositionalObjectTreeMap<PositionalObject> modifiedObjects, double newValue)
     {
         super(map);
 
         this.modifiedObjects = modifiedObjects;
         this.newValue = newValue;
+        this.redLines = redLines;
 
         this.originalValues = new HashMap<>();
         for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
-            for (PositionalObject o : objects)
+            for (PositionalObject o : objects) {
                 this.originalValues.put(o, o.getValue());
+            }
         }
     }
 
@@ -36,7 +40,11 @@ public class ValueSetChange extends MapChange {
             }
         }
 
-        map.updateSv();
+        if (redLines)
+            map.regenerateDivisor();
+        else
+            map.updateSv();
+
         map.gameplayChanged();
 
         return this;
@@ -50,7 +58,11 @@ public class ValueSetChange extends MapChange {
             }
         }
 
-        map.updateSv();
+        if (redLines)
+            map.regenerateDivisor();
+        else
+            map.updateSv();
+
         map.gameplayChanged();
 
         return this;

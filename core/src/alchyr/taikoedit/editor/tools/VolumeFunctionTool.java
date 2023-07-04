@@ -6,7 +6,8 @@ import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.VolumeFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.LineAddition;
+import alchyr.taikoedit.editor.changes.MultiLineAddition;
+import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.PreviewLine;
@@ -378,7 +379,7 @@ public class VolumeFunctionTool extends EditorTool {
                         vol.add(p);
                     }
 
-                    map.registerChange(new LineAddition(map, vol).perform());
+                    map.registerChange(new MultiLineAddition(map, vol).perform());
                     return;
                 }
             }
@@ -422,7 +423,7 @@ public class VolumeFunctionTool extends EditorTool {
                 }
 
                 map.registerVolumeChange(vol, new PositionalObjectTreeMap<>());
-                map.updateEffectPoints(vol.entrySet(), null);
+                map.updateLines(vol.entrySet(), null);
             }
             else {
                 //Normal generation.
@@ -479,7 +480,7 @@ public class VolumeFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerChange(new LineAddition(map, vol).perform());
+                map.registerChange(new MultiLineAddition(map, vol).perform());
             }
         }
     }

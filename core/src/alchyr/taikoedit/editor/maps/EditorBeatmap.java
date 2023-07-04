@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.maps;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.BeatDivisors;
 import alchyr.taikoedit.editor.DivisorOptions;
 import alchyr.taikoedit.editor.Snap;
@@ -61,7 +62,7 @@ public class EditorBeatmap {
     private NavigableMap<Long, ArrayList<TimingPoint>> editEffectPoints;
     private long lastEffectPointStart = Long.MIN_VALUE, lastEffectPointEnd = Long.MIN_VALUE;
 
-    private NavigableMap<Long, ArrayList<TimingPoint>> visibleTimingPoints;
+    private NavigableMap<Long, ArrayList<TimingPoint>> editTimingPoints;
     private long lastTimingPointStart = Long.MIN_VALUE, lastTimingPointEnd = Long.MIN_VALUE;
 
 
@@ -275,16 +276,16 @@ public class EditorBeatmap {
         undoQueue.addLast(new ObjectAddition(this, o, shouldReplace).perform());
         redoQueue.clear();
     }
-    public void delete(MapChange.ChangeType type, NavigableMap<Long, ArrayList<PositionalObject>> deletion)
+    public void delete(NavigableMap<Long, ArrayList<PositionalObject>> deletion)
     {
         dirty = true;
-        undoQueue.addLast(new Deletion(this, type, deletion).perform());
+        undoQueue.addLast(new MultiDeletion(this, deletion).perform());
         redoQueue.clear();
     }
-    public void delete(MapChange.ChangeType type, PositionalObject o)
+    public void delete(PositionalObject o)
     {
         dirty = true;
-        undoQueue.addLast(new Deletion(this, type, o).perform());
+        undoQueue.addLast(new SingleDeletion(this, o).perform());
         redoQueue.clear();
     }
     public void paste(PositionalObjectTreeMap<PositionalObject> pasteObjects, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace) {
@@ -294,7 +295,7 @@ public class EditorBeatmap {
     }
     public void pasteLines(PositionalObjectTreeMap<PositionalObject> pasteLines) {
         dirty = true;
-        undoQueue.addLast(new LineAddition(this, pasteLines).perform());
+        undoQueue.addLast(new MultiLineAddition(this, pasteLines).perform());
         redoQueue.clear();
     }
     /*public void pasteLines(PositionalObjectTreeMap<PositionalObject> pasteLines) {
@@ -312,10 +313,16 @@ public class EditorBeatmap {
         undoQueue.addLast(new Reverse(this, type, resnap, reversed).perform());
         redoQueue.clear();
     }
-    public void registerMovement(MapChange.ChangeType type, PositionalObjectTreeMap<PositionalObject> movementObjects, long offset)
+    public void registerObjectMovement(PositionalObjectTreeMap<PositionalObject> movementObjects, long offset)
     {
         dirty = true;
-        undoQueue.addLast(new Movement(this, type, movementObjects, offset).redo());
+        undoQueue.addLast(new ObjectMovement(this, movementObjects, offset).redo());
+        redoQueue.clear();
+    }
+    public void registerLineMovement(PositionalObjectTreeMap<PositionalObject> movementObjects, long offset)
+    {
+        dirty = true;
+        undoQueue.addLast(new LineMovement(this, movementObjects, offset).redo());
         redoQueue.clear();
     }
 
@@ -422,7 +429,9 @@ public class EditorBeatmap {
     {
         return divisor = new BeatDivisors(divisorOptions, this);
     }
-
+    public void regenerateDivisor() {
+        TaikoEditor.onMain(divisor::reset);
+    }
     public NavigableMap<Long, Snap> getActiveSnaps(double startPos, double endPos)
     {
         return divisor.getSnaps(startPos, endPos);
@@ -1260,7 +1269,8 @@ public class EditorBeatmap {
         return pos;
     }
     private long addedPoint(long pos, TimingPoint p) {
-        volumeMap.put(pos, p.volume);
+        if (!volumeMap.containsKey(pos) || !p.uninherited) //no point here, or a green line which overrides
+            volumeMap.put(pos, p.volume);
 
         //Update kiai.
         Map.Entry<Long, Boolean> kiaiEntry = kiaiMap.floorEntry(pos);
@@ -1368,7 +1378,7 @@ public class EditorBeatmap {
             }
         }
     }
-    public void updateEffectPoints(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed) {
+    public void updateLines(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed) {
         if (!effectViews.isEmpty()) {
             if (removed != null) {
                 TimingPoint temp;
@@ -1397,8 +1407,9 @@ public class EditorBeatmap {
                     if (!e.getValue().isEmpty()) {
                         effective = (TimingPoint) GeneralUtils.listLast(e.getValue());
                         addedPoint(e.getKey(), effective);
-                        for (EffectView effectView : effectViews)
-                            effectView.testNewSvLimit(effective.value);
+                        if (!effective.uninherited)
+                            for (EffectView effectView : effectViews)
+                                effectView.testNewSvLimit(effective.value);
                         updateVolume(e.getKey());
                     }
                 }
@@ -1416,21 +1427,22 @@ public class EditorBeatmap {
             effectView.recheckSvLimits();
         }
     }
-    public void updateEffectPoints(TimingPoint added, List<Pair<Long, ArrayList<TimingPoint>>> removed) {
+    public void updateLines(TimingPoint added, List<Pair<Long, ArrayList<TimingPoint>>> removed) {
         if (!effectViews.isEmpty()) {
-            updateEffectPoints(Collections.singleton(new Pair<>(added.getPos(), Collections.singletonList(added))), removed);
+            updateLines(Collections.singleton(new Pair<>(added.getPos(), Collections.singletonList(added))), removed);
         }
     }
-    public void updateEffectPoints(List<Pair<Long, ArrayList<TimingPoint>>> added, TimingPoint removed) {
+    public void updateLines(List<Pair<Long, ArrayList<TimingPoint>>> added, TimingPoint removed) {
         if (!effectViews.isEmpty()) {
-            updateEffectPoints(added, Collections.singleton(new Pair<>(removed.getPos(), Collections.singletonList(removed))));
+            updateLines(added, Collections.singleton(new Pair<>(removed.getPos(), Collections.singletonList(removed))));
         }
     }
 
     public void gameplayChanged() {
         for (GameplayView view : gameplayViews) {
-            if (view.autoRefresh())
-                view.calculateTimes();
+            if (view.autoRefresh()) {
+                TaikoEditor.onMain(view::calculateTimes);
+            }
         }
     }
 
@@ -1445,6 +1457,15 @@ public class EditorBeatmap {
         }
         return editPoints;
     }
+    public NavigableMap<Long, ArrayList<TimingPoint>> getEditTimingPoints(long startPos, long endPos) {
+        if (startPos != lastTimingPointStart || endPos != lastTimingPointEnd)
+        {
+            lastTimingPointStart = startPos;
+            lastTimingPointEnd = endPos;
+            editTimingPoints = timingPoints.extendedDescendingSubMap(startPos, endPos);
+        }
+        return editTimingPoints;
+    }
     public NavigableMap<Long, ArrayList<TimingPoint>> getEditEffectPoints(long startPos, long endPos)
     {
         if (startPos != lastEffectPointStart || endPos != lastEffectPointEnd)
@@ -1454,6 +1475,10 @@ public class EditorBeatmap {
             editEffectPoints = effectPoints.extendedDescendingSubMap(startPos, endPos);
         }
         return editEffectPoints;
+    }
+    public NavigableMap<Long, ArrayList<TimingPoint>> getSubTimingMap(long startPos, long endPos)
+    {
+        return timingPoints.descendingSubMap(startPos, true, endPos, true);
     }
     public NavigableMap<Long, ArrayList<TimingPoint>> getSubEffectMap(long startPos, long endPos)
     {
@@ -1480,17 +1505,6 @@ public class EditorBeatmap {
     }
     public void setTimeline(Timeline line) {
         this.timeline = line;
-    }
-
-    //Timing
-    public NavigableMap<Long, ArrayList<TimingPoint>> getVisibleTimingPoints(long startPos, long endPos) {
-        if (startPos != lastTimingPointStart || endPos != lastTimingPointEnd)
-        {
-            lastTimingPointStart = startPos;
-            lastTimingPointEnd = endPos;
-            visibleTimingPoints = timingPoints.extendedDescendingSubMap(startPos, endPos);
-        }
-        return visibleTimingPoints;
     }
 
     public TreeMap<Long, Boolean> getKiai() {
@@ -1909,6 +1923,12 @@ public class EditorBeatmap {
         BufferedWriter w = null;
         try
         {
+            String mapInfo = fullMapInfo.toString();
+            String lines = timingPoints();
+            String objects = hitObjects();
+
+            //Successfully generated map save text without crashing.
+
             File newFile = fullMapInfo.generateMapFile();
 
             if (fullMapInfo.getMapFile().exists())
@@ -1936,12 +1956,13 @@ public class EditorBeatmap {
                     e.printStackTrace();
                 }
             }
+
             out = new FileOutputStream(newFile, false);
             w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
 
-            w.write(fullMapInfo.toString());
-            w.write(timingPoints());
-            w.write(hitObjects());
+            w.write(mapInfo);
+            w.write(lines);
+            w.write(objects);
 
             w.close();
             out.close();

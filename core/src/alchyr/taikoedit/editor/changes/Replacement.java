@@ -31,7 +31,7 @@ public class Replacement extends MapChange {
                 map.objects.addAll(deletedObjects);
                 map.updateVolume(deletedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.removeAll(addedObjects);
                 map.allPoints.removeAll(addedObjects);
 
@@ -54,7 +54,7 @@ public class Replacement extends MapChange {
                 map.objects.addAll(addedObjects);
                 map.updateVolume(addedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.removeAll(deletedObjects);
                 map.allPoints.removeAll(deletedObjects);
 

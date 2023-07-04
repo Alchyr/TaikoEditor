@@ -4,7 +4,8 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.LineAddition;
+import alchyr.taikoedit.editor.changes.MultiLineAddition;
+import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
@@ -354,21 +355,29 @@ public class SVFunctionTool extends EditorTool {
             HashSet<Long> positions = new HashSet<>();
 
             if (info.generateLines) {
-                if (info.svObjects) {
-                    for (Map.Entry<Long, ArrayList<HitObject>> stack : map.getSubMap(start - 1, end + 1).entrySet()) {
-                        if (!info.selectedOnly || stack.getValue().stream().anyMatch((h)->h.selected)) {
-                            positions.add(stack.getKey());
-                        }
+                if (info.fixedSnapping) {
+                    for (Snap s : map.getSnaps(info.snap)) {
+                        if (s.pos >= start && s.pos <= end)
+                            positions.add(s.pos);
                     }
                 }
+                else {
+                    if (info.svObjects) {
+                        for (Map.Entry<Long, ArrayList<HitObject>> stack : map.getSubMap(start - 1, end + 1).entrySet()) {
+                            if (!info.selectedOnly || stack.getValue().stream().anyMatch((h)->h.selected)) {
+                                positions.add(stack.getKey());
+                            }
+                        }
+                    }
 
-                //barlines
-                if (info.svBarlines)
-                {
-                    for (Snap s : map.getSnaps(1))
+                    //barlines
+                    if (info.svBarlines)
                     {
-                        if (s.divisor == 0 && s.pos >= start && s.pos <= end) {
-                            positions.add(s.pos);
+                        for (Snap s : map.getSnaps(1))
+                        {
+                            if (s.divisor == 0 && s.pos >= start && s.pos <= end) {
+                                positions.add(s.pos);
+                            }
                         }
                     }
                 }
@@ -504,7 +513,7 @@ public class SVFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerChange(new LineAddition(map, sv).perform());
+                map.registerChange(new MultiLineAddition(map, sv).perform());
             }
         }
     }

@@ -123,6 +123,10 @@ public class TimingPoint extends PositionalObject {
     {
         return 60000 / value;
     }
+    public void setBPM(double bpm)
+    {
+        this.value = 60000 / bpm;
+    }
 
     private static final DecimalFormat optionalDecimals = new DecimalFormat("##0.#############", osuSafe);
     private static final DecimalFormat scientific = new DecimalFormat("0.####E0", osuSafe);
@@ -184,6 +188,7 @@ public class TimingPoint extends PositionalObject {
             this.value = newVal;
         }
     }
+
     @Override
     public double registerChange() {
         if (!this.uninherited) {
@@ -200,6 +205,9 @@ public class TimingPoint extends PositionalObject {
     @Override
     public double getValue() {
         return this.value;
+    }
+    public String valueText(DecimalFormat format) {
+        return uninherited ? format.format(getBPM()) : format.format(value);
     }
 
     @Override
@@ -235,6 +243,15 @@ public class TimingPoint extends PositionalObject {
         if (uninherited) {
             this.uninherited = false;
             this.lastRegisteredValue = this.value = 1;
+            this.omitted = false;
+        }
+        return this;
+    }
+    public TimingPoint uninherit()
+    {
+        if (!uninherited) {
+            this.uninherited = true;
+            setBPM(120);
             this.omitted = false;
         }
         return this;

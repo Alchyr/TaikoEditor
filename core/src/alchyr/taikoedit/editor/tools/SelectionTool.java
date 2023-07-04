@@ -13,7 +13,6 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -310,7 +309,7 @@ public class SelectionTool extends EditorTool {
         {
             if (mode == SelectionToolMode.DRAGGING && selectingView.hasSelection())
             {
-                if (totalHorizontalOffset != 0 && dragMode == DragMode.HORIZONTAL)
+                if (dragMode == DragMode.HORIZONTAL)
                 {
                     selectingView.registerMove(totalHorizontalOffset);
                 }
@@ -492,9 +491,9 @@ public class SelectionTool extends EditorTool {
                 double verticalChange = (Gdx.input.getY() - clickStartY);
                 //Find closest snap to this new offset
 
-                if (dragMode == DragMode.NONE && selectingView.allowVerticalDrag && (verticalChange > MIN_VERTICAL_DRAG_DIST || verticalChange < -MIN_VERTICAL_DRAG_DIST)) {
+                if (dragMode == DragMode.NONE && selectingView.allowVerticalDrag() && (verticalChange > MIN_VERTICAL_DRAG_DIST || verticalChange < -MIN_VERTICAL_DRAG_DIST)) {
                     dragMode = DragMode.VERTICAL;
-                    selectingView.dragging();
+                    selectingView.movingObjects();
                 }
 
                 verticalChange *= (shift() ? 0.01 : 0.05);
@@ -515,22 +514,17 @@ public class SelectionTool extends EditorTool {
 
                     if (horizontalChange != 0) {
                         dragMode = DragMode.HORIZONTAL;
-                        selectingView.dragging();
+                        selectingView.movingObjects();
                         totalHorizontalOffset += horizontalChange;
-
-                        PositionalObjectTreeMap<PositionalObject> moved = new PositionalObjectTreeMap<>();
 
                         for (Map.Entry<Long, ArrayList<PositionalObject>> e : selectingView.getSelection().entrySet())
                         {
                             for (PositionalObject o : e.getValue())
                                 o.setPos(e.getKey() + horizontalChange);
-                            moved.put(e.getKey() + horizontalChange, e.getValue());
                         }
 
-                        selectingView.getEditMap().removeAll(selectingView.getSelection());
-                        selectingView.getSelection().clear();
-                        selectingView.getEditMap().addAll(moved);
-                        selectingView.getSelection().addAll(moved);
+                        selectingView.updatePositions(selectingView.getSelection());
+                        selectingView.refreshSelection();
                     }
 
                     //Should move slower than normal selection.
@@ -557,36 +551,7 @@ public class SelectionTool extends EditorTool {
                     }
                 }
                 else if (dragMode == DragMode.VERTICAL) {
-                    if (selectingView instanceof EffectView) {
-                        if (effectMode) {
-                            for (Map.Entry<Long, ArrayList<PositionalObject>> e : selectingView.getSelection().entrySet())
-                            {
-                                for (PositionalObject o : e.getValue()) {
-                                    o.tempModification(totalVerticalOffset);
-                                }
-                            }
-                        }
-                        else {
-                            for (Map.Entry<Long, ArrayList<PositionalObject>> e : selectingView.getSelection().entrySet())
-                            {
-                                for (PositionalObject o : e.getValue()) {
-                                    o.volumeModification(totalVerticalOffset);
-                                }
-                            }
-                        }
-
-                        //Do not check for removed points here for simpler check.
-                        //Proper update will occur on release.
-                        selectingView.map.updateEffectPoints(selectingView.getSelection().entrySet(), null);
-                    }
-                    else {
-                        for (Map.Entry<Long, ArrayList<PositionalObject>> e : selectingView.getSelection().entrySet())
-                        {
-                            for (PositionalObject o : e.getValue()) {
-                                o.tempModification(totalVerticalOffset);
-                            }
-                        }
-                    }
+                    selectingView.updateVerticalDrag(totalVerticalOffset);
 
                     totalVerticalOffset += verticalChange; //Track separately every time so holding shift can adjust just new input
                     clickStartY = Gdx.input.getY();

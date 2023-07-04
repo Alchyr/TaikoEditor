@@ -78,7 +78,7 @@ public class VolumeModificationChange extends MapChange {
                 o.setVolume(originalVolumes.get(o));
             }
         }
-        map.updateEffectPoints(modifiedObjects.entrySet(), null);
+        map.updateLines(modifiedObjects.entrySet(), null);
         return this;
     }
     @Override
@@ -89,7 +89,7 @@ public class VolumeModificationChange extends MapChange {
                 o.setVolume(newVolumes.get(o));
             }
         }
-        map.updateEffectPoints(modifiedObjects.entrySet(), null);
+        map.updateLines(modifiedObjects.entrySet(), null);
         return this;
     }
 }

@@ -105,6 +105,14 @@ public class ToggleButton implements UIElement {
         return false;
     }
 
+    public void setState(boolean enabled) {
+        if (enabled != this.enabled) {
+            this.enabled = enabled;
+            if (onToggle != null)
+                onToggle.accept(enabled);
+        }
+    }
+
     @Override
     public void update(float elapsed)
     {
@@ -167,6 +175,7 @@ public class ToggleButton implements UIElement {
     {
         return x2 + dx;
     }
+
 
     /*public void setText(String newText)
     {

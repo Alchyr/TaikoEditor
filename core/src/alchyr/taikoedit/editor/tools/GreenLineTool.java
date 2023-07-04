@@ -2,7 +2,7 @@ package alchyr.taikoedit.editor.tools;
 
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.LineAddition;
+import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -159,7 +159,7 @@ public class GreenLineTool extends EditorTool {
             TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(time)).inherit();
             p.kiai = BindingGroup.shift();
 
-            view.map.registerChange(new LineAddition(view.map, p).perform());
+            view.map.registerChange(new SingleLineAddition(view.map, p).perform());
             return true;
         }
         else if (lastEffect == null) {
@@ -176,7 +176,7 @@ public class GreenLineTool extends EditorTool {
             p.kiai = !p.kiai;
         }
 
-        view.map.registerChange(new LineAddition(view.map, p).perform());
+        view.map.registerChange(new SingleLineAddition(view.map, p).perform());
         return true;
     }
 
@@ -225,7 +225,7 @@ public class GreenLineTool extends EditorTool {
 
             placingView.map.effectPoints.removeObject(adjusting);
             placingView.map.allPoints.removeObject(adjusting);
-            placingView.map.registerChange(new LineAddition(placingView.map, adjusting).perform());
+            placingView.map.registerChange(new SingleLineAddition(placingView.map, adjusting).perform());
 
             hold = null;
         }
@@ -253,7 +253,7 @@ public class GreenLineTool extends EditorTool {
                 lastY = Gdx.input.getY();
                 //Do not check for removed points here for simpler check.
                 //Proper update will occur on release.
-                placingView.map.updateEffectPoints(adjusting, null);
+                placingView.map.updateLines(adjusting, null);
             }
         }
     }

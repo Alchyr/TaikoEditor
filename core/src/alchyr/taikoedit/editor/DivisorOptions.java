@@ -6,7 +6,7 @@ import java.util.*;
 //Controls the options, controls setting the current divisor.
 //the BeatDivisors in dependents hold the actual snappings for each individual difficulty.
 public class DivisorOptions {
-    private static final NavigableSet<Integer> autoGen = new TreeSet<>();
+    public static final NavigableSet<Integer> autoGen = new TreeSet<>();
     static {
         for (int i = 1; i <= 16; ++i)
             autoGen.add(i);

@@ -35,6 +35,7 @@ import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -169,13 +170,35 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         if (backgroundImg != null && !backgroundImg.isEmpty())
         {
             TaikoEditor.onMain(()->{
-                //assetMaster.get(backgroundImg.toLowerCase());
-                background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like, which messes up assetMaster loading.
-                background.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
+                FileHandle h = Gdx.files.absolute(backgroundImg);
+                if (h.exists()) {
+                    try {
+                        background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like, which messes up assetMaster loading.
+                        background.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
 
-                float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
-                bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
-                bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                        float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                        bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                        bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                    }
+                    catch (Exception e) {
+                        editorLogger.error("Failed to load background image.", e);
+                        if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
+                        {
+                            background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
+
+                            float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                            bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                            bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                        }
+                    }
+                }
+                else if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty()) {
+                    background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
+
+                    float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                    bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                    bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                }
             });
         }
         else if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
@@ -620,7 +643,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         return new EditorLoadingLayer()
                 .addLayers(true, this)
                 .addTask(this::stopMusic)
-                .newSet().addTracker(music::getProgress, music::hasMusic, true)
+                .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(), true) //music loading starts in song select
+                .addFailure(music::noTrack)
                 .addTask(true, ()->{ music.play(); music.pause(); })
                 .addTask(true, ()->music.seekSecond(0))
                 .addTask(true, ()->SettingsMaster.loadMapSettings(EditorLayer.this, set))
@@ -693,15 +717,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             addObjectView(beatmap, false);
         }*/
 
-        if (activeMaps.isEmpty())
+        if (activeMaps.isEmpty()) //no map loaded.
         {
             divisorOptions.set(4);
         }
         else
         {
-            if (backgroundImg == null) {
-                backgroundImg = activeMaps.get(0).getFullMapInfo().getBackground();
-            }
+            backgroundImg = activeMaps.get(0).getFullMapInfo().getBackground(); //no need to refresh bg if no map was loaded.
             divisorOptions.set(activeMaps.get(0).getDefaultDivisor());
         }
         editorLogger.info("Loaded beatmap successfully.");

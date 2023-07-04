@@ -40,7 +40,7 @@ public class Reverse extends MapChange {
             case OBJECTS:
                 map.removeObjects(reversedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.removeAll(reversedObjects);
                 map.allPoints.removeAll(reversedObjects);
                 break;
@@ -64,7 +64,7 @@ public class Reverse extends MapChange {
                 map.objects.addAll(reversedObjects);
                 map.updateVolume(reversedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.addAll(reversedObjects);
                 map.allPoints.addAll(reversedObjects);
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : reversedObjects.entrySet()) {
@@ -91,7 +91,7 @@ public class Reverse extends MapChange {
             case OBJECTS:
                 map.removeObjects(reversedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.removeAll(reversedObjects);
                 map.allPoints.removeAll(reversedObjects);
                 break;
@@ -135,7 +135,7 @@ public class Reverse extends MapChange {
                 map.objects.addAll(reversedObjects);
                 map.updateVolume(reversedObjects);
                 break;
-            case EFFECT:
+            case GREEN_LINE:
                 map.effectPoints.addAll(reversedObjects);
                 map.allPoints.addAll(reversedObjects);
                 for (Map.Entry<Long, ArrayList<PositionalObject>> e : reversedObjects.entrySet()) {

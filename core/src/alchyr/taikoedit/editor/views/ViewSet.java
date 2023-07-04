@@ -68,9 +68,7 @@ public class ViewSet {
 
         for (MapView view : views) {
             for (ArrayList<? extends PositionalObject> objects : viewObjects.getOrDefault(view, Collections.emptyNavigableMap()).values()) {
-                for (PositionalObject o : objects) {
-                    view.renderObject(o, sb, sr);
-                }
+                view.renderStack(objects, sb, sr);
             }
         }
     }

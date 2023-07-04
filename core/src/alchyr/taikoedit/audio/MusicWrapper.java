@@ -421,16 +421,14 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     public void pause()
     {
-        if (lockKey != null)
+        if (lockKey != null || music == null)
             return;
-        if (hasMusic) {
-            music.pause();
-            playing = false;
-        }
+        music.pause();
+        playing = false;
     }
     public void play()
     {
-        if (lockKey != null)
+        if (lockKey != null || music == null)
             return;
         music.play();
         playing = true;

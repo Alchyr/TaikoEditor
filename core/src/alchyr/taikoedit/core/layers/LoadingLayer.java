@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Queue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.*;
@@ -147,6 +148,19 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
             trackers.addFirst(new ArrayList<>());
         }
         trackers.first().add(new Tracker(tracker, confirmation, mustFinish));
+        return this;
+    }
+    public LoadingLayer addFailure(Supplier<Boolean> isFailed) {
+        tasks.addFirst(new ArrayList<>());
+        trackers.addFirst(new ArrayList<>());
+        tasks.first().add(
+                ()->{
+                    if (isFailed.get()) {
+                        tasks.clear();
+                        trackers.clear();
+                    }
+                }
+        );
         return this;
     }
 

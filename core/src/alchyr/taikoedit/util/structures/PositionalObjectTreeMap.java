@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 //Modified version of java.util.TreeMap. See header.
 public class PositionalObjectTreeMap<V extends PositionalObject>
@@ -816,6 +817,25 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return p;
     }
 
+    public boolean removeIf(Predicate<V> condition) {
+        boolean changed = false;
+        Iterator<Map.Entry<Long, ArrayList<V>>> entryIterator = entrySet().iterator();
+
+        while (entryIterator.hasNext()) {
+            Map.Entry<Long, ArrayList<V>> entry = entryIterator.next();
+            int amt = entry.getValue().size();
+            if (entry.getValue().removeIf(condition)) {
+                changed = true;
+
+                if (entry.getValue().isEmpty()) {
+                    entryIterator.remove();
+                }
+                count -= (amt - entry.getValue().size());
+            }
+        }
+        return changed;
+    }
+
     public boolean removeAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
         boolean changed = false;
         for (Map.Entry<? extends Long, ? extends ArrayList<? extends PositionalObject>> deleting : map.entrySet())
@@ -1257,6 +1277,19 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         int expectedModCount = modCount;
         for (Entry<V> e = getFirstEntry(); e != null; e = successor(e)) {
             action.accept(e.key, e.value);
+
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
+        }
+    }
+
+    public void forEachObject(Consumer<V> action) {
+        Objects.requireNonNull(action);
+        int expectedModCount = modCount;
+        for (Entry<V> e = getFirstEntry(); e != null; e = successor(e)) {
+            for (V val : e.getValue())
+                action.accept(val);
 
             if (expectedModCount != modCount) {
                 throw new ConcurrentModificationException();

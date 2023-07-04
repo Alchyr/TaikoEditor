@@ -49,6 +49,8 @@ public class EffectView extends MapView implements TextInputReceiver {
     //For clicking value of a timing point
     private static final int VALUE_LABEL_TOP = TOP_VALUE_Y + 2;
     private static final int VALUE_LABEL_BOTTOM = TOP_VALUE_Y - 12;
+    private static final int BPM_LABEL_TOP = BOTTOM_VALUE_Y + 2;
+    private static final int BPM_LABEL_BOTTOM = BOTTOM_VALUE_Y - 12;
 
     //Selection
     private static final int SELECTION_DIST = 10, ADJUST_DIST = 30;
@@ -58,6 +60,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     private static final Color kiai = new Color(240.0f/255.0f, 164.0f/255.0f, 66.0f/255.0f, 1.0f);
 
     private SortedMap<Long, Snap> activeSnaps;
+    private boolean ignoreSelected = false;
 
     //Positions
     private int baseMidY;
@@ -67,6 +70,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     public boolean mode = true; //true = sv, false = volume
 
+    public boolean effectPointsEnabled = true; //TODO: Add button to disable.
     public boolean timingEnabled = false;
 
     //SV Graph
@@ -93,12 +97,12 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         font = assetMaster.getFont("aller small");
 
-        allowVerticalDrag = true;
-
         lastSounded = 0;
         minSV = 0.75;
         peakSV = 1.3;
         recheckSvLimits();
+
+        updateToolset();
     }
 
     public void close(int button)
@@ -117,14 +121,22 @@ public class EffectView extends MapView implements TextInputReceiver {
         endAdjust();
 
         mode = !mode;
+        updateToolset();
+
         SelectionTool.get().effectMode = mode;
-        parent.tools.changeToolset(this);
+    }
+
+    @Override
+    public boolean allowVerticalDrag() {
+        return effectPointsEnabled || !mode; //volume mode or effect points exist
     }
 
     public void swapTimingEnabled(int button)
     {
         timingEnabled = !timingEnabled;
         parent.showText(timingEnabled ? "Timing editing enabled." : "Timing editing disabled.");
+        clearSelection();
+        updateToolset();
     }
 
     @Override
@@ -146,8 +158,18 @@ public class EffectView extends MapView implements TextInputReceiver {
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
         //return graph points
-        return timingEnabled ? map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime)
-                : map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        if (!timingEnabled && !effectPointsEnabled) {
+            return Collections.emptyNavigableMap();
+        }
+        if (!timingEnabled) {
+            return map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        }
+        else if (!effectPointsEnabled) {
+            return map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        }
+        else {
+            return map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        }
     }
 
     @Override
@@ -203,12 +225,13 @@ public class EffectView extends MapView implements TextInputReceiver {
         sb.draw(pix, 0, midY + SV_AREA, SettingsMaster.getWidth(), 1);
         sb.draw(pix, 0, midY - SV_AREA, SettingsMaster.getWidth(), 1);
 
-        if (!timingEnabled) {
+        if (!timingEnabled) { //If timing editing disabled, rendered as part of base.
             TimingPoint t;
-            for (ArrayList<TimingPoint> points : map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
+            for (ArrayList<TimingPoint> points : map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
                 t = GeneralUtils.listLast(points);
 
-                if (!map.effectPoints.containsKey(t.getPos())) {
+                //If effect point covers and enabled, do not render
+                if (!effectPointsEnabled || !map.effectPoints.containsKey(t.getPos())) {
                     renderObject(t, sb, sr, 1);
                 }
             }
@@ -239,24 +262,36 @@ public class EffectView extends MapView implements TextInputReceiver {
         super.renderOverlay(sb, sr);
     }
 
+    private static float svGraphPos(TimingPoint p, double maxValue, double minValue) {
+        if (p.uninherited) { //red line
+            return 0;
+        }
+        else { //green line
+            if (p.value >= 1)
+            {
+                return SV_AREA * (float) ((p.value - 1) / maxValue);
+            }
+            else
+            {
+                return -SV_AREA * (float) ((1 - p.value) / minValue);
+            }
+        }
+    }
     private void renderSVGraph(SpriteBatch sb, ShapeRenderer sr) {
         if (map.allPoints.isEmpty())
             return;
 
+        //TODO - FIX - RENDERS VALUE OF NEXT (reverse order, previous) POINT RATHER THAN CURRENT POINT
+
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         //*********************GRAPH*********************
         float graphPosition = 0, newGraphPosition; //if new position not same, draw graph line. If new position is same, just pretend this line doesn't exist, unless the next line is different.
-        TimingPoint effect = null, timing = null, lastPoint = null;
+        TimingPoint current, lastPoint;
         double maxValue = peakSV - 1, minValue = 1 - minSV;
 
-        if (effectPointIterator.hasNext())
-            effect = GeneralUtils.listLast(effectPointIterator.next());
-        if (timingPointIterator.hasNext()) {
-            timing = GeneralUtils.listLast(timingPointIterator.next());
-        }
+        current = GeneralUtils.iterateListsUntilNull(pointIterator);
 
         sb.end();
         sr.begin(ShapeRenderer.ShapeType.Line);
@@ -264,184 +299,38 @@ public class EffectView extends MapView implements TextInputReceiver {
         sr.setColor(green);
 
         //Render graph for last point
-        if (timing != null && (effect == null || timing.getPos() > effect.getPos())) { //Rendering the last point of the map
-            sr.setColor(timing.kiai ? kiai : green);
-            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX());
-            if (drawPos < SettingsMaster.getWidth() && atEnd(timing.getPos())) //Last point is a timing point. position 0.
+        if (current != null) {
+            int drawPos = getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX());
+            graphPosition = svGraphPos(current, maxValue, minValue);
+            if (drawPos < SettingsMaster.getWidth() && atEnd(current.getPos())) //This is the last point in map, render after line to end
             {
-                sr.line(drawPos, midY,
-                        SettingsMaster.getWidth(), midY);
-            }
-        }
-        else if (effect != null) {
-            sr.setColor(effect.kiai ? kiai : green);
-            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX());
-            if (drawPos < SettingsMaster.getWidth() && atEnd(effect.getPos())) //Last point is a timing point. position 0.
-            {
-                if (effect.value >= 1)
-                {
-                    newGraphPosition = SV_AREA * (float) ((effect.value - 1) / maxValue);
-                }
-                else
-                {
-                    newGraphPosition = -SV_AREA * (float) ((1 - effect.value) / minValue);
-                }
+                sr.setColor(current.kiai ? kiai : green);
 
-                sr.line(drawPos, midY + newGraphPosition,
-                        SettingsMaster.getWidth(), midY + newGraphPosition);
+                sr.line(drawPos, midY + graphPosition,
+                        SettingsMaster.getWidth(), midY + graphPosition);
             }
         }
 
         //SV+TIMING
-        while (effect != null && timing != null) {
-            if (timing.getPos() > effect.getPos()) { //Timing next
-                newGraphPosition = 0;
-                sr.setColor(timing.kiai ? kiai : green);
+        lastPoint = current;
+        current = GeneralUtils.iterateListsUntilNull(pointIterator);
 
-                if (lastPoint != null) {
-                    if (lastPoint.getPos() - timing.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
-                    {
-                        sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX())), midY,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY);
-                    } else {
-                        sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                    }
-                }
-                lastPoint = timing;
-                graphPosition = newGraphPosition;
+        while (current != null) {
+            newGraphPosition = svGraphPos(current, maxValue, minValue);
+            sr.setColor(current.kiai ? kiai : green);
 
-                if (timingPointIterator.hasNext()) {
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                }
-                else {
-                    timing = null;
-                }
-            }
-            else if (effect.getPos() > timing.getPos()) {
-                sr.setColor(effect.kiai ? kiai : green);
-                if (effect.value >= 1)
-                {
-                    newGraphPosition = SV_AREA * (float) ((effect.value - 1) / maxValue);
-                }
-                else
-                {
-                    newGraphPosition = -SV_AREA * (float) ((1 - effect.value) / minValue);
-                    //newGraphPosition = -SV_AREA * (float) ((effect.value - minSV) / minValue);
-                }
-
-                if (lastPoint != null) {
-                    if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
-                    {
-                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
-                    } else {
-                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                    }
-                }
-                lastPoint = effect;
-                graphPosition = newGraphPosition;
-
-                if (effectPointIterator.hasNext()) {
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                }
-                else {
-                    effect = null;
-                }
-            }
-            else {
-                sr.setColor(effect.kiai ? kiai : green);
-                if (effect.value >= 1)
-                {
-                    newGraphPosition = SV_AREA * (float) ((effect.value - 1) / maxValue);
-                }
-                else
-                {
-                    newGraphPosition = -SV_AREA * (float) ((1 - effect.value) / minValue);
-                }
-
-                if (lastPoint != null) {
-                    if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
-                    {
-                        sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
-                                Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
-                    } else {
-                        sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
-                                getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                    }
-                }
-                lastPoint = effect;
-                graphPosition = newGraphPosition;
-
-                if (effectPointIterator.hasNext())
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                else {
-                    effect = null;
-                }
-
-                if (timingPointIterator.hasNext())
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                else
-                    timing = null;
-            }
-        }
-        //Just sv left
-        while (effect != null) {
-            sr.setColor(effect.kiai ? kiai : green);
-            if (effect.value >= 1)
+            if (lastPoint.getPos() - current.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
             {
-                newGraphPosition = SV_AREA * (float) ((effect.value - 1) / maxValue);
-            }
-            else
-            {
-                newGraphPosition = -SV_AREA * (float) ((1 - effect.value) / minValue);
+                sr.line(Math.max(0, getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
+                        Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
+            } else {
+                sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
+                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
             }
 
-            if (lastPoint != null) {
-                if (lastPoint.getPos() - effect.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
-                {
-                    sr.line(Math.max(0, getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
-                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
-                } else {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                }
-            }
-            lastPoint = effect;
             graphPosition = newGraphPosition;
-
-            if (effectPointIterator.hasNext()) {
-                effect = GeneralUtils.listLast(effectPointIterator.next());
-            }
-            else {
-                effect = null;
-            }
-        }
-        //Just timing points left
-        while (timing != null) {
-            sr.setColor(timing.kiai ? kiai : green);
-            newGraphPosition = 0;
-
-            if (lastPoint != null) {
-                if (lastPoint.getPos() - timing.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
-                {
-                    sr.line(Math.max(0, getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX())), midY,
-                            Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY);
-                } else {
-                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                }
-            }
-            lastPoint = timing;
-            graphPosition = newGraphPosition;
-
-            if (timingPointIterator.hasNext()) {
-                timing = GeneralUtils.listLast(timingPointIterator.next());
-            }
-            else {
-                timing = null;
-            }
+            lastPoint = current;
+            current = GeneralUtils.iterateListsUntilNull(pointIterator);
         }
 
         //Iteration goes in reverse order, so the last point checked is the earliest point
@@ -491,24 +380,23 @@ public class EffectView extends MapView implements TextInputReceiver {
             renderValueLabels(sb, focus);
         }
     }
+
+    private static float volumeGraphPos(TimingPoint p) {
+        return SV_AREA * ((p.volume - 50) / 50.0f);
+    }
     private void renderVolumeGraph(SpriteBatch sb, ShapeRenderer sr) {
         if (map.allPoints.isEmpty())
             return;
 
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         //*********************GRAPH*********************
         float graphPosition = 0;
-        TimingPoint effect = null, timing = null, lastPoint = null;
+        TimingPoint current, lastPoint = null;
         //double  = 5, minValue = 1 - minSV;
 
-        if (effectPointIterator.hasNext())
-            effect = GeneralUtils.listLast(effectPointIterator.next());
-        if (timingPointIterator.hasNext()) {
-            timing = GeneralUtils.listLast(timingPointIterator.next());
-        }
+        current = GeneralUtils.iterateListsUntilNull(pointIterator);
 
         sb.end();
         sr.begin(ShapeRenderer.ShapeType.Line);
@@ -516,121 +404,38 @@ public class EffectView extends MapView implements TextInputReceiver {
         sr.setColor(yellow);
 
         //Render graph for last point
-        if (timing != null && (effect == null || timing.getPos() > effect.getPos())) { //Rendering the last point of the map
-            int drawPos = getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX());
-            if (drawPos < SettingsMaster.getWidth() && atEnd(timing.getPos())) //Last point is a timing point. position 0.
+        if (current != null) {
+            int drawPos = getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX());
+            graphPosition = volumeGraphPos(current);
+            if (drawPos < SettingsMaster.getWidth() && atEnd(current.getPos())) //This is the last point in map, render after line to end
             {
-                graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
-                sr.line(drawPos, midY + graphPosition,
-                        SettingsMaster.getWidth(), midY + graphPosition);
-            }
-        }
-        else if (effect != null) {
-            int drawPos = getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX());
-            if (drawPos < SettingsMaster.getWidth() && atEnd(effect.getPos())) //Last point is a timing point. position 0.
-            {
-                graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
-
                 sr.line(drawPos, midY + graphPosition,
                         SettingsMaster.getWidth(), midY + graphPosition);
             }
         }
 
         //SV+TIMING
-        while (effect != null && timing != null) {
-            if (timing.getPos() > effect.getPos()) { //Timing next
-                graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
+        lastPoint = current;
+        current = GeneralUtils.iterateListsUntilNull(pointIterator);
 
-                if (lastPoint != null) {
-                    sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                }
-                lastPoint = timing;
+        while (current != null) {
+            graphPosition = volumeGraphPos(lastPoint);
+            sr.setColor(current.kiai ? kiai : green);
 
-                if (timingPointIterator.hasNext()) {
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                }
-                else {
-                    timing = null;
-                }
-            }
-            else if (effect.getPos() > timing.getPos()) {
-                graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
+            sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
+                    getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
 
-                if (lastPoint != null) {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                }
-                lastPoint = effect;
-
-                if (effectPointIterator.hasNext()) {
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                }
-                else {
-                    effect = null;
-                }
-            }
-            else {
-                graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
-
-                if (lastPoint != null) {
-                    sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                            getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-                }
-                lastPoint = effect;
-
-                if (effectPointIterator.hasNext())
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                else {
-                    effect = null;
-                }
-
-                if (timingPointIterator.hasNext())
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                else
-                    timing = null;
-            }
-        }
-        //Just sv left
-        while (effect != null) {
-            graphPosition = SV_AREA * ((effect.volume - 50) / 50.0f);
-
-            if (lastPoint != null) {
-                sr.line(getPositionFromTime(effect.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-            }
-            lastPoint = effect;
-
-            if (effectPointIterator.hasNext()) {
-                effect = GeneralUtils.listLast(effectPointIterator.next());
-            }
-            else {
-                effect = null;
-            }
-        }
-        //Just timing points left
-        while (timing != null) {
-            graphPosition = SV_AREA * ((timing.volume - 50) / 50.0f);
-
-            if (lastPoint != null) {
-                sr.line(getPositionFromTime(timing.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
-            }
-            lastPoint = timing;
-
-            if (timingPointIterator.hasNext()) {
-                timing = GeneralUtils.listLast(timingPointIterator.next());
-            }
-            else {
-                timing = null;
-            }
+            lastPoint = current;
+            current = GeneralUtils.iterateListsUntilNull(pointIterator);
         }
 
         //Iteration goes in reverse order, so the last point checked is the earliest point
         if (lastPoint != null && atStart(lastPoint.getPos()))
         {
-            sr.line(0, midY + graphPosition,
-                    getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
+            //sv at start of map before first timing point is fixed at 1x
+            int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
+            if (pos > 0)
+                sr.line(0, midY + graphPosition, pos, midY + graphPosition);
         }
 
         sr.end();
@@ -668,7 +473,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         TimingPoint effect = null, timing = null, lastPoint = null;
 
         Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         if (effectPointIterator.hasNext())
             effect = GeneralUtils.listLast(effectPointIterator.next());
@@ -896,7 +701,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         TimingPoint effect = null, timing = null, lastPoint = null;
 
         Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getVisibleTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
 
         if (effectPointIterator.hasNext())
             effect = GeneralUtils.listLast(effectPointIterator.next());
@@ -1132,7 +937,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         textRenderer.setFont(font).renderText(sb, mode ? twoDecimal.format(p.value) : volume.format(p.volume), x, y, Color.WHITE);
     }
 
-
+    //if time is at/more extreme than the start/end of map
     private boolean atStart(long time) {
         if (map.effectPoints.isEmpty() && map.timingPoints.isEmpty())
             return false;
@@ -1157,15 +962,51 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
-        if (o instanceof TimingPoint) {
+    public void renderStack(ArrayList<? extends PositionalObject> objects, SpriteBatch sb, ShapeRenderer sr) {
+        if (objects.isEmpty())
+            return;
+
+        PositionalObject selected = null, mainObj = GeneralUtils.listLast(objects);
+        int type = 0;
+        for (PositionalObject o : objects) {
+            if (o.selected)
+                selected = o;
+
             if (((TimingPoint) o).uninherited) {
-                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, red, alpha);
-            }
-            else if (map.timingPoints.containsKey(o.getPos())) {
-                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, yellow, alpha);
+                type |= 1;
             }
             else {
+                type |= 2;
+            }
+        }
+        if (!timingEnabled && map.timingPoints.containsKey(mainObj.getPos())) {
+            type |= 1;
+        }
+        switch (type) {
+            case 1:
+                ((TimingPoint) mainObj).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, red, 1);
+                break;
+            case 3:
+                ((TimingPoint) mainObj).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, yellow, 1);
+                break;
+            default:
+                ((TimingPoint) mainObj).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, green, 1);
+                break;
+        }
+        if (selected != null)
+            renderSelection(selected, sb, sr);
+    }
+
+    @Override
+    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
+        if (o instanceof TimingPoint) {
+            if (((TimingPoint) o).uninherited) { //red line rendered through this method = red
+                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, red, alpha);
+            }
+            else if (map.timingPoints.containsKey(o.getPos())) { //A red line exists at this point, rendering a green line = yellow
+                ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, yellow, alpha);
+            }
+            else { //Let the line decide its own color. Should be green.
                 o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, alpha);
             }
         }
@@ -1177,55 +1018,6 @@ public class EffectView extends MapView implements TextInputReceiver {
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
         o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom);
-    }
-
-    @Override
-    public Snap getClosestSnap(double time, float limit) {
-        long rounded = Math.round(time);
-        if (map.getCurrentSnaps().containsKey(rounded))
-            return map.getCurrentSnaps().get(rounded);
-
-        Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry(rounded);
-        higher = map.getCurrentSnaps().higherEntry(rounded);
-
-        if (lower == null && higher == null)
-        {
-            return null;
-        }
-        else if (lower == null)
-        {
-            if (higher.getKey() - time <= limit)
-                return higher.getValue();
-        }
-        else if (higher == null)
-        {
-            if (time - lower.getKey() <= limit)
-                return lower.getValue();
-        }
-        else
-        {
-            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
-            if (lowerDist <= higherDist)
-            {
-                if (lowerDist <= limit)
-                    return lower.getValue();
-            }
-            if (higherDist <= limit)
-                return higher.getValue();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean noSnaps() {
-        return map.getCurrentSnaps().isEmpty();
-    }
-
-
-    @Override
-    public PositionalObjectTreeMap<?> getEditMap() {
-        return map.effectPoints;
     }
 
     @Override
@@ -1255,13 +1047,13 @@ public class EffectView extends MapView implements TextInputReceiver {
             return;
 
         endAdjust();
-        this.map.reverse(MapChange.ChangeType.EFFECT, false, selectedObjects);
+        this.map.reverse(MapChange.ChangeType.GREEN_LINE, false, selectedObjects);
         refreshSelection();
     }
 
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = prep();
 
         if (source.isEmpty())
             return null;
@@ -1281,16 +1073,63 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
+    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
+        //Change position in maps, but don't update anything else about the map.
+        map.timingPoints.removeAll(getSelection());
+        map.effectPoints.removeAll(getSelection());
+        map.allPoints.removeAll(getSelection());
+
+        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : moved.entrySet()) {
+            for (PositionalObject o : entry.getValue()) {
+                if (o instanceof TimingPoint) {
+                    if (((TimingPoint) o).uninherited) {
+                        map.timingPoints.add((TimingPoint) o);
+                    }
+                    else {
+                        map.effectPoints.add((TimingPoint) o);
+                    }
+                }
+            }
+        }
+        map.allPoints.addAll(moved);
+    }
+
+    @Override
+    public void updateVerticalDrag(double totalVerticalOffset) {
+        if (mode) {
+            for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
+            {
+                for (PositionalObject o : e.getValue()) {
+                    if (o instanceof TimingPoint && !((TimingPoint) o).uninherited)
+                        o.tempModification(totalVerticalOffset);
+                }
+            }
+        }
+        else {
+            for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
+            {
+                for (PositionalObject o : e.getValue()) {
+                    o.volumeModification(totalVerticalOffset);
+                }
+            }
+        }
+
+        //Do not check for removed points here for simpler check.
+        //Proper update will occur on release.
+        map.updateLines(getSelection().entrySet(), null);
+    }
+
+    @Override
     public void deleteObject(PositionalObject o) {
         endAdjust();
-        this.map.delete(MapChange.ChangeType.EFFECT, o);
+        this.map.delete(o);
     }
     @Override
     public void deleteSelection() {
         if (selectedObjects != null)
         {
             endAdjust();
-            this.map.delete(MapChange.ChangeType.EFFECT, selectedObjects);
+            this.map.delete(selectedObjects);
             clearSelection();
         }
     }
@@ -1298,9 +1137,13 @@ public class EffectView extends MapView implements TextInputReceiver {
     public void registerMove(long totalMovement) {
         if (selectedObjects != null)
         {
-            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
-            movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerMovement(MapChange.ChangeType.EFFECT, movementCopy, totalMovement);
+            ignoreSelected = false;
+            map.regenerateDivisor();
+            if (totalMovement != 0) {
+                PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+                movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
+                this.map.registerLineMovement(movementCopy, totalMovement);
+            }
         }
     }
     @Override
@@ -1319,7 +1162,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             PositionalObjectTreeMap<PositionalObject> adjusted = new PositionalObjectTreeMap<>();
             adjusted.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
             this.map.registerVolumeChange(adjusted, getStackedSelection());
-            this.map.updateEffectPoints(adjusted.entrySet(), null); //for just a volume check, this is good enough
+            this.map.updateLines(adjusted.entrySet(), null); //for just a volume check, this is good enough
         }
     }
 
@@ -1333,8 +1176,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 for (PositionalObject t : points)
                 {
                     TimingPoint point = (TimingPoint) t;
-
-                    point.value += point.value * (variance * (Math.random() - 0.5f) * 2.0f);
+                    if (!((TimingPoint) t).uninherited)
+                        point.value += point.value * (variance * (Math.random() - 0.5f) * 2.0f);
                 }
             }
 
@@ -1361,7 +1204,12 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         selectedObjects = new PositionalObjectTreeMap<>();
 
-        selectedObjects.addAll(map.effectPoints);
+        if (timingEnabled && effectPointsEnabled)
+            selectedObjects.addAll(map.allPoints);
+        else if (effectPointsEnabled)
+            selectedObjects.addAll(map.effectPoints);
+        else if (timingEnabled)
+            selectedObjects.addAll(map.timingPoints);
 
         for (ArrayList<? extends PositionalObject> stuff : selectedObjects.values())
             for (PositionalObject o : stuff)
@@ -1374,15 +1222,22 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (startTime == endTime)
             return;
 
-        PositionalObjectTreeMap<PositionalObject> newSelection;
+        PositionalObjectTreeMap<TimingPoint> src;
+        if (timingEnabled && effectPointsEnabled)
+            src = map.allPoints;
+        else if (timingEnabled)
+            src = map.timingPoints;
+        else
+            src = map.effectPoints;
+
 
         if (selectedObjects == null)
         {
-            newSelection = new PositionalObjectTreeMap<>();
+            PositionalObjectTreeMap<PositionalObject> newSelection = new PositionalObjectTreeMap<>();
             if (startTime > endTime)
-                newSelection.addAll(map.getSubEffectMap(endTime, startTime));
+                newSelection.addAll(src.descendingSubMap(endTime, true, startTime, true));
             else
-                newSelection.addAll(map.getSubEffectMap(startTime, endTime));
+                newSelection.addAll(src.descendingSubMap(startTime, true, endTime, true));
 
             selectedObjects = newSelection;
             for (ArrayList<PositionalObject> stuff : selectedObjects.values())
@@ -1394,9 +1249,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             NavigableMap<Long, ArrayList<TimingPoint>> newSelected;
 
             if (startTime > endTime)
-                newSelected = map.getSubEffectMap(endTime, startTime);
+                newSelected =  src.descendingSubMap(endTime, true, startTime, true);
             else
-                newSelected = map.getSubEffectMap(startTime, endTime);
+                newSelected =  src.descendingSubMap(startTime, true, endTime, true);
 
             selectedObjects.addAllUnique(newSelected);
 
@@ -1414,7 +1269,20 @@ public class EffectView extends MapView implements TextInputReceiver {
     private AdjustMode adjustMode = AdjustMode.NONE;
     private TimingPoint adjustPoint = null;
     @Override
-    public void dragging() {
+    public void movingObjects() {
+        if (!ignoreSelected) {
+            ignoreSelected = true;
+            if (map.timingPoints.removeAll(selectedObjects)) {
+                if (!map.timingPoints.isEmpty()) //If there are timing points other than selected ones, ignore them
+                    map.regenerateDivisor();
+
+                //And put them back.
+                for (Map.Entry<Long, ArrayList<PositionalObject>> stack : selectedObjects.entrySet())
+                    for (PositionalObject o : stack.getValue())
+                        if (((TimingPoint) o).uninherited)
+                            map.timingPoints.add((TimingPoint) o);
+            }
+        }
         endAdjust();
     }
     @Override
@@ -1435,35 +1303,34 @@ public class EffectView extends MapView implements TextInputReceiver {
     public PositionalObject getObjectAt(float x, float y) {
         //Check if y location is on sv label area
         //If so, allow wider x area for clicking.
-        NavigableMap<Long, ArrayList<TimingPoint>> selectable = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep();
         if (selectable == null || y < bottom || y > top)
             return null;
 
         double time = getTimeFromPosition(x);
 
-        if (y > bottom + VALUE_LABEL_BOTTOM && y < bottom + VALUE_LABEL_TOP) {
+        boolean lowerSelection = (y > bottom + BPM_LABEL_BOTTOM && y < bottom + BPM_LABEL_TOP),
+                higherSelection = (y > bottom + VALUE_LABEL_BOTTOM && y < bottom + VALUE_LABEL_TOP);
+        if (lowerSelection || higherSelection) {
             adjustMode = AdjustMode.POSSIBLE;
         }
-        //TODO - This method doesn't scale properly with viewscale.
 
         if (selectable.containsKey((long) time)) {
-            ArrayList<TimingPoint> selectableObjects = selectable.get((long) time);
+            ArrayList<? extends PositionalObject> selectableObjects = selectable.get((long) time);
             if (selectableObjects.isEmpty())
             {
                 editorLogger.error("WTF? Empty arraylist of objects in object map.");
             }
             else
             {
-                //Select the first object.
-                return selectableObjects.get(selectableObjects.size() - 1);
+                return adjustPoint = (TimingPoint) selectableObjects.get(selectableObjects.size() - 1);
             }
         }
 
-        Map.Entry<Long, ArrayList<TimingPoint>> lower = selectable.higherEntry((long) time);
-        Map.Entry<Long, ArrayList<TimingPoint>> higher = selectable.lowerEntry((long) time);
+        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> lower = selectable.higherEntry((long) time);
+        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> higher = selectable.lowerEntry((long) time);
         double higherDist, lowerDist;
-        double adjustLimit = (adjustMode == AdjustMode.POSSIBLE ? ADJUST_DIST : SELECTION_DIST);
-        //boolean isLower = true;
+        double adjustLimit = adjustMode == AdjustMode.POSSIBLE ? ADJUST_DIST : SELECTION_DIST;
 
         if (lower == null && higher == null)
             return adjustPoint = null;
@@ -1490,40 +1357,34 @@ public class EffectView extends MapView implements TextInputReceiver {
         //Check the closer objects first.
         if (lower != null && lowerDist < higherDist)
         {
-            ArrayList<TimingPoint> selectableObjects = lower.getValue();
-            if (!selectableObjects.isEmpty() && lowerDist < adjustLimit) //lower distance is within selection range.
-            {
-                //Select the first object.
-                return adjustPoint = selectableObjects.get(selectableObjects.size() - 1);
+            TimingPoint point = (TimingPoint) GeneralUtils.listLast(lower.getValue());
+            //lower distance is within selection range.
+            if (point != null &&
+                (lowerDist < SELECTION_DIST ||
+                    (lowerDist < adjustLimit &&
+                        ((point.uninherited && lowerSelection) || (!point.uninherited && higherSelection))
+                    )
+                )
+            ) {
+                return adjustPoint = point;
             }
-
-            if (higher != null)
-            {
-                selectableObjects = higher.getValue();
-                if (!selectableObjects.isEmpty() && higherDist < SELECTION_DIST) {
-                    //Select the first object.
-                    return adjustPoint = selectableObjects.get(selectableObjects.size() - 1);
-                }
-            }
+            //No need to check higher; if lower is not in a possibly greater range and higher one is farther,
+            //it is definitely not in range
         }
         else if (higher != null && higherDist < lowerDist)
         {
-            ArrayList<TimingPoint> selectableObjects = higher.getValue();
-            if (!selectableObjects.isEmpty() && higherDist < SELECTION_DIST) {
-                //Select the first object.
-                return adjustPoint = selectableObjects.get(selectableObjects.size() - 1);
+            if (higherDist < SELECTION_DIST) {
+                return adjustPoint = (TimingPoint) GeneralUtils.listLast(higher.getValue());
             }
 
             if (lower != null)
             {
-                selectableObjects = lower.getValue();
-                if (!selectableObjects.isEmpty() && lowerDist < adjustLimit) {
-                    //Select the first object.
-                    return adjustPoint = selectableObjects.get(selectableObjects.size() - 1);
+                TimingPoint point = (TimingPoint) GeneralUtils.listLast(lower.getValue());
+                if (point != null && lowerDist < adjustLimit &&
+                        ((point.uninherited && lowerSelection) ||
+                        (!point.uninherited && higherSelection))) {
+                    return adjustPoint = point;
                 }
-                //lower distance is within selection range.
-
-
             }
         }
         return adjustPoint = null;
@@ -1595,11 +1456,24 @@ public class EffectView extends MapView implements TextInputReceiver {
         minSVText = svFormat.format(minSV);
     }
 
-    private static final Toolset svToolset = new Toolset(SelectionTool.get(), GreenLineTool.get(), SVFunctionTool.get(), KiaiTool.get());
-    private static final Toolset volumeToolset = new Toolset(SelectionTool.get(), GreenLineTool.get(), VolumeFunctionTool.get(), KiaiTool.get());
+    private final Toolset tools = new Toolset();
     public Toolset getToolset()
     {
-        return mode ? svToolset : volumeToolset;
+        return tools;
+    }
+    private void updateToolset() {
+        tools.clear();
+        tools.addTool(SelectionTool.get());
+        if (timingEnabled)
+            tools.addTool(RedLineTool.get());
+        if (effectPointsEnabled)
+            tools.addTool(GreenLineTool.get());
+        if (effectPointsEnabled) {
+            tools.addTool(mode ? SVFunctionTool.get() : VolumeFunctionTool.get());
+            tools.addTool(KiaiTool.get());
+        }
+        if (parent != null && parent.tools != null)
+            parent.tools.changeToolset(this);
     }
 
     //text input
@@ -1616,7 +1490,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void startAdjust(TimingPoint p, boolean clearValue) {
         adjustPoint = p;
         adjustMode = AdjustMode.ACTIVE;
-        textInput = clearValue ? "" : (mode ? precise.format(p.value) : volume.format(p.volume));
+        textInput = clearValue ? "" : (mode ? p.valueText(precise) : volume.format(p.volume));
         blipOffsetX = textRenderer.setFont(font).getWidth(textInput) + BLIP_BUFFER;
         renderBlip = true;
         blipTimer = 0.4f;
@@ -1627,16 +1501,18 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (adjustMode == AdjustMode.ACTIVE && adjustPoint != null && changed && selectedObjects != null) {
             try {
                 if (mode) {
-                    double nSv = Double.parseDouble(textInput);
-                    //parent.showText("Set new SV: " + nSv);
+                    double newValue = Double.parseDouble(textInput);
+                    if (adjustPoint.uninherited)
+                        newValue = 60000 / newValue;
 
-                    if (nSv <= 0) {
+                    if (newValue <= 0) {
                         parent.showText("Invalid value entered.");
                     }
                     else {
                         PositionalObjectTreeMap<PositionalObject> adjustCopy = new PositionalObjectTreeMap<>();
                         adjustCopy.addAll(selectedObjects);
-                        map.registerChange(new ValueSetChange(map, adjustCopy, nSv).perform());
+                        adjustCopy.removeIf((p)->(!(p instanceof TimingPoint) || (((TimingPoint) p).uninherited != adjustPoint.uninherited)));
+                        map.registerChange(new ValueSetChange(map, adjustPoint.uninherited, adjustCopy, newValue).perform());
                     }
                 }
                 else {
@@ -1664,12 +1540,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         PositionalObjectTreeMap<PositionalObject> allStacked = new PositionalObjectTreeMap<>();
         ArrayList<TimingPoint> stack;
         for (Long k : selectedObjects.keySet()) {
-            stack = map.timingPoints.get(k);
-            if (stack != null)
-                for (PositionalObject o : stack)
-                    allStacked.add(o);
-
-            stack = map.effectPoints.get(k);
+            stack = map.allPoints.get(k);
             if (stack != null)
                 for (PositionalObject o : stack)
                     allStacked.add(o);
@@ -1688,7 +1559,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public int getCharLimit() {
-        return mode ? 12 : 3;
+        return mode || (adjustPoint != null && adjustPoint.uninherited) ? 12 : 3;
     }
 
     @Override
@@ -1733,6 +1604,4 @@ public class EffectView extends MapView implements TextInputReceiver {
     private static final Color red = Color.RED.cpy();
     private static final Color green = new Color(0.25f, 0.75f, 0.0f, 1.0f);
     private static final Color yellow = new Color(0.8f, 0.8f, 0.0f, 1.0f);
-
-    private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
 }

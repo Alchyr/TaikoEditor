@@ -25,6 +25,14 @@ public class Toolset {
         return tools.get(index);
     }
 
+    public void clear() {
+        tools.clear();
+    }
+
+    public void addTool(EditorTool tool) {
+        tools.add(tool);
+    }
+
     public int size()
     {
         return tools.size();

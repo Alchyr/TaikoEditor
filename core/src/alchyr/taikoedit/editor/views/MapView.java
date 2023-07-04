@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public abstract class MapView {
+
     public enum ViewType {
         OBJECT_VIEW,
         GIMMICK_VIEW,
@@ -96,7 +97,6 @@ public abstract class MapView {
 
     //Selection
     protected PositionalObjectTreeMap<PositionalObject> selectedObjects;
-    public boolean allowVerticalDrag = false;
 
     private final List<ImageButton> overlayButtons;
 
@@ -190,6 +190,10 @@ public abstract class MapView {
         return this.y;
     }
 
+    public boolean allowVerticalDrag() {
+        return false;
+    }
+
     //If this method returns true, make it the primary view
     public boolean select()
     {
@@ -256,6 +260,11 @@ public abstract class MapView {
         }
     }
     public abstract void renderBase(SpriteBatch sb, ShapeRenderer sr);
+    public void renderStack(ArrayList<? extends PositionalObject> objects, SpriteBatch sb, ShapeRenderer sr) {
+        for (PositionalObject o : objects) {
+            renderObject(o, sb, sr);
+        }
+    }
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr)
     {
         renderObject(o, sb, sr, 1.0f);
@@ -326,11 +335,49 @@ public abstract class MapView {
         }
         return next.getValue();
     }
-    public abstract Snap getClosestSnap(double time, float limit); //time in ms, limit as max ms gap
-    public abstract boolean noSnaps();
+
+    public Snap getClosestSnap(double time, float limit) { //time in ms, limit as max ms gap
+        long rounded = Math.round(time);
+        if (map.getCurrentSnaps().containsKey(rounded))
+            return map.getCurrentSnaps().get(rounded);
+
+        Map.Entry<Long, Snap> lower, higher;
+        lower = map.getCurrentSnaps().lowerEntry(rounded);
+        higher = map.getCurrentSnaps().higherEntry(rounded);
+
+        if (lower == null && higher == null)
+        {
+            return null;
+        }
+        else if (lower == null)
+        {
+            if (higher.getKey() - time <= limit)
+                return higher.getValue();
+        }
+        else if (higher == null)
+        {
+            if (time - lower.getKey() <= limit)
+                return lower.getValue();
+        }
+        else
+        {
+            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
+            if (lowerDist <= higherDist)
+            {
+                if (lowerDist <= limit)
+                    return lower.getValue();
+            }
+            if (higherDist <= limit)
+                return higher.getValue();
+        }
+        return null;
+    }
+
+    public boolean noSnaps() {
+        return map.getCurrentSnaps().isEmpty();
+    }
 
     //Other methods
-    public abstract PositionalObjectTreeMap<?> getEditMap(); //Returns the map that should be modified by selection
     public void delete(int x, int y) { //Delete selection if any, otherwise closest object if object is close enough. (Key input.)
         if (hasSelection()) {
             deleteSelection();
@@ -360,9 +407,21 @@ public abstract class MapView {
         }
         return false;
     }
+
+    //specifically updates positions in the EditorBeatmap's lists.
+    //Should be called with objects in their positions in the map *before* being moved, while the positional property of the objects themselves have been adjusted.
+    public abstract void updatePositions(PositionalObjectTreeMap<PositionalObject> moved);
+    public void updateVerticalDrag(double totalVerticalOffset) {
+        for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
+        {
+            for (PositionalObject o : e.getValue()) {
+                o.tempModification(totalVerticalOffset);
+            }
+        }
+    }
     public abstract void deleteObject(PositionalObject o);
     public abstract void deleteSelection();
-    public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support
+    public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support. May be called with 0 movement.
     public void registerValueChange() { //Registers a modification of currently selected objects with underlying map for undo/redo support
 
     }
@@ -409,7 +468,7 @@ public abstract class MapView {
     public abstract void addSelectionRange(long startTime, long endTime);
 
     //Perform Click selection.
-    public void dragging() { //method called when dragging begins
+    public void movingObjects() { //method called when dragging (horizontal) begins
     }
     public void dragRelease() { //method called when mouse released without entering a dragging mode
     }
@@ -437,125 +496,73 @@ public abstract class MapView {
 
     public void resnap()
     {
-        if (hasSelection()) {
-            PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
-            TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
-            int changed = 0;
+        boolean onlySelected = hasSelection();
+        if (!onlySelected)
+            selectAll();
 
-            getEditMap().removeAll(selectedObjects);
+        PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
+        TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
+        int changed = 0;
 
-            for (Map.Entry<Long, ArrayList<PositionalObject>> objs : selectedObjects.entrySet())
+        for (Map.Entry<Long, ArrayList<PositionalObject>> objs : selectedObjects.entrySet())
+        {
+            if (allSnaps.containsKey(objs.getKey()))
             {
-                if (allSnaps.containsKey(objs.getKey()))
-                {
-                    resnapped.put(objs.getKey(), objs.getValue());
-                    continue;
-                }
-
-                long newSnap = objs.getKey();
-                if (allSnaps.containsKey(newSnap + 1))
-                {
-                    newSnap += 1;
-                }
-                else if (allSnaps.containsKey(newSnap - 1))
-                {
-                    newSnap -= 1;
-                }
-                else {
-                    Long higherSnap = allSnaps.higherKey(newSnap),
-                            lowerSnap = allSnaps.lowerKey(newSnap);
-
-                    if (higherSnap != null && lowerSnap != null) {
-                        if (newSnap - lowerSnap < higherSnap - newSnap) {
-                            newSnap = lowerSnap;
-                        }
-                        else {
-                            newSnap = higherSnap;
-                        }
-                    }
-                    else if (higherSnap != null) {
-                        newSnap = higherSnap;
-                    }
-                    else if (lowerSnap != null) {
-                        newSnap = lowerSnap;
-                    }
-                }
-
-                if (newSnap != objs.getKey())
-                {
-                    for (PositionalObject h : objs.getValue())
-                    {
-                        h.setPos(newSnap);
-                    }
-                    changed += objs.getValue().size();
-                }
-
-                resnapped.put(newSnap, objs.getValue());
+                resnapped.put(objs.getKey(), objs.getValue());
+                continue;
             }
 
-            getEditMap().addAll(resnapped);
-            parent.showText("Resnapped " + changed + " objects.");
-
-            refreshSelection();
-        }
-        else {
-            PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
-            TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
-            int changed = 0;
-
-            for (Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> objs : getEditMap().entrySet())
+            long newSnap = objs.getKey();
+            if (allSnaps.containsKey(newSnap + 1))
             {
-                if (allSnaps.containsKey(objs.getKey()))
-                {
-                    resnapped.put(objs.getKey(), (ArrayList<PositionalObject>) objs.getValue());
-                    continue;
-                }
+                newSnap += 1;
+            }
+            else if (allSnaps.containsKey(newSnap - 1))
+            {
+                newSnap -= 1;
+            }
+            else {
+                Long higherSnap = allSnaps.higherKey(newSnap),
+                        lowerSnap = allSnaps.lowerKey(newSnap);
 
-                long newSnap = objs.getKey();
-                if (allSnaps.containsKey(newSnap + 1))
-                {
-                    newSnap += 1;
-                }
-                else if (allSnaps.containsKey(newSnap - 1))
-                {
-                    newSnap -= 1;
-                }
-                else {
-                    Long higherSnap = allSnaps.higherKey(newSnap),
-                            lowerSnap = allSnaps.lowerKey(newSnap);
-
-                    if (higherSnap != null && lowerSnap != null) {
-                        if (newSnap - lowerSnap < higherSnap - newSnap) {
-                            newSnap = lowerSnap;
-                        }
-                        else {
-                            newSnap = higherSnap;
-                        }
-                    }
-                    else if (higherSnap != null) {
-                        newSnap = higherSnap;
-                    }
-                    else if (lowerSnap != null) {
+                if (higherSnap != null && lowerSnap != null) {
+                    if (newSnap - lowerSnap < higherSnap - newSnap) {
                         newSnap = lowerSnap;
                     }
-                }
-
-                if (newSnap != objs.getKey())
-                {
-                    for (PositionalObject h : objs.getValue())
-                    {
-                        h.setPos(newSnap);
+                    else {
+                        newSnap = higherSnap;
                     }
-                    changed += objs.getValue().size();
                 }
-
-                resnapped.put(newSnap, (ArrayList<PositionalObject>) objs.getValue());
+                else if (higherSnap != null) {
+                    newSnap = higherSnap;
+                }
+                else if (lowerSnap != null) {
+                    newSnap = lowerSnap;
+                }
             }
 
-            getEditMap().clear();
-            getEditMap().addAll(resnapped);
-            parent.showText("Resnapped " + changed + " objects.");
+            if (newSnap != objs.getKey())
+            {
+                for (PositionalObject h : objs.getValue())
+                {
+                    h.setPos(newSnap);
+                }
+                changed += objs.getValue().size();
+            }
+
+            resnapped.put(newSnap, objs.getValue());
         }
+
+        updatePositions(selectedObjects);
+        selectedObjects.clear();
+        selectedObjects.addAll(resnapped);
+
+        parent.showText("Resnapped " + changed + " objects.");
+
+        refreshSelection();
+
+        if (!onlySelected)
+            clearSelection();
     }
 
     public abstract Toolset getToolset();

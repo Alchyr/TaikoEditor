@@ -220,8 +220,14 @@ public class GeneralUtils {
         return pairList;
     }
 
+    public static <T> T iterateListsUntilNull(Iterator<? extends List<T>> iter) {
+        if (iter.hasNext())
+            return listLast(iter.next());
+        else
+            return null;
+    }
     public static <T> T listLast(List<T> next) {
-        return next.get(next.size() - 1);
+        return next.isEmpty() ? null : next.get(next.size() - 1);
     }
 
     public static void logStackTrace(Logger l, Throwable e) {

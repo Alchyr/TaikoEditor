@@ -1,6 +1,8 @@
 package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.util.structures.PositionalObject;
 
 //For undo support
 public abstract class MapChange {
@@ -16,8 +18,18 @@ public abstract class MapChange {
     public abstract MapChange perform();
 
 
+    public static ChangeType getChangeType(PositionalObject o) {
+        if (o instanceof TimingPoint) {
+            if (((TimingPoint) o).uninherited)
+                return ChangeType.RED_LINE;
+            else
+                return ChangeType.GREEN_LINE;
+        }
+        return ChangeType.OBJECTS;
+    }
     public enum ChangeType {
         OBJECTS,
-        EFFECT
+        GREEN_LINE,
+        RED_LINE
     }
 }

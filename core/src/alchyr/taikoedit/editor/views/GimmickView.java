@@ -741,58 +741,10 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public Snap getClosestSnap(double time, float limit) {
-        long rounded = Math.round(time);
-        if (map.getCurrentSnaps().containsKey(rounded))
-            return map.getCurrentSnaps().get(rounded);
-
-        Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry(rounded);
-        higher = map.getCurrentSnaps().higherEntry(rounded);
-
-        if (lower == null && higher == null)
-        {
-            return null;
-        }
-        else if (lower == null)
-        {
-            if (higher.getKey() - time <= limit)
-                return higher.getValue();
-        }
-        else if (higher == null)
-        {
-            if (time - lower.getKey() <= limit)
-                return lower.getValue();
-        }
-        else
-        {
-            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
-            if (lowerDist <= higherDist)
-            {
-                if (lowerDist <= limit)
-                    return lower.getValue();
-            }
-            if (higherDist <= limit)
-                return higher.getValue();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean noSnaps() {
-        return map.getCurrentSnaps().isEmpty();
-    }
-
-    @Override
     public void dispose() {
         super.dispose();
 
         activeSnaps = null;
-    }
-
-    @Override
-    public PositionalObjectTreeMap<?> getEditMap() {
-        return map.objects;
     }
 
     private void reposition() {
@@ -878,8 +830,16 @@ public class GimmickView extends MapView {
     }
 
     @Override
+    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
+        map.objects.removeAll(getSelection());
+        getSelection().clear();
+        map.objects.addAll(moved);
+        getSelection().addAll(moved);
+    }
+
+    @Override
     public void deleteObject(PositionalObject o) {
-        this.map.delete(MapChange.ChangeType.OBJECTS, o);
+        this.map.delete(o);
     }
 
     @Override
@@ -943,18 +903,18 @@ public class GimmickView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(MapChange.ChangeType.OBJECTS, selectedObjects);
+            this.map.delete(selectedObjects);
             clearSelection();
         }
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null)
+        if (selectedObjects != null && totalMovement != 0)
         {
             PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
+            this.map.registerObjectMovement(movementCopy, totalMovement);
         }
     }
 

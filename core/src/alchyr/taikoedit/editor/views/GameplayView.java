@@ -120,8 +120,13 @@ public class GameplayView extends MapView {
         startTimes.clear();
         endTimes.clear();
         svMap.clear();
+        barlineStartTimes.clear();
+        barlineEndTimes.clear();
+        barlineStartMap.clear();
 
+        boolean reprep = !visibleObjects.isEmpty() || !barlines.isEmpty();
         visibleObjects.clear();
+        barlines.clear();
         lastPos = Long.MIN_VALUE;
 
         Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = map.objects.entrySet().iterator();
@@ -298,6 +303,10 @@ public class GameplayView extends MapView {
                     stack = null;
             }
         }
+
+        if (reprep) {
+            prep(); //prevent flicker when clearing visual info for 1 frame
+        }
     }
 
 
@@ -375,7 +384,7 @@ public class GameplayView extends MapView {
                     objectIterator.remove();
                 }
             }
-            barlines.removeIf((snap)->snap.pos+(snap.pos-barlineStartMap.get(snap)) / 2 < time);
+            barlines.removeIf((snap)->snap.pos+(snap.pos-barlineStartMap.getOrDefault(snap, 0L)) / 2 < time);
 
             for (ArrayList<HitObject> hits : startTimes.subMap(lastPos, false, time, true).values()) {
                 for (HitObject h : hits)
@@ -411,44 +420,6 @@ public class GameplayView extends MapView {
 
         lastPos = time;
         return visibleObjects.descendingMap(); //descending version to ensure reverse rendering order for correct overlapping
-    }
-
-    @Override
-    public Snap getClosestSnap(double time, float limit) {
-        long rounded = Math.round(time);
-        if (map.getCurrentSnaps().containsKey(rounded))
-            return map.getCurrentSnaps().get(rounded);
-
-        Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry(rounded);
-        higher = map.getCurrentSnaps().higherEntry(rounded);
-
-        if (lower == null && higher == null)
-        {
-            return null;
-        }
-        else if (lower == null)
-        {
-            if (higher.getKey() - time <= limit)
-                return higher.getValue();
-        }
-        else if (higher == null)
-        {
-            if (time - lower.getKey() <= limit)
-                return lower.getValue();
-        }
-        else
-        {
-            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
-            if (lowerDist <= higherDist)
-            {
-                if (lowerDist <= limit)
-                    return lower.getValue();
-            }
-            if (higherDist <= limit)
-                return higher.getValue();
-        }
-        return null;
     }
 
     public void close(int button)
@@ -526,18 +497,16 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public PositionalObjectTreeMap<?> getEditMap() {
-        return map.objects;
-    }
-
-    @Override
-    public boolean noSnaps() {
-        return map.getCurrentSnaps().isEmpty();
+    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
+        map.objects.removeAll(getSelection());
+        getSelection().clear();
+        map.objects.addAll(moved);
+        getSelection().addAll(moved);
     }
 
     @Override //will never do anything since it's based on clickObject, which always returns null
     public void deleteObject(PositionalObject o) {
-        this.map.delete(MapChange.ChangeType.OBJECTS, o);
+        this.map.delete(o);
     }
 
     @Override
@@ -558,18 +527,18 @@ public class GameplayView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(MapChange.ChangeType.OBJECTS, selectedObjects);
+            this.map.delete(selectedObjects);
             clearSelection();
         }
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null)
+        if (selectedObjects != null && totalMovement != 0)
         {
             PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
+            this.map.registerObjectMovement(movementCopy, totalMovement);
         }
     }
 

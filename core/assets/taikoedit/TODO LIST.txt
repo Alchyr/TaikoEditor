@@ -1,9 +1,7 @@
-LOADING SUCKS MAKE IT BETTER.
-Loading takes way too long on some pcs or if you have a huge amount of maps.
-- Should be improved?
-Now saves database, which should increase speed on subsequent loads on non-solid state drives.
-On SSD probably almost no difference, but on a hard drive should? make a very large difference due to far less file operations.
-- Should be extremely significantly improved by dedicating more time to loading during load screens, as well as improvement to file loading for maps.
+consider improving loading more
+
+Shift + left/right - Nudge selection by 1ms
+
 
 MAJOR:
 Bezier Curve SV

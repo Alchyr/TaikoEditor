@@ -3,8 +3,6 @@ package alchyr.taikoedit.editor.views;
 import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
-import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.tools.*;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
@@ -57,7 +55,6 @@ public class DifficultyView extends MapView {
 
     public void close(int button)
     {
-        //TODO: Add save check
         if (button == Input.Buttons.LEFT)
         {
             parent.removeView(this);
@@ -298,61 +295,19 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public Snap getClosestSnap(double time, float limit) {
-        long rounded = Math.round(time);
-        if (map.getCurrentSnaps().containsKey(rounded))
-            return map.getCurrentSnaps().get(rounded);
-
-        Map.Entry<Long, Snap> lower, higher;
-        lower = map.getCurrentSnaps().lowerEntry(rounded);
-        higher = map.getCurrentSnaps().higherEntry(rounded);
-
-        if (lower == null && higher == null)
-        {
-            return null;
-        }
-        else if (lower == null)
-        {
-            if (higher.getKey() - time <= limit)
-                return higher.getValue();
-        }
-        else if (higher == null)
-        {
-            if (time - lower.getKey() <= limit)
-                return lower.getValue();
-        }
-        else
-        {
-            double lowerDist = time - lower.getValue().pos, higherDist = higher.getValue().pos - time;
-            if (lowerDist <= higherDist)
-            {
-                if (lowerDist <= limit)
-                    return lower.getValue();
-            }
-            if (higherDist <= limit)
-                return higher.getValue();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean noSnaps() {
-        return map.getCurrentSnaps().isEmpty();
-    }
-
-    @Override
     public void dispose() {
         super.dispose();
     }
 
     @Override
-    public PositionalObjectTreeMap<?> getEditMap() {
-        return map.objects;
+    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
+        map.objects.removeAll(moved);
+        map.objects.addAll(moved);
     }
 
     @Override
     public void deleteObject(PositionalObject o) {
-        this.map.delete(MapChange.ChangeType.OBJECTS, o);
+        this.map.delete(o);
     }
 
     @Override
@@ -367,18 +322,18 @@ public class DifficultyView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(MapChange.ChangeType.OBJECTS, selectedObjects);
+            this.map.delete(selectedObjects);
             clearSelection();
         }
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null)
+        if (selectedObjects != null && totalMovement != 0)
         {
             PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerMovement(MapChange.ChangeType.OBJECTS, movementCopy, totalMovement);
+            this.map.registerObjectMovement(movementCopy, totalMovement);
         }
     }
 
