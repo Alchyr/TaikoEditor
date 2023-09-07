@@ -8,6 +8,7 @@ import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.AlphabeticComparer;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.Hitbox;
+import alchyr.taikoedit.util.TrackedThread;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -238,12 +239,12 @@ public class MapSelect implements Scrollable {
     }
 
     private boolean loadingMusic = false;
-    private MusicWrapper.SuccessFailThread musicLoading = null;
+    private TrackedThread musicLoading = null;
     private void setSelected(Mapset set) {
         selected = set;
 
         if (selected != null) {
-            musicLoading = music.loadAsync(set.getSongFile(), this::musicLoaded);
+            musicLoading = music.loadAsync(set.getSongFile(), this::musicLoaded).thread;
             loadingMusic = true;
         }
         else {
@@ -254,7 +255,7 @@ public class MapSelect implements Scrollable {
         thumbnail = null;
         updateThumbnail = true;
     }
-    private void musicLoaded(MusicWrapper.SuccessFailThread thread) {
+    private void musicLoaded(TrackedThread thread) {
         if (thread.equals(musicLoading) && thread.success()) {
             loadingMusic = false;
             music.play();

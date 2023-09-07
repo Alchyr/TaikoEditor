@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.views;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
@@ -20,6 +21,7 @@ import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
@@ -36,6 +38,9 @@ public class GameplayView extends MapView {
     public String typeString() {
         return ID;
     }
+
+
+    private final ReentrantLock calculationLock = new ReentrantLock();
 
     //Objects that should be rendered are all those where given a current time, their start time is before it and their end time is after it.
     private final TreeMap<Long, ArrayList<HitObject>> startTimes; //A sorted set based on object start times
@@ -75,7 +80,7 @@ public class GameplayView extends MapView {
         lastSounded = 0;
 
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
-        addOverlayButton(new ImageButton(assetMaster.get("editor:refresh"), assetMaster.get("editor:refreshh")).setClick((i)->this.calculateTimes()).setAction("Refresh"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:refresh"), assetMaster.get("editor:refreshh")).setClick(()->TaikoEditor.onMain(this::calculateTimes)).setAction("Refresh"));
 
         Texture aron = assetMaster.get("editor:arefreshon");
         Texture aronh = assetMaster.get("editor:arefreshonh");
@@ -117,196 +122,192 @@ public class GameplayView extends MapView {
     }
 
     public void calculateTimes() {
-        startTimes.clear();
-        endTimes.clear();
-        svMap.clear();
-        barlineStartTimes.clear();
-        barlineEndTimes.clear();
-        barlineStartMap.clear();
-
-        boolean reprep = !visibleObjects.isEmpty() || !barlines.isEmpty();
-        visibleObjects.clear();
-        barlines.clear();
-        lastPos = Long.MIN_VALUE;
-
-        Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = map.objects.entrySet().iterator();
-        Iterator<Map.Entry<Long, Snap>> snapIterator = map.getBarlineSnaps().entrySet().iterator();
-
-        //Sv tracking variables
-        long lastTimingPos = Long.MIN_VALUE, lastEffectPos = Long.MIN_VALUE, startTime;
-        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> timing, effect;
-        Map.Entry<Long, Snap> nextSnap = null;
-        Map.Entry<Long, ArrayList<HitObject>> stack = null;
-        Map.Entry<Long, ArrayList<TimingPoint>> nextTiming = null, nextEffect = null;
-        float baseSV = map.getBaseSV();
-        double svRate = baseSV, currentBPM;
-
-        TimingPoint temp;
-
-        timing = map.timingPoints.entrySet().iterator();
-        effect = map.effectPoints.entrySet().iterator();
-
-        if (timing.hasNext()) //First timing point
+        calculationLock.lock();
         {
-            nextTiming = timing.next();
-            currentBPM = nextTiming.getValue().get(0).value;
-            svMap.put(Long.MIN_VALUE, (float)(SCROLL_SPEED_SCALE * baseSV / currentBPM));
-            if (timing.hasNext())
+            startTimes.clear();
+            endTimes.clear();
+            svMap.clear();
+            barlineStartTimes.clear();
+            barlineEndTimes.clear();
+            barlineStartMap.clear();
+
+            boolean reprep = !visibleObjects.isEmpty() || !barlines.isEmpty();
+            visibleObjects.clear();
+            barlines.clear();
+            lastPos = Long.MIN_VALUE;
+
+            Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = map.objects.entrySet().iterator();
+            Iterator<Map.Entry<Long, Snap>> snapIterator = map.getBarlineSnaps().entrySet().iterator();
+
+            //Sv tracking variables
+            long lastTimingPos = Long.MIN_VALUE, lastEffectPos = Long.MIN_VALUE, startTime;
+            Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> timing, effect;
+            Map.Entry<Long, Snap> nextSnap = null;
+            Map.Entry<Long, ArrayList<HitObject>> stack = null;
+            Map.Entry<Long, ArrayList<TimingPoint>> nextTiming = null, nextEffect = null;
+            float baseSV = map.getBaseSV();
+            double svRate = baseSV, currentBPM;
+
+            TimingPoint temp;
+
+            timing = map.timingPoints.entrySet().iterator();
+            effect = map.effectPoints.entrySet().iterator();
+
+            if (timing.hasNext()) //First timing point
+            {
                 nextTiming = timing.next();
-            else
-                nextTiming = null; //Only one timing point.
-        }
-        else
-        {
-            //what the fuck why are there no timing points >:(
-            currentBPM = 120; //This is what osu uses as default so it's what I'm gonna use. Though really, there shouldn't be any objects if there's no timing points.
-        }
-
-        if (effect.hasNext())
-            nextEffect = effect.next(); //First SV doesn't apply until the first timing point is reached because game Dumb.
-
-        if (objectIterator.hasNext())
-            stack = objectIterator.next();
-        if (snapIterator.hasNext())
-            nextSnap = snapIterator.next();
-
-        while (stack != null || nextSnap != null) {
-            if (nextSnap != null && (stack == null || nextSnap.getKey() <= stack.getKey())) {
-                //next is a barline
-                while (nextTiming != null && nextTiming.getKey() <= nextSnap.getKey())// + 1)
-                {
-                    currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
-                    lastTimingPos = nextTiming.getKey();
-                    svRate = baseSV; //return to base sv
-                    svMap.put(lastTimingPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
-
-                    if (timing.hasNext())
-                        nextTiming = timing.next();
-                    else
-                        nextTiming = null;
-                }
-                while (nextEffect != null && nextEffect.getKey() <= nextSnap.getKey())// + 1)
-                {
-                    lastEffectPos = nextEffect.getKey();
-                    temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
-                    svRate = baseSV * temp.value;
-                    svMap.put(lastEffectPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
-
-                    if (effect.hasNext())
-                        nextEffect = effect.next();
-                    else
-                        nextEffect = null;
-                }
-                if (lastEffectPos < lastTimingPos)
-                {
-                    svRate = baseSV; //return to base sv
-                }
-
-                //Calculate start and end times
-
-                if (svRate <= 0) { //0 bpm dumb
-                    barlineStartMap.put(nextSnap.getValue(), Long.MIN_VALUE);
-                }
-                else {
-                    //currentBPM - ms gap between beats. High value = lower bpm = lower speed = higher duration
-                    //svRate - multiplier of scroll speed
-
-                    //speed in pixels per ms - about 320 * svRate / currentBPM
-                    //visible pixels / pixels per ms = ms duration
-                    startTime = nextSnap.getKey() - (long) (VISIBLE_LENGTH / (SCROLL_SPEED_SCALE * svRate / currentBPM));
-
-                    if (startTime == nextSnap.getKey()) //some absurdly high sv value that makes it instant could result in division by 0
-                        startTime -= 1;
-
-                    barlineStartMap.put(nextSnap.getValue(), startTime);
-                }
-                //for convenience, barlines will just vanish at their time
-                barlineStartTimes.put(barlineStartMap.get(nextSnap.getValue()), nextSnap.getValue());
-
-                if (snapIterator.hasNext())
-                    nextSnap = snapIterator.next();
+                currentBPM = nextTiming.getValue().get(0).value;
+                svMap.put(Long.MIN_VALUE, (float) (SCROLL_SPEED_SCALE * baseSV / currentBPM));
+                if (timing.hasNext())
+                    nextTiming = timing.next();
                 else
-                    nextSnap = null;
+                    nextTiming = null; //Only one timing point.
+            } else {
+                //what the fuck why are there no timing points >:(
+                currentBPM = 120; //This is what osu uses as default so it's what I'm gonna use. Though really, there shouldn't be any objects if there's no timing points.
             }
-            else { //next is objects
-                while (nextTiming != null && nextTiming.getKey() <= stack.getKey())// + 1)
-                {
-                    currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
-                    lastTimingPos = nextTiming.getKey();
-                    svRate = baseSV; //return to base sv
-                    svMap.put(lastTimingPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
 
-                    if (timing.hasNext())
-                        nextTiming = timing.next();
+            if (effect.hasNext())
+                nextEffect = effect.next(); //First SV doesn't apply until the first timing point is reached because game Dumb.
+
+            if (objectIterator.hasNext())
+                stack = objectIterator.next();
+            if (snapIterator.hasNext())
+                nextSnap = snapIterator.next();
+
+            while (stack != null || nextSnap != null) {
+                if (nextSnap != null && (stack == null || nextSnap.getKey() <= stack.getKey())) {
+                    //next is a barline
+                    while (nextTiming != null && nextTiming.getKey() <= nextSnap.getKey())// + 1)
+                    {
+                        currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
+                        lastTimingPos = nextTiming.getKey();
+                        svRate = baseSV; //return to base sv
+                        svMap.put(lastTimingPos, (float) (SCROLL_SPEED_SCALE * svRate / currentBPM));
+
+                        if (timing.hasNext())
+                            nextTiming = timing.next();
+                        else
+                            nextTiming = null;
+                    }
+                    while (nextEffect != null && nextEffect.getKey() <= nextSnap.getKey())// + 1)
+                    {
+                        lastEffectPos = nextEffect.getKey();
+                        temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
+                        svRate = baseSV * temp.value;
+                        svMap.put(lastEffectPos, (float) (SCROLL_SPEED_SCALE * svRate / currentBPM));
+
+                        if (effect.hasNext())
+                            nextEffect = effect.next();
+                        else
+                            nextEffect = null;
+                    }
+                    if (lastEffectPos < lastTimingPos) {
+                        svRate = baseSV; //return to base sv
+                    }
+
+                    //Calculate start and end times
+
+                    if (svRate <= 0) { //0 bpm dumb
+                        barlineStartMap.put(nextSnap.getValue(), Long.MIN_VALUE);
+                    } else {
+                        //currentBPM - ms gap between beats. High value = lower bpm = lower speed = higher duration
+                        //svRate - multiplier of scroll speed
+
+                        //speed in pixels per ms - about 320 * svRate / currentBPM
+                        //visible pixels / pixels per ms = ms duration
+                        startTime = nextSnap.getKey() - (long) (VISIBLE_LENGTH / (SCROLL_SPEED_SCALE * svRate / currentBPM));
+
+                        if (startTime == nextSnap.getKey()) //some absurdly high sv value that makes it instant could result in division by 0
+                            startTime -= 1;
+
+                        barlineStartMap.put(nextSnap.getValue(), startTime);
+                    }
+                    //for convenience, barlines will just vanish at their time
+                    barlineStartTimes.put(barlineStartMap.get(nextSnap.getValue()), nextSnap.getValue());
+
+                    if (snapIterator.hasNext())
+                        nextSnap = snapIterator.next();
                     else
-                        nextTiming = null;
-                }
-                while (nextEffect != null && nextEffect.getKey() <= stack.getKey())// + 1)
-                {
-                    lastEffectPos = nextEffect.getKey();
-                    temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
-                    svRate = baseSV * temp.value;
-                    svMap.put(lastEffectPos, (float)(SCROLL_SPEED_SCALE * svRate / currentBPM));
+                        nextSnap = null;
+                } else { //next is objects
+                    while (nextTiming != null && nextTiming.getKey() <= stack.getKey())// + 1)
+                    {
+                        currentBPM = nextTiming.getValue().get(nextTiming.getValue().size() - 1).value;
+                        lastTimingPos = nextTiming.getKey();
+                        svRate = baseSV; //return to base sv
+                        svMap.put(lastTimingPos, (float) (SCROLL_SPEED_SCALE * svRate / currentBPM));
 
-                    if (effect.hasNext())
-                        nextEffect = effect.next();
+                        if (timing.hasNext())
+                            nextTiming = timing.next();
+                        else
+                            nextTiming = null;
+                    }
+                    while (nextEffect != null && nextEffect.getKey() <= stack.getKey())// + 1)
+                    {
+                        lastEffectPos = nextEffect.getKey();
+                        temp = nextEffect.getValue().get(nextEffect.getValue().size() - 1);
+                        svRate = baseSV * temp.value;
+                        svMap.put(lastEffectPos, (float) (SCROLL_SPEED_SCALE * svRate / currentBPM));
+
+                        if (effect.hasNext())
+                            nextEffect = effect.next();
+                        else
+                            nextEffect = null;
+                    }
+                    if (lastEffectPos < lastTimingPos) {
+                        svRate = baseSV; //return to base sv
+                    }
+
+                    //Calculate start and end times
+
+                    if (svRate <= 0) { //0 bpm dumb
+                        startTime = Long.MIN_VALUE;
+                    } else {
+                        //currentBPM - ms gap between beats. High value = lower bpm = lower speed = higher duration
+                        //svRate - multiplier of scroll speed
+
+                        //speed in pixels per ms - about 320 * svRate / currentBPM
+                        //visible pixels / pixels per ms = ms duration
+                        startTime = stack.getKey() - (long) (VISIBLE_LENGTH / (SCROLL_SPEED_SCALE * svRate / currentBPM));
+
+                        if (startTime == stack.getKey()) //some absurdly high sv value that makes it instant could result in division by 0
+                            startTime -= 1;
+                    }
+
+                    if (!startTimes.containsKey(startTime)) {
+                        startTimes.put(startTime, new ArrayList<>());
+                    }
+
+                    for (HitObject h : stack.getValue()) {
+                        h.gameplayStart = startTime;
+
+                        startTimes.get(h.gameplayStart).add(h);
+                        endTimes.compute(h.getEndPos(), (k, v) -> {
+                            if (v == null) {
+                                ArrayList<HitObject> list = new ArrayList<>();
+                                list.add(h);
+                                return list;
+                            } else {
+                                v.add(h);
+                                return v;
+                            }
+                        });
+                        //oldEndTimes.put(h, h.getEndPos());
+                    }
+
+                    if (objectIterator.hasNext())
+                        stack = objectIterator.next();
                     else
-                        nextEffect = null;
+                        stack = null;
                 }
-                if (lastEffectPos < lastTimingPos)
-                {
-                    svRate = baseSV; //return to base sv
-                }
+            }
 
-                //Calculate start and end times
-
-                if (svRate <= 0) { //0 bpm dumb
-                    startTime = Long.MIN_VALUE;
-                }
-                else {
-                    //currentBPM - ms gap between beats. High value = lower bpm = lower speed = higher duration
-                    //svRate - multiplier of scroll speed
-
-                    //speed in pixels per ms - about 320 * svRate / currentBPM
-                    //visible pixels / pixels per ms = ms duration
-                    startTime = stack.getKey() - (long) (VISIBLE_LENGTH / (SCROLL_SPEED_SCALE * svRate / currentBPM));
-
-                    if (startTime == stack.getKey()) //some absurdly high sv value that makes it instant could result in division by 0
-                        startTime -= 1;
-                }
-
-                if (!startTimes.containsKey(startTime)) {
-                    startTimes.put(startTime, new ArrayList<>());
-                }
-
-                for (HitObject h : stack.getValue()) {
-                    h.gameplayStart = startTime;
-
-                    startTimes.get(h.gameplayStart).add(h);
-                    endTimes.compute(h.getEndPos(), (k, v) -> {
-                        if (v == null) {
-                            ArrayList<HitObject> list = new ArrayList<>();
-                            list.add(h);
-                            return list;
-                        }
-                        else {
-                            v.add(h);
-                            return v;
-                        }
-                    });
-                    //oldEndTimes.put(h, h.getEndPos());
-                }
-
-                if (objectIterator.hasNext())
-                    stack = objectIterator.next();
-                else
-                    stack = null;
+            if (reprep) {
+                prep(); //prevent flicker when clearing visual info for 1 frame
             }
         }
-
-        if (reprep) {
-            prep(); //prevent flicker when clearing visual info for 1 frame
-        }
+        calculationLock.unlock();
     }
 
 
@@ -349,6 +350,8 @@ public class GameplayView extends MapView {
         if (!(o instanceof HitObject))
             return;
 
+        calculationLock.lock();
+
         HitObject h = (HitObject) o;
         //Calculate position based on start and end time?
 
@@ -362,6 +365,8 @@ public class GameplayView extends MapView {
             alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 1000) / 500.0, 0.0, 1.0);
 
         h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
+
+        calculationLock.unlock();
     }
     @Override
     public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
@@ -372,6 +377,8 @@ public class GameplayView extends MapView {
     private final ArrayList<Snap> barlines = new ArrayList<>();
     @Override
     public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+        calculationLock.lock();
+
         Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> objectIterator = visibleObjects.entrySet().iterator();
         Map.Entry<Long, ArrayList<PositionalObject>> stack;
 
@@ -413,10 +420,13 @@ public class GameplayView extends MapView {
                         visibleObjects.add(h);
             }
             for (Snap s : map.getBarlineSnaps().subMap(time, true, lastPos, false).values()) {
-                if (barlineStartMap.get(s) <= time)
+                Long startTime = barlineStartMap.get(s);
+                if (startTime != null && startTime <= time)
                     barlines.add(s);
             }
         }
+
+        calculationLock.unlock();
 
         lastPos = time;
         return visibleObjects.descendingMap(); //descending version to ensure reverse rendering order for correct overlapping

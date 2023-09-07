@@ -430,7 +430,15 @@ public class EditorBeatmap {
         return divisor = new BeatDivisors(divisorOptions, this);
     }
     public void regenerateDivisor() {
-        TaikoEditor.onMain(divisor::reset);
+        regenerateDivisor(false);
+    }
+    public void regenerateDivisor(boolean immediate) {
+        if (immediate) {
+            divisor.reset();
+        }
+        else {
+            TaikoEditor.onMain(divisor::reset);
+        }
     }
     public NavigableMap<Long, Snap> getActiveSnaps(double startPos, double endPos)
     {
@@ -448,7 +456,7 @@ public class EditorBeatmap {
     }
     public HashSet<Snap> getSnaps(int divisor)
     {
-        return this.divisor.getSnappings(divisor);
+        return this.divisor.getCombinedSnaps(divisor);
     }
     public TreeMap<Long, Snap> getBarlineSnaps() { return divisor.getBarlines(); }
 

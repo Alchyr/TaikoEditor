@@ -39,6 +39,7 @@ public class RedLineTool extends EditorTool {
 
         placementObject = new TimingPoint(0);
         placementObject.uninherited = true;
+        placementObject.setValue(300);
     }
 
     public static RedLineTool get()

@@ -13,6 +13,7 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.GeneralUtils;
+import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -81,6 +82,12 @@ public class EffectView extends MapView implements TextInputReceiver {
     private String peakSVText, minSVText;
     private boolean renderLabels = true; //TODO: Add way to disable labels. Toggle button on overlay?
 
+    //Waveform Graph
+    private static final Color waveformColor = new Color(81f/255, 68f/255, 1f, 1f);
+    private List<Pair<Float, Float>> waveform = null;
+    private int waveformMode = -1; //-1 = none, 0 = normal, 1 = absolute value
+    private static final int MAX_WAVEFORM_MODE = 1;
+
     //Sv values
     private final BitmapFont font;
 
@@ -92,6 +99,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:mode"), assetMaster.get("editor:modeh")).setClick(this::swapMode).setAction("Swap Modes"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:graph"), assetMaster.get("editor:graphh")).setClick(this::waveformMode).setAction("Waveform Mode"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:timing"), assetMaster.get("editor:timingh")).setClick(this::swapTimingEnabled).setAction("Edit Timing"));
         addLockPositionButton();
 
@@ -128,7 +136,20 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     @Override
     public boolean allowVerticalDrag() {
-        return effectPointsEnabled || !mode; //volume mode or effect points exist
+        return noRedlines() && (effectPointsEnabled || !mode); //not adjusting a red line, volume mode or effect points exist
+    }
+
+    private boolean noRedlines() {
+        if (!hasSelection())
+            return true;
+
+        for (ArrayList<PositionalObject> stack : selectedObjects.values()) {
+            for (PositionalObject o : stack) {
+                if (o instanceof TimingPoint && ((TimingPoint) o).uninherited)
+                    return false;
+            }
+        }
+        return true;
     }
 
     public void swapTimingEnabled(int button)
@@ -137,6 +158,20 @@ public class EffectView extends MapView implements TextInputReceiver {
         parent.showText(timingEnabled ? "Timing editing enabled." : "Timing editing disabled.");
         clearSelection();
         updateToolset();
+    }
+
+    public void waveformMode(int button)
+    {
+        if (waveform != null && waveformMode == MAX_WAVEFORM_MODE) {
+            waveform = null;
+            waveformMode = -1;
+        }
+        else {
+            waveform = music.getSpectrogram();
+            if (waveform != null) {
+                ++waveformMode;
+            }
+        }
     }
 
     @Override
@@ -225,6 +260,10 @@ public class EffectView extends MapView implements TextInputReceiver {
         sb.draw(pix, 0, midY + SV_AREA, SettingsMaster.getWidth(), 1);
         sb.draw(pix, 0, midY - SV_AREA, SettingsMaster.getWidth(), 1);
 
+        if (waveform != null) {
+            renderWaveform(sb, sr);
+        }
+
         if (!timingEnabled) { //If timing editing disabled, rendered as part of base.
             TimingPoint t;
             for (ArrayList<TimingPoint> points : map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
@@ -280,8 +319,6 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void renderSVGraph(SpriteBatch sb, ShapeRenderer sr) {
         if (map.allPoints.isEmpty())
             return;
-
-        //TODO - FIX - RENDERS VALUE OF NEXT (reverse order, previous) POINT RATHER THAN CURRENT POINT
 
         //Returns from first line before visible area, to first line after visible area
         Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
@@ -347,19 +384,6 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         //*********************LABELS*********************
         if (renderLabels) {
-            /*switch (adjustMode) {
-                case NONE:
-                    sb.setColor(Color.RED);
-                    break;
-                case POSSIBLE:
-                    sb.setColor(Color.YELLOW);
-                    break;
-                case ACTIVE:
-                    sb.setColor(Color.GREEN);
-                    break;
-            }
-            sb.draw(pix, 0, bottom + SV_LABEL_BOTTOM, 200, SV_LABEL_TOP - SV_LABEL_BOTTOM);*/
-
             TimingPoint focus = null;
 
             if (adjustPoint != null) {
@@ -387,6 +411,8 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void renderVolumeGraph(SpriteBatch sb, ShapeRenderer sr) {
         if (map.allPoints.isEmpty())
             return;
+
+        //TODO - FIX - RENDERS VALUE OF NEXT (reverse order, previous) POINT RATHER THAN CURRENT POINT
 
         //Returns from first line before visible area, to first line after visible area
         Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
@@ -419,7 +445,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         current = GeneralUtils.iterateListsUntilNull(pointIterator);
 
         while (current != null) {
-            graphPosition = volumeGraphPos(lastPoint);
+            graphPosition = volumeGraphPos(current);
             sr.setColor(current.kiai ? kiai : green);
 
             sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
@@ -433,6 +459,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (lastPoint != null && atStart(lastPoint.getPos()))
         {
             //sv at start of map before first timing point is fixed at 1x
+            graphPosition = volumeGraphPos(lastPoint);
             int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
             if (pos > 0)
                 sr.line(0, midY + graphPosition, pos, midY + graphPosition);
@@ -464,460 +491,263 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
     }
 
+    private void renderWaveform(SpriteBatch sb, ShapeRenderer sr) {
+        if (waveform == null || waveform.isEmpty())
+            return;
+
+        sb.end();
+        sr.begin(ShapeRenderer.ShapeType.Filled);
+
+        sr.setColor(waveformColor);
+
+        float max, min;
+        int stepRounding = (int) Math.ceil(1 / viewScale);
+        if (stepRounding % 2 == 0)
+            stepRounding += 1;
+
+        for (int x = 0; x <= SettingsMaster.getWidth(); ++x) {
+            int time = (int) (getTimeFromPosition(x) - (music.activeOffset * 1000) - 25); //this -25 is an arbitrary number, may not be accurate.
+            if (time < 0 || time >= waveform.size()) {
+                continue;
+            }
+
+            time = (time / stepRounding) * stepRounding;
+            max = min = 0;
+            int count = 0;
+
+            for (int i = 0; i < stepRounding; ++i) {
+                int pos = time + i;
+                if (pos >= waveform.size())
+                    break;
+
+                Pair<Float, Float> maxMin = waveform.get(time + i);
+                max = Math.max(max, maxMin.a);
+                min = Math.min(min, maxMin.b);
+
+                ++count;
+            }
+            //max /= count;
+            //min /= count;
+
+            if (max > 1) max = 1;
+            if (min < -1) min = -1;
+
+            switch (waveformMode) {
+                case 0:
+                    max -= min;
+                    sr.rect(x, midY + (SV_AREA * min), 1, SV_AREA * max);
+                    break;
+                case 1:
+                    sr.rect(x, midY - SV_AREA, 1, SV_AREA * (max - min));
+                    break;
+            }
+        }
+
+        sr.end();
+        sb.begin();
+    }
+
     private void renderValueLabels(SpriteBatch sb, TimingPoint adjust) {
-        //TODO - adjust for rendering adjusting timing value
         long lastRenderable = adjust == null ? 0 : adjust.getPos() + (long)(LABEL_SPACING / viewScale);
         double svLabelSpacing = 0;
         double bpmLabelSpacing = 0;
 
-        TimingPoint effect = null, timing = null, lastPoint = null;
+        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator();
 
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        if (!pointIterator.hasNext())
+            return;
 
-        if (effectPointIterator.hasNext())
-            effect = GeneralUtils.listLast(effectPointIterator.next());
-        if (timingPointIterator.hasNext()) {
-            timing = GeneralUtils.listLast(timingPointIterator.next());
-        }
+        Map.Entry<Long, ArrayList<TimingPoint>> stack, previous = null;
+        stack = pointIterator.next();
 
-        while (effect != null && timing != null) { //SV+TIMING
+        TimingPoint effect, timing;
+
+        while (stack != null) {
             if (adjust != null) {
-                if (Math.max(effect.getPos(), timing.getPos()) < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
+                if (stack.getKey() < lastRenderable - (long)(LABEL_SPACING / viewScale))
+                    adjust = null; //Passed the adjustment point somehow, clear it.
             }
-            //Timing labels don't care about selected effect point
-            if (timing.getPos() > effect.getPos()) { //Timing next
-                if (lastPoint == null) { //First point.
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    renderLabel(sb, twoDecimal.format(1),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    bpmLabelSpacing = LABEL_SPACING;
-                    svLabelSpacing = LABEL_SPACING;
-                }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-                    svLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
 
-                    if (bpmLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                        bpmLabelSpacing = LABEL_SPACING;
+            timing = null;
+            effect = null;
+
+            int stackX = (int) (SettingsMaster.getMiddleX() + (stack.getKey() - preciseTime) * viewScale + 4);
+
+            if (previous != null) {
+                bpmLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
+                svLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
+            }
+
+            if (adjust != null && stack.getKey() <= lastRenderable) { //Adjust point not null and within range of it.
+                for (TimingPoint point : stack.getValue()) {
+                    if (point.uninherited) {
+                        //if adjustment point is not red (so this doesn't matter), or this is the adjustment point
+                        if (!adjust.uninherited || adjust.equals(point)) timing = point;
                     }
-                    if (svLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, twoDecimal.format(1),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        svLabelSpacing = LABEL_SPACING;
+                    else {
+                        //if this is the adjustment point
+                        if (adjust.uninherited || adjust.equals(point)) effect = point;
                     }
                 }
-                lastPoint = timing;
 
-                if (timingPointIterator.hasNext()) {
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                }
-                else {
-                    timing = null;
-                }
-            }
-            else if (effect.getPos() > timing.getPos()) {
-                if (adjust != null && effect.getPos() <= lastRenderable) { //selected object special case
+
+                if (effect != null && svLabelSpacing <= 0) {
                     if (effect.equals(adjust)) {
-                        renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        svLabelSpacing = LABEL_SPACING;
+                        renderAdjustableLabel(sb, effect, stackX, bottom + TOP_VALUE_Y);
                         adjust = null;
                     }
-                }
-                else if (lastPoint == null) {
-                    renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
+                    else {
+                        renderLabel(sb, twoDecimal.format(effect.value), stackX, bottom + TOP_VALUE_Y);
+                    }
                     svLabelSpacing = LABEL_SPACING;
                 }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    svLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    if (svLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, twoDecimal.format(effect.value),
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        svLabelSpacing = LABEL_SPACING;
-                    }
-                }
-                lastPoint = effect;
 
-                if (effectPointIterator.hasNext()) {
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                }
-                else {
-                    effect = null;
-                }
-            }
-            else { //effect and timing point stacked
-                if (adjust != null && effect.getPos() <= lastRenderable) {
-                    //timing point, handled normally
-                    if (lastPoint == null)
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    else {
-                        bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                        if (bpmLabelSpacing <= 0) {
-                            renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                    (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                            bpmLabelSpacing = LABEL_SPACING;
+                if (timing != null && bpmLabelSpacing <= 0) {
+                    if (timing.equals(adjust)) {
+                        renderAdjustableLabel(sb, timing, stackX, bottom + BOTTOM_VALUE_Y);
+                        adjust = null;
+
+                        //If svLabelSpacing <= 0, effect must be null. Render a label, the adjust point isn't sv.
+                        if (svLabelSpacing <= 0) {
+                            renderLabel(sb, twoDecimal.format(1), stackX, bottom + TOP_VALUE_Y);
+                            svLabelSpacing = LABEL_SPACING;
                         }
                     }
-
-                    //effect point
-                    if (effect.equals(adjust)) {
-                        renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        svLabelSpacing = LABEL_SPACING;
-                        adjust = null;
+                    else {
+                        renderLabel(sb, bpmFormat.format(timing.getBPM()), stackX, bottom + BOTTOM_VALUE_Y);
+                        //For a non-adjust point timing point to be rendered, the adjust point is an effect point.
+                        //Do not render an effect point position unless effect is not null, which is handled.
                     }
-                }
-                else if (lastPoint == null) {
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    svLabelSpacing = LABEL_SPACING;
                     bpmLabelSpacing = LABEL_SPACING;
                 }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    svLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    if (bpmLabelSpacing <= 0) {
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                        bpmLabelSpacing = LABEL_SPACING;
-                    }
+            }
+            else {
+                for (int i = stack.getValue().size() - 1; i >= 0 && (timing == null || effect == null); --i) {
+                    TimingPoint point = stack.getValue().get(i);
+                    if (point.uninherited && timing == null)
+                        timing = point;
+                    else if (!point.uninherited && effect == null)
+                        effect = point;
+                }
+
+                if (effect != null && svLabelSpacing <= 0)
+                {
+                    renderLabel(sb, twoDecimal.format(effect.value), stackX, bottom + TOP_VALUE_Y);
+                    svLabelSpacing = LABEL_SPACING;
+                }
+
+                if (timing != null && bpmLabelSpacing <= 0)
+                {
+                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
+                            stackX, bottom + BOTTOM_VALUE_Y);
+                    bpmLabelSpacing = LABEL_SPACING;
+
                     if (svLabelSpacing <= 0)
                     {
-                        renderLabel(sb, twoDecimal.format(effect.value),
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
+                        renderLabel(sb, twoDecimal.format(1), stackX, bottom + TOP_VALUE_Y);
                         svLabelSpacing = LABEL_SPACING;
                     }
                 }
-                lastPoint = effect;
+            }
 
-                if (effectPointIterator.hasNext())
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                else
-                    effect = null;
+            previous = stack;
 
-                if (timingPointIterator.hasNext())
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                else
-                    timing = null;
-            }
-        }
-        //Just sv left
-        while (effect != null) {
-            if (adjust != null) {
-                if (effect.getPos() < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
-            }
-            if (adjust != null && effect.getPos() <= lastRenderable) {
-                if (effect.equals(adjust)) {
-                    renderAdjustableLabel(sb, effect,
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    svLabelSpacing = LABEL_SPACING;
-                    adjust = null;
-                }
-            }
-            else if (lastPoint == null) {
-                renderLabel(sb, twoDecimal.format(effect.value),
-                        (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                svLabelSpacing = LABEL_SPACING;
+            if (pointIterator.hasNext()) {
+                stack = pointIterator.next();
             }
             else {
-                bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                svLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                if (svLabelSpacing <= 0)
-                {
-                    renderLabel(sb, twoDecimal.format(effect.value),
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    svLabelSpacing = LABEL_SPACING;
-                }
-            }
-            lastPoint = effect;
-
-            if (effectPointIterator.hasNext()) {
-                effect = GeneralUtils.listLast(effectPointIterator.next());
-            }
-            else {
-                effect = null;
-            }
-        }
-        //Just timing points left
-        while (timing != null) {
-            if (adjust != null) {
-                if (timing.getPos() < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
-            }
-            if (lastPoint == null) {
-                renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                renderLabel(sb, twoDecimal.format(1),
-                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                bpmLabelSpacing = LABEL_SPACING;
-                svLabelSpacing = LABEL_SPACING;
-            }
-            else {
-                bpmLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-                svLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-
-                if (bpmLabelSpacing <= 0)
-                {
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    bpmLabelSpacing = LABEL_SPACING;
-                }
-                if (svLabelSpacing <= 0)
-                {
-                    renderLabel(sb, twoDecimal.format(1),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    svLabelSpacing = LABEL_SPACING;
-                }
-            }
-            lastPoint = timing;
-
-            if (timingPointIterator.hasNext()) {
-                timing = GeneralUtils.listLast(timingPointIterator.next());
-            }
-            else {
-                timing = null;
+                stack = null;
             }
         }
     }
+
     private void renderVolumeLabels(SpriteBatch sb, TimingPoint adjust) {
         long lastRenderable = adjust == null ? 0 : adjust.getPos() + (long)(LABEL_SPACING / viewScale);
         double volumeLabelSpacing = 0;
         double bpmLabelSpacing = 0;
 
-        TimingPoint effect = null, timing = null, lastPoint = null;
+        TimingPoint effect, timing;
 
-        Iterator<ArrayList<TimingPoint>> effectPointIterator = map.getEditEffectPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
-        Iterator<ArrayList<TimingPoint>> timingPointIterator = map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator();
+        Map.Entry<Long, ArrayList<TimingPoint>> stack = null, previous = null;
 
-        if (effectPointIterator.hasNext())
-            effect = GeneralUtils.listLast(effectPointIterator.next());
-        if (timingPointIterator.hasNext()) {
-            timing = GeneralUtils.listLast(timingPointIterator.next());
-        }
+        if (pointIterator.hasNext())
+            stack = pointIterator.next();
 
-        while (effect != null && timing != null) { //SV+TIMING
+        while (stack != null) {
             if (adjust != null) {
-                if (Math.max(effect.getPos(), timing.getPos()) < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
+                if (stack.getKey() < lastRenderable - (long)(LABEL_SPACING / viewScale))
+                    adjust = null; //Passed the adjust point somehow, clear it.
             }
-            //Timing labels don't care about selected effect point
-            if (timing.getPos() > effect.getPos()) { //Timing next
-                if (lastPoint == null) { //First point.
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    renderLabel(sb, volume.format(timing.volume),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    bpmLabelSpacing = LABEL_SPACING;
-                    volumeLabelSpacing = LABEL_SPACING;
-                }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-                    volumeLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
 
-                    if (bpmLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                        bpmLabelSpacing = LABEL_SPACING;
-                    }
-                    if (volumeLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, volume.format(timing.volume),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        volumeLabelSpacing = LABEL_SPACING;
-                    }
-                }
-                lastPoint = timing;
+            timing = null;
+            effect = null;
 
-                if (timingPointIterator.hasNext()) {
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                }
-                else {
-                    timing = null;
-                }
+            int stackX = (int) (SettingsMaster.getMiddleX() + (stack.getKey() - preciseTime) * viewScale + 4);
+
+            if (previous != null) {
+                bpmLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
+                volumeLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
             }
-            else if (effect.getPos() > timing.getPos()) {
-                if (adjust != null && effect.getPos() <= lastRenderable) { //selected object special case
-                    if (effect.equals(adjust)) {
-                        renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        volumeLabelSpacing = LABEL_SPACING;
-                        adjust = null;
-                    }
-                }
-                else if (lastPoint == null) {
-                    renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    volumeLabelSpacing = LABEL_SPACING;
-                }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    volumeLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    if (volumeLabelSpacing <= 0)
-                    {
-                        renderLabel(sb, volume.format(effect.volume),
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        volumeLabelSpacing = LABEL_SPACING;
-                    }
-                }
-                lastPoint = effect;
 
-                if (effectPointIterator.hasNext()) {
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                }
-                else {
-                    effect = null;
-                }
-            }
-            else { //effect and timing point stacked
-                if (adjust != null && effect.getPos() <= lastRenderable) {
-                    //timing point, handled normally
-                    if (lastPoint == null)
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
+            if (adjust != null && stack.getKey() <= lastRenderable) { //Adjust point not null and within range of it.
+                for (TimingPoint point : stack.getValue()) {
+                    if (point.uninherited) {
+                        //if adjustment point is not red (so this doesn't matter), or this is the adjustment point
+                        if (!adjust.uninherited || adjust.equals(point)) timing = point;
+                    }
                     else {
-                        bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                        if (bpmLabelSpacing <= 0) {
-                            renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                    (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                            bpmLabelSpacing = LABEL_SPACING;
-                        }
-                    }
-
-                    //effect point
-                    if (effect.equals(adjust)) {
-                        renderAdjustableLabel(sb, effect,
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                        volumeLabelSpacing = LABEL_SPACING;
-                        adjust = null;
+                        //if this is the adjustment point
+                        if (adjust.equals(point)) effect = point;
                     }
                 }
-                else if (lastPoint == null) {
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    volumeLabelSpacing = LABEL_SPACING;
+
+                if (timing != null && bpmLabelSpacing <= 0) {
+                    renderLabel(sb, bpmFormat.format(timing.getBPM()), stackX, bottom + BOTTOM_VALUE_Y);
                     bpmLabelSpacing = LABEL_SPACING;
                 }
-                else {
-                    bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    volumeLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                    if (bpmLabelSpacing <= 0) {
-                        renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                                (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                        bpmLabelSpacing = LABEL_SPACING;
-                    }
-                    if (volumeLabelSpacing <= 0)
+                if (effect != null || adjust.equals(timing)) {
+                    renderAdjustableLabel(sb, adjust, stackX, bottom + TOP_VALUE_Y);
+                    volumeLabelSpacing = LABEL_SPACING;
+                    adjust = null;
+                }
+            }
+            else {
+                for (int i = stack.getValue().size() - 1; i >= 0 && (timing == null || effect == null); --i) {
+                    TimingPoint point = stack.getValue().get(i);
+                    if (point.uninherited && timing == null)
+                        timing = point;
+                    else if (!point.uninherited && effect == null)
+                        effect = point;
+                }
+
+                if (timing != null && bpmLabelSpacing <= 0)
+                {
+                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
+                            stackX, bottom + BOTTOM_VALUE_Y);
+                    bpmLabelSpacing = LABEL_SPACING;
+
+                    if (effect == null && volumeLabelSpacing <= 0)
                     {
-                        renderLabel(sb, volume.format(effect.volume),
-                                (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
+                        renderLabel(sb, volume.format(timing.volume), stackX, bottom + TOP_VALUE_Y);
                         volumeLabelSpacing = LABEL_SPACING;
                     }
                 }
-                lastPoint = effect;
 
-                if (effectPointIterator.hasNext())
-                    effect = GeneralUtils.listLast(effectPointIterator.next());
-                else
-                    effect = null;
-
-                if (timingPointIterator.hasNext())
-                    timing = GeneralUtils.listLast(timingPointIterator.next());
-                else
-                    timing = null;
-            }
-        }
-        //Just sv left
-        while (effect != null) {
-            if (adjust != null) {
-                if (effect.getPos() < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
-            }
-            if (adjust != null && effect.getPos() <= lastRenderable) {
-                if (effect.equals(adjust)) {
-                    renderAdjustableLabel(sb, effect,
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    volumeLabelSpacing = LABEL_SPACING;
-                    adjust = null;
-                }
-            }
-            else if (lastPoint == null) {
-                renderLabel(sb, volume.format(effect.volume),
-                        (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                volumeLabelSpacing = LABEL_SPACING;
-            }
-            else {
-                bpmLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                volumeLabelSpacing -= (lastPoint.getPos() - effect.getPos()) * viewScale;
-                if (volumeLabelSpacing <= 0)
+                if (effect != null && volumeLabelSpacing <= 0)
                 {
-                    renderLabel(sb, volume.format(effect.volume),
-                            (int) (SettingsMaster.getMiddleX() + (effect.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
+                    renderLabel(sb, volume.format(effect.volume), stackX, bottom + TOP_VALUE_Y);
                     volumeLabelSpacing = LABEL_SPACING;
                 }
             }
-            lastPoint = effect;
 
-            if (effectPointIterator.hasNext()) {
-                effect = GeneralUtils.listLast(effectPointIterator.next());
+            previous = stack;
+
+            if (pointIterator.hasNext()) {
+                stack = pointIterator.next();
             }
             else {
-                effect = null;
-            }
-        }
-        //Just timing points left
-        while (timing != null) {
-            if (adjust != null) {
-                if (timing.getPos() < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null;
-            }
-            if (lastPoint == null) {
-                renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                renderLabel(sb, volume.format(timing.volume),
-                        (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                bpmLabelSpacing = LABEL_SPACING;
-                volumeLabelSpacing = LABEL_SPACING;
-            }
-            else {
-                bpmLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-                volumeLabelSpacing -= (lastPoint.getPos() - timing.getPos()) * viewScale;
-
-                if (bpmLabelSpacing <= 0)
-                {
-                    renderLabel(sb, bpmFormat.format(timing.getBPM()),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + BOTTOM_VALUE_Y);
-                    bpmLabelSpacing = LABEL_SPACING;
-                }
-                if (volumeLabelSpacing <= 0)
-                {
-                    renderLabel(sb, volume.format(timing.volume),
-                            (int) (SettingsMaster.getMiddleX() + (timing.getPos() - preciseTime) * viewScale + 4), bottom + TOP_VALUE_Y);
-                    volumeLabelSpacing = LABEL_SPACING;
-                }
-            }
-            lastPoint = timing;
-
-            if (timingPointIterator.hasNext()) {
-                timing = GeneralUtils.listLast(timingPointIterator.next());
-            }
-            else {
-                timing = null;
+                stack = null;
             }
         }
     }
@@ -934,7 +764,12 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
             return;
         }
-        textRenderer.setFont(font).renderText(sb, mode ? twoDecimal.format(p.value) : volume.format(p.volume), x, y, Color.WHITE);
+        if (p.uninherited) {
+            textRenderer.setFont(font).renderText(sb, mode ? bpmFormat.format(p.getBPM()) : volume.format(p.volume), x, y, Color.WHITE);
+        }
+        else {
+            textRenderer.setFont(font).renderText(sb, mode ? twoDecimal.format(p.value) : volume.format(p.volume), x, y, Color.WHITE);
+        }
     }
 
     //if time is at/more extreme than the start/end of map
@@ -1274,7 +1109,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             ignoreSelected = true;
             if (map.timingPoints.removeAll(selectedObjects)) {
                 if (!map.timingPoints.isEmpty()) //If there are timing points other than selected ones, ignore them
-                    map.regenerateDivisor();
+                    map.regenerateDivisor(true);
 
                 //And put them back.
                 for (Map.Entry<Long, ArrayList<PositionalObject>> stack : selectedObjects.entrySet())
@@ -1511,6 +1346,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                     else {
                         PositionalObjectTreeMap<PositionalObject> adjustCopy = new PositionalObjectTreeMap<>();
                         adjustCopy.addAll(selectedObjects);
+                        //Only keep points of the same uninherited state
                         adjustCopy.removeIf((p)->(!(p instanceof TimingPoint) || (((TimingPoint) p).uninherited != adjustPoint.uninherited)));
                         map.registerChange(new ValueSetChange(map, adjustPoint.uninherited, adjustCopy, newValue).perform());
                     }

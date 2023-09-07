@@ -226,6 +226,16 @@
       "class": "Texture"
     },
     {
+      "name": "graph",
+      "file": "taikoedit/images/editor/ui/graph.png",
+      "class": "Texture"
+    },
+    {
+      "name": "graphh",
+      "file": "taikoedit/images/editor/ui/graphhover.png",
+      "class": "Texture"
+    },
+    {
       "name": "locked",
       "file": "taikoedit/images/editor/ui/lock.png",
       "class": "Texture"

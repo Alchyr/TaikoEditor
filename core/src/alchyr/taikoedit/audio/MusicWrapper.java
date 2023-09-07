@@ -4,6 +4,7 @@ import alchyr.taikoedit.audio.mp3.PreloadedMp3;
 import alchyr.taikoedit.audio.ogg.PreloadOgg;
 import alchyr.taikoedit.util.RunningAverage;
 import alchyr.taikoedit.util.TrackedThread;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.files.FileHandle;
@@ -25,7 +26,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
 
     private static final Map<String, Float> baseOffsetMap = new HashMap<>();
     static {
-        baseOffsetMap.put("mp3", -0.083f);
+        baseOffsetMap.put("mp3", -0.09f);
         baseOffsetMap.put("ogg", 0f);
     }
     public float activeOffset = 0;
@@ -81,105 +82,119 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return false;
     }
 
-    private final LinkedList<SuccessFailThread> loadingThreads = new LinkedList<>();
-    public SuccessFailThread loadAsync(String songFile, Consumer<SuccessFailThread> followup) {
+    private final LinkedList<AudioLoadThread> loadingThreads = new LinkedList<>();
+    public AudioLoadThread loadAsync(String songFile, Consumer<TrackedThread> followup) {
         loadingThreads.removeIf((t)->!t.isAlive());
 
-        List<SuccessFailThread> old = Collections.emptyList();
+        List<AudioLoadThread> old = Collections.emptyList();
         if (!loadingThreads.isEmpty()) {
-            for (SuccessFailThread t : loadingThreads) {
-                t.interrupt();
+            for (AudioLoadThread thread : loadingThreads) {
+                thread.cancelled = true;
             }
             old = new ArrayList<>(loadingThreads);
         }
 
-        List<SuccessFailThread> finalOld = old;
-        SuccessFailThread loadingThread = new SuccessFailThread(()->{
-            try {
-                for (SuccessFailThread sibling : finalOld) {
-                    if (sibling.isAlive()) {
-                        editorLogger.info("Waiting for old load attempt to end.");
-                        synchronized (sibling) {
-                            sibling.setFollowup((t)->{
-                                synchronized (sibling) {
-                                    sibling.notify();
-                                }
-                            }, true);
-                            while (sibling.isAlive()) {
-                                sibling.wait(1000);
-                            }
-                        }
-                    }
-                }
-
-                FileHandle file = Gdx.files.absolute(songFile);
-                setMusic(file);
-                if (file.exists()) {
-                    prep();
-
-                    if (!initialize()) {
-                        dispose();
-                    }
-                }
-                else {
-                    dispose();
-                }
-            }
-            catch (InterruptedException ignored) {
-                editorLogger.info("Cancelled loading " + songFile);
-                dispose();
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                dispose();
-            }
-        }, this::getProgress, ()->hasMusic);
+        AudioLoadThread loadingThread = new AudioLoadThread(this, songFile, old);
+        loadingThread.setFollowup(followup, true);
         loadingThreads.add(loadingThread);
-        loadingThread.setName("Loading " + songFile);
-        loadingThread.setDaemon(true);
-        loadingThread.setFollowup(followup, false);
-        loadingThread.start();
 
         return loadingThread;
     }
     public void cancelAsyncFollowup() {
-        for (SuccessFailThread t : loadingThreads)
+        for (AudioLoadThread t : loadingThreads)
             t.setFollowup(null, false);
     }
 
-    public static class SuccessFailThread extends TrackedThread {
-        final Supplier<Boolean> success;
-        private Consumer<SuccessFailThread> followup;
-        public SuccessFailThread(Runnable r, Supplier<Float> tracker, Supplier<Boolean> success) {
-            super(r, tracker);
+    public static class AudioLoadThread {
+        public boolean cancelled;
+        public boolean canIgnore;
 
-            this.success = success;
+        public final TrackedThread thread;
+        private AudioLoadThread(MusicWrapper music, String songFile, List<AudioLoadThread> old) {
+            cancelled = false;
+            canIgnore = false;
+            thread = new TrackedThread(()->{
+                FileHandle file = Gdx.files.absolute(songFile);
+
+                try {
+                    for (AudioLoadThread sibling : old) {
+                        if (sibling.isAlive()) {
+                            editorLogger.info("Waiting for old load attempt to end.");
+                            synchronized (sibling) {
+                                sibling.setFollowup((t)->{
+                                    synchronized (sibling) {
+                                        sibling.notify();
+                                    }
+                                }, true);
+                                while (sibling.isAlive() && !sibling.canIgnore) {
+                                    sibling.wait(1000);
+                                }
+                            }
+                        }
+                    }
+
+                    music.setMusic(file);
+                    if (cancelled) {
+                        if (file.equals(music.musicFile))
+                            music.dispose();
+                        return;
+                    }
+
+                    if (file.exists()) {
+                        music.prep();
+                        canIgnore = true;
+
+                        if (cancelled) {
+                            if (file.equals(music.musicFile))
+                                music.dispose();
+                            return;
+                        }
+
+                        music.music.preload();
+
+                        if (cancelled) {
+                            if (file.equals(music.musicFile))
+                                music.dispose();
+                            return;
+                        }
+
+                        if (!music.initialize()) {
+                            if (file.equals(music.musicFile))
+                                music.dispose();
+                        }
+                    }
+                    else {
+                        if (file.equals(music.musicFile))
+                            music.dispose();
+                    }
+                }
+                catch (InterruptedException ignored) {
+                    editorLogger.info("Cancelled loading " + songFile);
+                    if (file.equals(music.musicFile))
+                        music.dispose();
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    if (file.equals(music.musicFile))
+                        music.dispose();
+                }
+            }, music::getProgress, ()->music.hasMusic);
+
+            thread.setName("Loading " + songFile);
+            thread.setDaemon(true);
+            thread.start();
         }
 
-        @Override
-        public void run() {
-            super.run();
+        public boolean isAlive() {
+            return thread.isAlive();
+        }
 
-            if (this.followup != null) {
-                this.followup.accept(this);
-            }
+        public void setFollowup(Consumer<TrackedThread> r, boolean started) {
+            thread.setFollowup(r, started);
         }
 
         public boolean success() {
-            return success.get();
-        }
-        public void setFollowup(Consumer<SuccessFailThread> r, boolean started) {
-            if (started) {
-                if (isAlive()) {
-                    this.followup = r;
-                }
-                else if (r != null) {
-                    r.accept(this);
-                }
-            }
-            else {
-                this.followup = r;
-            }
+            return thread.success();
         }
     }
 
@@ -228,7 +243,6 @@ public class MusicWrapper implements Music.OnCompletionListener {
                 }
                 else {
                     activeOffset = getBaseOffset(music);
-                    music.preload();
                 }
             }
             catch (Throwable e)
@@ -505,6 +519,12 @@ public class MusicWrapper implements Music.OnCompletionListener {
     public int getDisplayOffset()
     {
         return Math.round((activeOffset - getBaseOffset(music)) * 1000);
+    }
+
+    public List<Pair<Float, Float>> getSpectrogram() {
+        if (music == null)
+            return null;
+        return music.getSpectogram();
     }
 
     @Override

@@ -63,6 +63,20 @@ public class InputBinding {
 
         return binding;
     }
+    public InputBinding setConflicts(Predicate<String> conflicts, ConflictType type)
+    {
+        this.isConflict = conflicts;
+        this.conflictType = type;
+
+        return this;
+    }
+    public InputBinding setType(BindingType bindingType)
+    {
+        this.bindingType = bindingType;
+
+        return this;
+    }
+
     private InputBinding(String ID) {
         this.inputID = ID;
         this.inputs = new ArrayList<>();
@@ -81,19 +95,6 @@ public class InputBinding {
         return copy;
     }
 
-    public InputBinding setConflicts(Predicate<String> conflicts, ConflictType type)
-    {
-        this.isConflict = conflicts;
-        this.conflictType = type;
-
-        return this;
-    }
-    public InputBinding setType(BindingType bindingType)
-    {
-        this.bindingType = bindingType;
-
-        return this;
-    }
 
     public String getInputID() {
         return inputID;

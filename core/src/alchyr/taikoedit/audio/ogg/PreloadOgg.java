@@ -6,6 +6,9 @@ import alchyr.taikoedit.audio.CustomAudio;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
+import com.google.common.collect.ForwardingIterator;
+
+import java.util.Iterator;
 
 public class PreloadOgg extends CustomAudio {
     private PreloadOggStream data;
@@ -62,6 +65,32 @@ public class PreloadOgg extends CustomAudio {
             previousInput = null; // release this reference
         }
         return data.read(buffer);
+    }
+
+    @Override
+    protected Iterator<byte[]> audioData() {
+        if (data == null) {
+            data = new PreloadOggStream(file.read(), previousInput);
+            setup(data.getChannels(), data.getSampleRate());
+            previousInput = null; // release this reference
+        }
+        Iterator<byte[]> itr = data.segmentedData.iterator();
+        return new ForwardingIterator<byte[]>() {
+            @Override
+            protected Iterator<byte[]> delegate() {
+                return itr;
+            }
+
+            @Override
+            public byte[] next() {
+                byte[] original = super.next();
+                byte[] cpy = new byte[original.length];
+                for (int i = 0; i < original.length; ++i) {
+                    cpy[i] = (byte) (original[i] + 256);
+                }
+                return cpy;
+            }
+        };
     }
 
     public void reset() {

@@ -75,7 +75,7 @@ public class PreloadOggStream extends InputStream {
     //post preload data
     private float length = 0;
     private int totalUncompressedBytes = 0;
-    private List<byte[]> segmentedData;
+    public List<byte[]> segmentedData;
     private float secondsPerSegment;
     private int currentSegment = 0;
     private int dataIndex = 0;

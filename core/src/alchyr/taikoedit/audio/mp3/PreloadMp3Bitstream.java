@@ -40,8 +40,8 @@ public class PreloadMp3Bitstream {
     /* * * Bitstream fields * * */
     private static final int CHANNELSIZE = 2 * 1152; // max. 2 * 1152 samples per frame
 
-    private final List<byte[]> frames = new ArrayList<>();
-    private final List<Float> frameTimes = new ArrayList<>();
+    public final List<byte[]> frames = new ArrayList<>();
+    public final List<Float> frameTimes = new ArrayList<>();
 
     private int currentFrame;
 

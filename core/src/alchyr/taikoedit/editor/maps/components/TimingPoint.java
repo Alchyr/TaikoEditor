@@ -224,7 +224,7 @@ public class TimingPoint extends PositionalObject {
     }
     @Override
     public void setVolume(int volume) {
-        this.volume = volume;
+        this.lastRegisteredVolume = this.volume = volume;
     }
     @Override
     public int getVolume() {

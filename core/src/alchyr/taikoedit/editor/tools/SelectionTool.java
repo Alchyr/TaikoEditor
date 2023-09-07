@@ -493,7 +493,6 @@ public class SelectionTool extends EditorTool {
 
                 if (dragMode == DragMode.NONE && selectingView.allowVerticalDrag() && (verticalChange > MIN_VERTICAL_DRAG_DIST || verticalChange < -MIN_VERTICAL_DRAG_DIST)) {
                     dragMode = DragMode.VERTICAL;
-                    selectingView.movingObjects();
                 }
 
                 verticalChange *= (shift() ? 0.01 : 0.05);

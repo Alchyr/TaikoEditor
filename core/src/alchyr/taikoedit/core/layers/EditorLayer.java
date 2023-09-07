@@ -1018,6 +1018,15 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
     private void disposeMap(EditorBeatmap map) {
         mapViews.remove(map);
         activeMaps.remove(map);
+        if (universalDivisor != null && universalDivisor.usesMap(map)) {
+            if (activeMaps.isEmpty()) {
+                universalDivisor.dispose();
+                universalDivisor = null;
+            }
+            else {
+                universalDivisor.setTimingMap(activeMaps.get(0));
+            }
+        }
         timeline.closeMap(map);
         map.dispose();
     }

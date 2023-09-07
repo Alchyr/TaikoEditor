@@ -48,6 +48,15 @@ public class BeatDivisors {
         generateCommonSnappings();
     }
 
+    public boolean usesMap(EditorBeatmap map) {
+        return timingMap.equals(map);
+    }
+
+    public void setTimingMap(EditorBeatmap editorBeatmap) {
+        this.timingMap = editorBeatmap;
+        refresh();
+    }
+
     public void refresh()
     {
         //combinedSnaps.clear();
@@ -112,7 +121,6 @@ public class BeatDivisors {
         return barlineSnaps;
     }
 
-
     private void generateCombinedSnaps()
     {
         currentCombinedDivisors.clear();
@@ -121,10 +129,6 @@ public class BeatDivisors {
         for (int divisor : divisorOptions.activeDivisors)
             for (Snap s : getSnappings(divisor))
                 combinedSnaps.put(s.pos, s);
-
-        /*for (int divisor : divisorOptions.activeDivisors)
-            for (Snap s : getSnappings(divisor))
-                combinedSnaps.put(s.pos, s);*/
 
         currentCombinedDivisors.addAll(divisorOptions.activeDivisors);
     }
@@ -154,6 +158,31 @@ public class BeatDivisors {
         return divisorSnappings.get(divisor);
     }
 
+    public HashSet<Snap> getCombinedSnaps(int divisor) {
+        if (!divisorSnappings.containsKey(divisor) || divisorSnappings.get(divisor).isEmpty()) {
+            boolean modifiedActive = divisorOptions.activeDivisors.contains(divisor);
+
+            generateSnappings(divisor);
+            for (int existingDivisor : divisorSnappings.keySet())
+            {
+                if (existingDivisor != divisor && existingDivisor % divisor == 0) //The newly generated divisor is a sub-set of this existing set. Re-generate it.
+                {
+                    generateSnappings(existingDivisor); //The snappings in this re-generated set will have some of them replaced with the sub-set's snappings.
+                    modifiedActive |= divisorOptions.activeDivisors.contains(existingDivisor);
+                }
+            }
+            if (modifiedActive)
+                refresh();
+        }
+        HashSet<Snap> combined = new HashSet<>();
+        for (int existingDivisor : divisorSnappings.keySet())
+        {
+            if (divisor % existingDivisor == 0)
+                combined.addAll(divisorSnappings.get(existingDivisor));
+        }
+        return combined;
+    }
+
     private void generateSnappings(int divisor)
     {
         HashSet<Snap> snappings = new HashSet<>();
@@ -170,7 +199,7 @@ public class BeatDivisors {
             if (divisor % snaps.getKey() == 0) //This snap is a sub-snap of the currently generating one, skip them
             {
                 for (Snap snap : snaps.getValue())
-                    subSnaps.add(snap.pos); //rounded to avoid issues when comparing doubles
+                    subSnaps.add(snap.pos);
             }
         }
 
@@ -208,26 +237,18 @@ public class BeatDivisors {
             return;
         }
 
-        double test = start - 1, mult = 1;
+        long step = 0;
         //In normal progression, multiplier will remain at 1.
         //However, in extreme cases such as near-infinite bpm, mult will continue to increase as snaps are generated in the same position until it grows large enough to cause a change in value.
 
-        for (double t = start; t < endPoint; t += (mult * rate) / divisor)
+        for (double t = start; t < endPoint; t = start + (step * rate) / divisor)
         {
-            if (t == test) { //infinite loop test due to absurdly small rate value resulting in no change although it isn't 0
-                //Occurs due to ultra-high (infinite?) bpm resulting in effectively no gap between snaps
-                mult += 1;
-                if (mult > 64)
-                    return;
-            }
-            else {
-                mult = 1;
-            }
-            test = t;
-
-            beatSegment = ++beatSegment % divisor;
-            if (beatSegment == 0)
+            ++beatSegment;
+            ++step;
+            if (beatSegment >= divisor) {
+                beatSegment -= divisor;
                 ++beat;
+            }
 
             pos = SettingsMaster.roundPos(t);
 

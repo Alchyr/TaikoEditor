@@ -6,6 +6,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import javazoom.jl.decoder.OutputBuffer;
 
+import java.util.Iterator;
+
 
 //Changes from original:
 //Preload entire mp3 to determine exact length and speed up seek operations? done
@@ -96,5 +98,10 @@ public class PreloadedMp3 extends CustomAudio {
         super.dispose();
         if (bitstream != null)
             bitstream.clear();
+    }
+
+    @Override
+    protected Iterator<byte[]> audioData() {
+        return bitstream.frames.iterator();
     }
 }

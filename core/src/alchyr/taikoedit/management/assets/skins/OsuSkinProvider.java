@@ -27,7 +27,7 @@ public class OsuSkinProvider extends SkinProvider {
 
     private final String hitImg, overlayImg, bodyImg, endImg, finisherImg, finisherOverlayImg, spinnerImg, approachCircle, backgroundKey;
 
-    private boolean hasFinisherImg = false, hasSpinner = false, hasApproachCircle = false;
+    private boolean hasFinisherImg = false, hasSpinner = false, hasApproachCircle = false, hasRollBody = false, hasRollEnd = false;
 
     private SkinRequirements requirements = new SkinRequirements();
 
@@ -97,14 +97,6 @@ public class OsuSkinProvider extends SkinProvider {
             assetMaster.load(file, Texture.class, AssetLists.linear);
             assetMaster.loadedAssets.put(overlayImg, file);
 
-            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.rollMiddle));
-            assetMaster.load(file, Texture.class, AssetLists.linear);
-            assetMaster.loadedAssets.put(bodyImg, file);
-
-            file = FileHelper.gdxSeparator(FileHelper.concat(folder.getPath(), requirements.rollEnd));
-            assetMaster.load(file, Texture.class, AssetLists.linear);
-            assetMaster.loadedAssets.put(endImg, file);
-
             //optional stuff
             FileHandle testHandle = base.child("taiko-normal-hitnormal.wav");
             try {
@@ -166,6 +158,20 @@ public class OsuSkinProvider extends SkinProvider {
                 assetMaster.loadedAssets.put(spinnerImg, testHandle.path());
             }
 
+            testHandle = base.child(requirements.rollMiddle);
+            if (testHandle.exists()) {
+                hasRollBody = true;
+                assetMaster.load(testHandle.path(), Texture.class, AssetLists.linear);
+                assetMaster.loadedAssets.put(bodyImg, testHandle.path());
+            }
+
+            testHandle = base.child(requirements.rollEnd);
+            if (testHandle.exists()) {
+                hasRollEnd = true;
+                assetMaster.load(testHandle.path(), Texture.class, AssetLists.linear);
+                assetMaster.loadedAssets.put(endImg, testHandle.path());
+            }
+
             testHandle = base.child(requirements.approachCircle);
             if (testHandle.exists()) {
                 hasApproachCircle = true;
@@ -210,9 +216,21 @@ public class OsuSkinProvider extends SkinProvider {
             hitArea.chain(new RenderComponent<>(approachCircleTexture, Texture.class));
         }
 
-        body = assetMaster.getRenderComponent(bodyImg, Texture.class);
-        Texture endTexture = assetMaster.get(endImg);
-        end = new RenderComponent<>(endTexture, new RenderComponent.TextureRenderer(Align.left));
+
+        if (hasRollBody) {
+            body = assetMaster.getRenderComponent(bodyImg, Texture.class);
+        }
+        else {
+            body = assetMaster.getRenderComponent("editor:body", Texture.class);
+        }
+
+        if (hasRollEnd) {
+            Texture endTexture = assetMaster.get(endImg);
+            end = new RenderComponent<>(endTexture, new RenderComponent.TextureRenderer(Align.left));
+        }
+        else {
+            end = new RenderComponent<>(assetMaster.get("editor:hit"), Texture.class).chain(new RenderComponent<>(assetMaster.get("editor:overlay"), new RenderComponent.FixedColorTexture(Color.WHITE)));
+        }
 
         if (hasFinisherImg) {
             Texture finisherBase = assetMaster.get(finisherImg);
@@ -260,8 +278,11 @@ public class OsuSkinProvider extends SkinProvider {
 
         assetMaster.unload(hitImg);
         assetMaster.unload(overlayImg);
-        assetMaster.unload(bodyImg);
-        assetMaster.unload(endImg);
+
+        if (hasRollEnd)
+            assetMaster.unload(endImg);
+        if (hasRollBody)
+            assetMaster.unload(bodyImg);
 
         if (hasFinisherImg) {
             assetMaster.unload(finisherImg);
@@ -328,10 +349,10 @@ public class OsuSkinProvider extends SkinProvider {
                 optional.put(s, item);
 
             item = new Pair<>(noAlt, (s)->rollMiddle = s);
-            required.put(rollMiddle, item);
+            optional.put(rollMiddle, item);
 
             item = new Pair<>(noAlt, (s)->rollEnd = s);
-            required.put(rollEnd, item);
+            optional.put(rollEnd, item);
 
             item = new Pair<>(noAlt, (s)->spinner = s);
             optional.put(spinner, item);

@@ -44,6 +44,7 @@ public class VolumeSetChange extends MapChange {
         {
             for (PositionalObject o : e.getValue()) {
                 o.setVolume(newValue);
+                o.registerVolumeChange();
             }
         }
         map.updateLines(modifiedObjects.entrySet(), null);
