@@ -14,11 +14,15 @@ import alchyr.taikoedit.core.layers.tests.BindingTestLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.MapSelect;
 import alchyr.taikoedit.core.ui.Scrollable;
+import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.util.FileDropHandler;
+import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -32,11 +36,20 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
-public class MenuLayer extends LoadedLayer implements InputLayer {
+public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandler.Handler {
+    private static final Set<String> AUDIO_EXTENSIONS;
+    static {
+        AUDIO_EXTENSIONS = new HashSet<>();
+        AUDIO_EXTENSIONS.add("mp3");
+        AUDIO_EXTENSIONS.add("ogg");
+    }
+
     private boolean initialized;
 
     private final MenuProcessor processor;
@@ -59,6 +72,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     private ImageButton settingsButton;
     //private ImageButton connectButton;
     private ImageButton updateButton;
+
+    private TextOverlay textOverlay;
 
     private static final Color bgColor = new Color(0.3f, 0.3f, 0.25f, 1.0f);
 
@@ -120,6 +135,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
             //connectButton = new ImageButton(SettingsMaster.getWidth() - 120, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth")).setClick(this::openConnect);
 
+            textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
+
             initialized = true;
 
             Thread updateCheck = new Thread(() -> {
@@ -169,6 +186,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             updateCheck.start();
         }
         processor.bind();
+        FileDropHandler.set(this);
     }
 
     @Override
@@ -187,6 +205,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
                 mapSelect.setMaps(MapMaster.search(searchInput.text));
             }
         }
+
+        textOverlay.update(elapsed);
 
         mapSelect.update(elapsed);
 
@@ -239,6 +259,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             updateButton.render(sb, sr);
 
         sb.draw(pixel, 0, searchY - 1, SettingsMaster.getWidth(), 2);
+
+        textOverlay.render(sb, sr);
     }
 
     @Override
@@ -253,6 +275,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
             EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulty());
 
             canOpen = false;
+            FileDropHandler.remove(this);
             TaikoEditor.removeLayer(this);
             TaikoEditor.addLayer(edit.getLoader());
         }
@@ -261,6 +284,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
     private void test()
     {
         TaikoEditor.removeLayer(this);
+        FileDropHandler.remove(this);
         TaikoEditor.addLayer(new BindingTestLayer().getLoader());
     }
 
@@ -271,6 +295,24 @@ public class MenuLayer extends LoadedLayer implements InputLayer {
 
     private void openConnect() {
 
+    }
+
+
+    @Override
+    public void receiveFiles(String[] files) {
+        for (String path : files) {
+            File f = new File(path);
+            if (!f.exists()) continue;
+            if (!f.isFile()) continue;
+            if (!f.canRead()) continue;
+
+            String extension = FileHelper.getFileExtension(f.getName());
+
+            if (!AUDIO_EXTENSIONS.contains(extension)) {
+                textOverlay.setText("File is not a valid audio file.", 2.0f);
+                continue;
+            }
+        }
     }
 
     private boolean checkUpdate(int x, int y, int b) {

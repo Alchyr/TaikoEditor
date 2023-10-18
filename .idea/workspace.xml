@@ -5,31 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/graph.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/assets/taikoedit/images/editor/ui/graphhover.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/hs_err_pid30308.log" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/FileDropHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/data/AssetLists.json" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/data/AssetLists.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/assets/taikoedit/localization/ENG/General.json" beforeDir="false" afterPath="$PROJECT_DIR$/core/assets/taikoedit/localization/ENG/General.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/CustomAudio.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/CustomAudio.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/MusicWrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/PreloadMp3Bitstream.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/PreloadMp3Bitstream.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/PreloadedMp3.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/mp3/PreloadedMp3.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/ogg/PreloadOgg.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/ogg/PreloadOgg.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/ogg/PreloadOggStream.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/audio/ogg/PreloadOggStream.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/InputBinding.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/InputBinding.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/MapSelect.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/BeatDivisors.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/BeatDivisors.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeSetChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeSetChange.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Timeline.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/Timeline.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/SingleDeletion.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/SingleDeletion.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/EditorBeatmap.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/EditorBeatmap.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/components/TimingPoint.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/components/TimingPoint.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/RedLineTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/RedLineTool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SelectionTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/SelectionTool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/FullMapInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/FullMapInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/maps/Mapset.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/GreenLineTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/GreenLineTool.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GameplayView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/GameplayView.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/OsuSkinProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/skins/OsuSkinProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TrackedThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/util/TrackedThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/BindingMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/BindingMaster.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SettingsMaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/SettingsMaster.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/FileHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/FileHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/DesktopLauncher.java" beforeDir="false" afterPath="$PROJECT_DIR$/desktop/src/alchyr/taikoedit/desktop/DesktopLauncher.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,12 +46,7 @@
         </task>
         <projects_view>
           <tree_state>
-            <expand>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="TaikoEditor" type="f1a62948:ProjectNode" />
-              </path>
-            </expand>
+            <expand />
             <select />
           </tree_state>
         </projects_view>
@@ -93,6 +82,9 @@
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="1VNtFCeFs50rf4bNZlRPa8kpWzZ" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
@@ -105,7 +97,7 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/sts/mods/if/pom.xml&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;inlay.hints&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.json.schema.catalog&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -134,7 +126,7 @@
       <recent name="alchyr.taikoedit.management.assets" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DesktopLauncher (direct open test)">
+  <component name="RunManager" selected="Application.DesktopLauncher">
     <configuration name="DesktopLauncher (direct open test)" type="Application" factoryName="Application" singleton="false">
       <option name="MAIN_CLASS_NAME" value="alchyr.taikoedit.desktop.DesktopLauncher" />
       <module name="TaikoEditor.desktop.main" />
@@ -181,6 +173,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <configuration name="TaikoEditor [buildDependents]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
@@ -202,6 +195,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <configuration name="TaikoEditor [dist]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
@@ -223,6 +217,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <configuration name="TaikoEditor [jar]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
@@ -244,6 +239,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <configuration name="TaikoEditor:desktop [dist]" type="GradleRunConfiguration" factoryName="Gradle">
@@ -265,6 +261,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <list>
@@ -480,7 +477,14 @@
       <option name="project" value="LOCAL" />
       <updated>1688446760433</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="update">
+      <created>1694052344774</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1694052344774</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -498,7 +502,6 @@
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="aaaaaaaaaaaaaaaaaaaaaaaaaaaa" />
     <MESSAGE value="initial" />
-    <MESSAGE value="update" />
     <MESSAGE value="fix null on seeking past end of map" />
     <MESSAGE value="render slider body correctly" />
     <MESSAGE value="more updates" />
@@ -519,7 +522,8 @@
     <MESSAGE value="whee big commits" />
     <MESSAGE value="another one" />
     <MESSAGE value="redline stuff, fixed snapping sv" />
-    <option name="LAST_COMMIT_MESSAGE" value="redline stuff, fixed snapping sv" />
+    <MESSAGE value="update" />
+    <option name="LAST_COMMIT_MESSAGE" value="update" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -540,6 +544,15 @@
         <PinnedItemInfo />
       </pinned-members>
     </pin-to-top-manager>
+    <watches-manager>
+      <configuration name="GradleRunConfiguration">
+        <watch expression="nextPoint" language="JAVA" />
+      </configuration>
+    </watches-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/TaikoEditor$DesktopLauncher.ic" NAME="DesktopLauncher Coverage Results" MODIFIED="1690246713817" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">

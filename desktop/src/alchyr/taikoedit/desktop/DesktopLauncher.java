@@ -5,6 +5,7 @@ import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.desktop.config.ConfigMenu;
 import alchyr.taikoedit.desktop.config.ProgramConfig;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.FileDropHandler;
 import alchyr.taikoedit.util.SystemUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
 import com.badlogic.gdx.Files;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
@@ -114,6 +116,14 @@ public class DesktopLauncher {
 		config.useVsync(true);
 
 		config.setWindowIcon(Files.FileType.Internal, "taikoedit/images/icon_48.png", "taikoedit/images/icon_32.png", "taikoedit/images/icon_16.png");
+
+		config.setWindowListener(new Lwjgl3WindowAdapter() {
+			@Override
+			public void filesDropped(String[] files) {
+				FileDropHandler.receive(files);
+			}
+
+		});
 
 		try {
 			boolean success = true;

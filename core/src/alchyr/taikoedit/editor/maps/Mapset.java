@@ -21,7 +21,7 @@ public class Mapset {
     protected String creator = "";
     protected String title = "";
     protected String artist = "";
-    protected String background = "";
+    protected String background = ""; //Absolute path
 
     private String shortCreator = null, shortTitle = null, shortArtist = null, songMeta = null; //temporary things.
 
@@ -64,6 +64,10 @@ public class Mapset {
     }
     public String getBackground() {
         return background;
+    }
+
+    public void setBackground(String bg) {
+        background = bg;
     }
 
     public List<MapInfo> getMaps()

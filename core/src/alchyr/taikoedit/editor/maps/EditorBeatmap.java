@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.maps;
 
 import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.BeatDivisors;
 import alchyr.taikoedit.editor.DivisorOptions;
 import alchyr.taikoedit.editor.Snap;
@@ -20,6 +21,7 @@ import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import com.badlogic.gdx.utils.Queue;
+import com.badlogic.gdx.utils.StreamUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -558,8 +560,9 @@ public class EditorBeatmap {
             volumeEntry = volumeMap.ceilingEntry(startPos);
         float volume = volumeEntry == null ? 1.0f : volumeEntry.getValue() / 100.0f;
         for (ArrayList<HitObject> stack : objects.subMap(startPos, true, end, false).values()) {
-            for (HitObject o : stack)
+            for (HitObject o : stack) {
                 o.volume = volume;
+            }
         }
     }
 
@@ -567,10 +570,12 @@ public class EditorBeatmap {
     //Should be called before the object(s) are actually added.
     public void preAddObject(HitObject h) {
         if (autoBreaks && (!objects.containsKey(h.getPos()) || h instanceof ILongObject)) { //wasn't already something here
-            //Things to check when an object is added:
-            //First - Is it in the middle of an existing break?
-            //If it is, remove that break.
-            //Second - If it is more than 5000 ms from preceding/following objects, generate necessary breaks.
+            /*
+            Things to check when an object is added:
+            First - Is it in the middle of an existing break?
+            If it is, remove that break.
+            Second - If it is more than 5000 ms from preceding/following objects, generate necessary breaks.
+             */
 
             Iterator<Pair<Long, Long>> breakIterator = getBreaks().iterator();
             int addIndex = 0;
@@ -1387,6 +1392,9 @@ public class EditorBeatmap {
         }
     }
     public void updateLines(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed) {
+        updateLines(added, removed, true);
+    }
+    public void updateLines(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed, boolean updateTimeline) {
         if (!effectViews.isEmpty()) {
             if (removed != null) {
                 TimingPoint temp;
@@ -1423,7 +1431,7 @@ public class EditorBeatmap {
                 }
             }
         }
-        if (timeline != null) {
+        if (updateTimeline && timeline != null) {
             timeline.updateTimingPoints(this, added, removed);
         }
         updatePositions.clear();
@@ -1433,6 +1441,12 @@ public class EditorBeatmap {
     public void updateSv() {
         for (EffectView effectView : effectViews) {
             effectView.recheckSvLimits();
+        }
+    }
+    public void updateLines(TimingPoint added, TimingPoint removed) {
+        if (!effectViews.isEmpty()) {
+            updateLines(Collections.singleton(new Pair<>(added.getPos(), Collections.singletonList(added))),
+                    Collections.singleton(new Pair<>(removed.getPos(), Collections.singletonList(removed))));
         }
     }
     public void updateLines(TimingPoint added, List<Pair<Long, ArrayList<TimingPoint>>> removed) {
@@ -1960,8 +1974,26 @@ public class EditorBeatmap {
                 catch (Exception e)
                 {
                     //No backup :(
-                    editorLogger.error("Failed to create backup.");
-                    e.printStackTrace();
+                    editorLogger.error("Failed to create backup.", e);
+                    try {
+                        File f = new File("error.txt");
+                        PrintWriter pWriter = null;
+
+                        try {
+                            pWriter = new PrintWriter(f);
+                            pWriter.println("Version: " + TaikoEditor.VERSION);
+                            pWriter.println("Error occurred during save: " + e.getMessage());
+                            e.printStackTrace(pWriter);
+                        }
+                        catch (Exception ignored) {
+                        }
+                        finally {
+                            StreamUtils.closeQuietly(pWriter);
+                        }
+                    }
+                    catch (Exception ignored) {
+
+                    }
                 }
             }
 
@@ -1998,8 +2030,28 @@ public class EditorBeatmap {
                 }
                 catch (Exception ignored) {}
             }
-            editorLogger.error("Failed to save beatmap.");
-            e.printStackTrace();
+            editorLogger.error("Failed to save beatmap.", e);
+
+            try {
+                File f = new File("error.txt");
+                PrintWriter pWriter = null;
+
+                try {
+                    pWriter = new PrintWriter(f);
+                    pWriter.println("Version: " + TaikoEditor.VERSION);
+                    pWriter.println("Error occurred during save: " + e.getMessage());
+                    e.printStackTrace(pWriter);
+                }
+                catch (Exception ignored) {
+                }
+                finally {
+                    StreamUtils.closeQuietly(pWriter);
+                }
+            }
+            catch (Exception ignored) {
+
+            }
+
             return false;
         }
     }

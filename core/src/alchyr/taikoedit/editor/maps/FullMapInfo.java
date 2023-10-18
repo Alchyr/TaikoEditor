@@ -114,6 +114,28 @@ public class FullMapInfo {
     public String getBackground() {
         return base.getBackground();
     }
+
+    public void setBackground(String path, String name) {
+        base.setBackground(path);
+        if (backgroundEvents.isEmpty()) {
+            backgroundEvents.add(new String[] {
+                    "0",
+                    "0",
+                    '\"' + name + '\"',
+                    "0",
+                    "0"
+            });
+        }
+        else {
+            backgroundEvents.set(0, new String[] {
+                    "0",
+                    "0",
+                    '\"' + name + '\"',
+                    "0",
+                    "0"
+            });
+        }
+    }
     public int getMode() {
         return base.getMode();
     }

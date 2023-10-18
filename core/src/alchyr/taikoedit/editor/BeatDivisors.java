@@ -315,10 +315,9 @@ public class BeatDivisors {
     public void dispose()
     {
         timingMap = null;
-        divisorOptions = null;
         divisorSnappings.clear();
-        combinedSnaps = null;
-        allSnaps = null;
-        activeSnaps = null;
+        combinedSnaps.clear();
+        allSnaps.clear();
+        activeSnaps.clear();
     }
 }

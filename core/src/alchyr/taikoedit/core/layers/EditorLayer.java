@@ -13,22 +13,27 @@ import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.tests.Wavetapper;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.LocalizationMaster;
+import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.editor.maps.components.HitObject;
+import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.localization.LocalizedText;
 import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.core.input.KeyHoldObject;
+import alchyr.taikoedit.util.FileDropHandler;
+import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
@@ -43,17 +48,28 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.google.common.io.Files;
 
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.io.File;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
-public class EditorLayer extends LoadedLayer implements InputLayer {
+public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHandler.Handler {
     public static EditorLayer activeEditor = null;
+
+    private static final Set<String> IMAGE_EXTENSIONS;
+    static {
+        IMAGE_EXTENSIONS = new HashSet<>();
+        IMAGE_EXTENSIONS.add("png");
+        IMAGE_EXTENSIONS.add("jpg");
+        IMAGE_EXTENSIONS.add("jpeg");
+    }
 
     //Return to menu
     private ProgramLayer src;
@@ -380,6 +396,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
         }
         processor.bind();
+        FileDropHandler.set(this);
     }
 
     @Override
@@ -601,6 +618,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             activeEditor = null;
             music.setOffset(0);
             TaikoEditor.removeLayer(this);
+            FileDropHandler.remove(this);
             if (src instanceof LoadedLayer) {
                 TaikoEditor.addLayer(((LoadedLayer) src).getReturnLoader());
             }
@@ -1195,6 +1213,33 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
         textOverlay.setText("Offset: " + music.getDisplayOffset(), 1.5f);
     }
 
+    private void increaseWaveformOffset()
+    {
+        if (BindingGroup.ctrl())
+        {
+            SettingsMaster.waveformOffset += 5;
+        }
+        else
+        {
+            SettingsMaster.waveformOffset += 1;
+        }
+        SettingsMaster.saveGeneralSettings();
+        textOverlay.setText("Waveform Offset: " + SettingsMaster.waveformOffset, 1.5f);
+    }
+    private void decreaseWaveformOffset()
+    {
+        if (BindingGroup.ctrl())
+        {
+            SettingsMaster.waveformOffset -= 5;
+        }
+        else
+        {
+            SettingsMaster.waveformOffset -= 1;
+        }
+        SettingsMaster.saveGeneralSettings();
+        textOverlay.setText("Waveform Offset: " + SettingsMaster.waveformOffset, 1.5f);
+    }
+
     private void toggleFinisher() {
         if (primaryView != null && primaryView.type == MapView.ViewType.OBJECT_VIEW && primaryView.hasSelection()) {
             boolean toFinisher = false;
@@ -1262,6 +1307,100 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             }
         }
         return false;
+    }
+
+    @Override
+    public void receiveFiles(String[] files) {
+        //Receive a dropped image file and set it as the background.
+        for (String path : files) {
+            File f = new File(path);
+            if (!f.exists()) continue;
+            if (!f.isFile()) continue;
+            if (!f.canRead()) continue;
+
+            String extension = FileHelper.getFileExtension(f.getName());
+
+            if (!IMAGE_EXTENSIONS.contains(extension)) {
+                showText("File is not a valid image file.");
+                continue;
+            }
+
+            File destination = new File(set.getDirectory(), f.getName());
+            try {
+                Files.copy(f, destination);
+            } catch (IOException e) {
+                showText("Failed to copy image to map folder.");
+                GeneralUtils.logStackTrace(editorLogger, e);
+                return;
+            }
+
+            if (!destination.exists()) {
+                showText("Failed to copy image to map folder.");
+                return;
+            }
+
+            clean();
+            TaikoEditor.addLayer(new ConfirmationLayer("Use background for all difficulties?", "Use For All", "Use For Open", true)
+                    .onConfirm(()->{
+                        backgroundImg = destination.getAbsolutePath();
+                        List<MapInfo> allMaps = new ArrayList<>(set.getMaps());
+                        for (EditorBeatmap map : activeMaps) {
+                            map.getFullMapInfo().setBackground(backgroundImg, destination.getName());
+                            allMaps.remove(map.getFullMapInfo().getInfo());
+                        }
+
+                        for (MapInfo info : allMaps) {
+                            EditorBeatmap temp = new EditorBeatmap(set, info);
+                            temp.getFullMapInfo().setBackground(backgroundImg, destination.getName());
+                            temp.save();
+                        }
+
+
+                        set.setBackground(backgroundImg);
+                        MapMaster.mapDatabase.save();
+
+                        updateEditorBg();
+                    })
+                    .onDeny(()->{
+                        backgroundImg = destination.getAbsolutePath();
+                        for (EditorBeatmap map : activeMaps) {
+                            map.getFullMapInfo().setBackground(backgroundImg, destination.getName());
+                        }
+                        if (set.getBackground() == null) {
+                            set.setBackground(backgroundImg);
+                            MapMaster.mapDatabase.save();
+                        }
+                        updateEditorBg();
+                    }));
+            return;
+        }
+    }
+
+    private void updateEditorBg() {
+        TaikoEditor.onMain(()->{
+            FileHandle h = Gdx.files.absolute(backgroundImg);
+            if (h.exists()) {
+                try {
+                    background = new Texture(Gdx.files.absolute(backgroundImg), true); //these song folders have quite high odds of containing characters libgdx doesn't like, which messes up assetMaster loading.
+                    background.setFilter(Texture.TextureFilter.MipMapLinearNearest, Texture.TextureFilter.MipMapLinearNearest);
+
+                    float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                    bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                    bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                }
+                catch (Exception e) {
+                    editorLogger.error("Failed to load background image.", e);
+                    if (!OsuBackgroundLoader.loadedBackgrounds.isEmpty())
+                    {
+                        background = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
+
+                        float bgScale = Math.max((float) SettingsMaster.getWidth() / background.getWidth(), (float) SettingsMaster.getHeight() / background.getHeight());
+                        bgWidth = (int) Math.ceil(background.getWidth() * bgScale);
+                        bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
+                    }
+                }
+            }
+        });
     }
 
     public static class EditorProcessor extends TextInputProcessor {
@@ -1420,6 +1559,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bindings.bind("IncreaseOffset", sourceLayer::increaseOffset);
             bindings.bind("DecreaseOffset", sourceLayer::decreaseOffset);
 
+            bindings.bind("IncreaseWaveformOffset", sourceLayer::increaseWaveformOffset);
+            bindings.bind("DecreaseWaveformOffset", sourceLayer::decreaseWaveformOffset);
+
             bindings.bind("TogglePlayback", music::toggle);
 
             bindings.bind("Exit", ()->{
@@ -1452,18 +1594,18 @@ public class EditorLayer extends LoadedLayer implements InputLayer {
             bindings.bind("DEBUG", ()->{
                 if (sourceLayer.primaryView != null)
                 {
-                    Wavetapper.generate(sourceLayer.primaryView.map);
+                    //Wavetapper.generate(sourceLayer.primaryView.map);
                     //Current function: Doubles sv in a certain section
-                    /*long startTime = 1034780, endTime = 1078140;
+                    long startTime = 453214, endTime = 490691;
                     SortedMap<Long, ArrayList<TimingPoint>> section = sourceLayer.primaryView.map.effectPoints.subMap(startTime, endTime);
 
                     for (ArrayList<TimingPoint> point : section.values())
                     {
                         for (TimingPoint p : point)
                         {
-                            p.value *= 2;
+                            p.setValue(p.value * 2);
                         }
-                    }*/
+                    }
                 }
             });
 

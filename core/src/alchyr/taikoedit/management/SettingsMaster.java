@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
@@ -44,6 +43,8 @@ public class SettingsMaster {
     //Is applied on newly placed objects and objects that have their properties changed (finisher, change color)
     //May also be applied to all objects in future with a "reposition all" option?
     public static int donX = 64, donY = 64, bigDonX = 64, bigDonY = 320, katX = 448, katY = 64, bigKatX = 448, bigKatY = 320;
+
+    public static int waveformOffset = 10; //Displayed waveform position vs reported music position, ignoring editor offset
 
     public static boolean lazerSnaps = false;
 
@@ -139,6 +140,9 @@ public class SettingsMaster {
                                             break;
                                         case "LazerSnaps":
                                             lazerSnaps = Boolean.parseBoolean(keyVal[1]);
+                                            break;
+                                        case "WaveformOffset":
+                                            waveformOffset = Integer.parseInt(keyVal[1]);
                                             break;
                                         default:
                                             editorLogger.info("Unknown setting key \"" + keyVal[0] + "\" with value " + keyVal[1]);
@@ -238,6 +242,7 @@ public class SettingsMaster {
                 "KX:" + bigKatX + '\n' +
                 "KY:" + bigKatY + '\n' +
                 "LazerSnaps:" + lazerSnaps + '\n' +
+                "WaveformOffset:" + waveformOffset + '\n' +
                 "Skin:" + Skins.currentSkin.toString();
         //.replace(":", "](}").replace("|", "})]");
     }

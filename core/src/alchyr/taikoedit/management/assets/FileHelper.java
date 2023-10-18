@@ -26,6 +26,11 @@ public class FileHelper {
         return result.toString();
     }
 
+    public static String getFileExtension(String filename) {
+        int separatorIndex = filename.lastIndexOf('.');
+        return separatorIndex == -1 ? "" : filename.substring(separatorIndex + 1);
+    }
+
     public static String withSeparator(String path)
     {
         return path + (path.endsWith(File.separator) ? "" : File.separator);

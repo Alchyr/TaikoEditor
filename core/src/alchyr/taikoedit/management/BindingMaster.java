@@ -8,6 +8,7 @@ package alchyr.taikoedit.management;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.InputBinding;
+import alchyr.taikoedit.core.input.InputBinding.InputInfo.Maybe;
 import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -55,7 +56,7 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Delete", new InputBinding.InputInfo(Input.Keys.FORWARD_DEL), new InputBinding.InputInfo(Input.Keys.BACKSPACE)));
         creating.addBinding(InputBinding.create("Copy", new InputBinding.InputInfo(Input.Keys.C, true)));
         creating.addBinding(InputBinding.create("Cut", new InputBinding.InputInfo(Input.Keys.X, true)));
-        creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, InputBinding.InputInfo.Maybe.TRUE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, Maybe.TRUE, Maybe.MAYBE, Maybe.FALSE)));
         creating.addBinding(InputBinding.create("Reverse", new InputBinding.InputInfo(Input.Keys.G, true)));
         creating.addBinding(InputBinding.create("ClearSelect", new InputBinding.InputInfo(Input.Keys.GRAVE)));
         creating.addBinding(InputBinding.create("Bookmark", new InputBinding.InputInfo(Input.Keys.B, true)));
@@ -66,9 +67,9 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("TJASave", new InputBinding.InputInfo(Input.Keys.S, true, true, true)));
 
         creating.addBinding(InputBinding.create("TogglePlayback", new InputBinding.InputInfo(Input.Keys.SPACE)));
-        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.X, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE))
+        creating.addBinding(InputBinding.create("SeekRight", new InputBinding.InputInfo(Input.Keys.RIGHT, Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.X, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("SeekLeft"), InputBinding.ConflictType.CANCELLING));
-        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT, InputBinding.InputInfo.Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.Z, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE))
+        creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT, Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.Z, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("SeekRight"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("RateUp", new InputBinding.InputInfo(Input.Keys.UP)));
         creating.addBinding(InputBinding.create("RateDown", new InputBinding.InputInfo(Input.Keys.DOWN)));
@@ -76,28 +77,30 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("ZoomOut", new InputBinding.InputInfo(Input.Keys.DOWN, false, false, true)));
         creating.addBinding(InputBinding.create("SnapUp", new InputBinding.InputInfo(Input.Keys.UP, true)));
         creating.addBinding(InputBinding.create("SnapDown", new InputBinding.InputInfo(Input.Keys.DOWN, true)));
-        creating.addBinding(InputBinding.create("IncreaseOffset", new InputBinding.InputInfo(Input.Keys.EQUALS, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("DecreaseOffset", new InputBinding.InputInfo(Input.Keys.MINUS, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("IncreaseOffset", new InputBinding.InputInfo(Input.Keys.EQUALS, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("DecreaseOffset", new InputBinding.InputInfo(Input.Keys.MINUS, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("IncreaseWaveformOffset", new InputBinding.InputInfo(Input.Keys.EQUALS, Maybe.MAYBE, Maybe.TRUE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("DecreaseWaveformOffset", new InputBinding.InputInfo(Input.Keys.MINUS, Maybe.MAYBE, Maybe.TRUE, Maybe.FALSE)));
 
         creating.addBinding(InputBinding.create("FinishLock", new InputBinding.InputInfo(Input.Keys.Q)));
-        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("i2",
-                new InputBinding.InputInfo(Input.Keys.W, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.F, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.K, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+                new InputBinding.InputInfo(Input.Keys.W, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.F, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.K, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("i3",
-                new InputBinding.InputInfo(Input.Keys.E, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.D, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.L, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.FALSE, InputBinding.InputInfo.Maybe.MAYBE)));
+                new InputBinding.InputInfo(Input.Keys.E, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.D, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.L, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("i4", new InputBinding.InputInfo(Input.Keys.R)));
         creating.addBinding(InputBinding.create("i5", new InputBinding.InputInfo(Input.Keys.T)));
         creating.addBinding(InputBinding.create("i6", new InputBinding.InputInfo(Input.Keys.Y)));
@@ -135,12 +138,12 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0)));
         creating.addBinding(InputBinding.create("TAB", new InputBinding.InputInfo(Input.Keys.TAB)));
         creating.addBinding(InputBinding.create("Up",
-                new InputBinding.InputInfo(Input.Keys.UP, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.PAGE_UP, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE))
+                new InputBinding.InputInfo(Input.Keys.UP, Maybe.MAYBE, Maybe.MAYBE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.PAGE_UP, Maybe.MAYBE, Maybe.MAYBE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("Down"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("Down",
-                new InputBinding.InputInfo(Input.Keys.DOWN, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE),
-                new InputBinding.InputInfo(Input.Keys.PAGE_DOWN, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE, InputBinding.InputInfo.Maybe.MAYBE))
+                new InputBinding.InputInfo(Input.Keys.DOWN, Maybe.MAYBE, Maybe.MAYBE, Maybe.MAYBE),
+                new InputBinding.InputInfo(Input.Keys.PAGE_DOWN, Maybe.MAYBE, Maybe.MAYBE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("Up"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("Refresh", new InputBinding.InputInfo(Input.Keys.F5)));
 

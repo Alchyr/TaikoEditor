@@ -14,6 +14,8 @@
       "SnapDown": [ "Decrease Divisor" ],
       "IncreaseOffset": [ "Increase Offset" ],
       "DecreaseOffset": [ "Decrease Offset" ],
+      "IncreaseWaveformOffset": [ "Increase Waveform Offset" ],
+      "DecreaseWaveformOffset": [ "Decrease Waveform Offset" ],
       "SelectAll": [ "Select All" ],
       "Bookmark": [ "Add Bookmark" ],
       "RemoveBookmark": [ "Remove Bookmark" ],

@@ -78,7 +78,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     private static final int SMOOTH_GRAPH_DISTANCE = 300; //Further apart than this, no smooth graph
     private static final int LABEL_SPACING = 36;
     private static final DecimalFormat svFormat = new DecimalFormat("0.000x", osuSafe);
-    private double peakSV, minSV;
+    public double peakSV, minSV;
     private String peakSVText, minSVText;
     private boolean renderLabels = true; //TODO: Add way to disable labels. Toggle button on overlay?
 
@@ -506,7 +506,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             stepRounding += 1;
 
         for (int x = 0; x <= SettingsMaster.getWidth(); ++x) {
-            int time = (int) (getTimeFromPosition(x) - (music.activeOffset * 1000) - 25); //this -25 is an arbitrary number, may not be accurate.
+            int time = (int) (getTimeFromPosition(x) - (music.activeOffset * 1000) - SettingsMaster.waveformOffset); //this -25 is an arbitrary number, may not be accurate.
             if (time < 0 || time >= waveform.size()) {
                 continue;
             }
@@ -1273,6 +1273,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             minSVText = svFormat.format(newLimit);
         }
     }
+
     public void recheckSvLimits()
     {
         peakSV = 1.3;

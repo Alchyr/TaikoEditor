@@ -10,16 +10,14 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static alchyr.taikoedit.core.input.BindingGroup.shift;
 
@@ -253,7 +251,7 @@ public class GreenLineTool extends EditorTool {
                 lastY = Gdx.input.getY();
                 //Do not check for removed points here for simpler check.
                 //Proper update will occur on release.
-                placingView.map.updateLines(adjusting, null);
+                placingView.map.updateLines(Collections.singleton(new Pair<>(adjusting.getPos(), Collections.singletonList(adjusting))), null, false);
             }
         }
     }

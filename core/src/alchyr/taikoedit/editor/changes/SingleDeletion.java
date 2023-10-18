@@ -3,7 +3,11 @@ package alchyr.taikoedit.editor.changes;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.PositionalObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SingleDeletion extends MapChange {
     private final MapChange.ChangeType type;
@@ -28,13 +32,13 @@ public class SingleDeletion extends MapChange {
             case GREEN_LINE:
                 map.effectPoints.add((TimingPoint) deleted);
                 map.allPoints.add((TimingPoint) deleted);
-                map.updateLines((TimingPoint) deleted, null);
+                map.updateLines((TimingPoint) deleted, (List<Pair<Long, ArrayList<TimingPoint>>>) null);
                 break;
             case RED_LINE:
                 map.timingPoints.add((TimingPoint) deleted);
                 map.allPoints.add((TimingPoint) deleted);
                 map.regenerateDivisor();
-                map.updateLines((TimingPoint) deleted, null);
+                map.updateLines((TimingPoint) deleted, (List<Pair<Long, ArrayList<TimingPoint>>>) null);
                 break;
         }
         map.gameplayChanged();
@@ -51,13 +55,13 @@ public class SingleDeletion extends MapChange {
             case GREEN_LINE:
                 map.effectPoints.removeObject(deleted);
                 map.allPoints.removeObject(deleted);
-                map.updateLines(null, (TimingPoint) deleted);
+                map.updateLines((List<Pair<Long, ArrayList<TimingPoint>>>) null, (TimingPoint) deleted);
                 break;
             case RED_LINE:
                 map.timingPoints.removeObject(deleted);
                 map.allPoints.removeObject(deleted);
                 map.regenerateDivisor();
-                map.updateLines(null, (TimingPoint) deleted);
+                map.updateLines((List<Pair<Long, ArrayList<TimingPoint>>>) null, (TimingPoint) deleted);
                 break;
         }
 

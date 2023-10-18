@@ -116,7 +116,7 @@ public class Timeline {
 
     public void update(double pos)
     {
-        this.time.setMilliseconds((int) (pos * 1000));
+        this.time.setMilliseconds(Math.round(pos * 1000));
         this.percentage = (float) (pos / length);
         this.pos = convertPercent(this.percentage);
     }
