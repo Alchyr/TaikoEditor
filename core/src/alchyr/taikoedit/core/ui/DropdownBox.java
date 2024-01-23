@@ -203,14 +203,11 @@ public class DropdownBox<T> implements UIElement, Scrollable {
             if (x + dx < clickX && dropdownBounds.y + dy < clickY && clickX < x2 + dx && clickY < y2 + dy)
             {
                 //Determine hovered
-                if (clickY < y + dy) {
-                    int index = (int) (((y + dy - clickY) - currentScroll) / height);
-                    if (index >= 0 && index < options.size()) {
-                        T old = currentOption;
-                        setCurrentOption(options.get(index));
-                        onSelect.accept(old, currentOption);
-                        return true;
-                    }
+                if (hovered != null) {
+                    T old = currentOption;
+                    setCurrentOption(hovered);
+                    onSelect.accept(old, currentOption);
+                    return true;
                 }
                 cancel();
                 return true;

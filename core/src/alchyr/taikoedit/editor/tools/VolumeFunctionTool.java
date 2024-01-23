@@ -337,7 +337,7 @@ public class VolumeFunctionTool extends EditorTool {
                     PositionalObjectTreeMap<PositionalObject> vol = new PositionalObjectTreeMap<>();
 
                     //Generate lines.
-                    int steps = Math.abs(dvol) + 1;
+                    int steps = Math.abs(dvol) * 2 + 1;
                     double spacing = steps == 1 ? 0 : dist / (steps - 1);
                     long pos;
 
@@ -350,11 +350,11 @@ public class VolumeFunctionTool extends EditorTool {
                             p.registerVolumeChange();
                             vol.add(p);
 
-                            //For the sake of simplicity, this won't be undoable if it modifies red lines.
-                            for (TimingPoint point : basePoint.getValue())  {
+                            //Modify volume of red lines. Not undoable.
+                            for (TimingPoint point : basePoint.getValue()) {
                                 if (point.uninherited) {
                                     point.setVolume(v);
-                                    p.registerVolumeChange();
+                                    point.registerVolumeChange();
                                 }
                             }
                         }

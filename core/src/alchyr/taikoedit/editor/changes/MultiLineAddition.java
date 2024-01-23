@@ -9,8 +9,6 @@ import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
 import java.util.*;
 
 public class MultiLineAddition extends MapChange {
-    //public enum LineType { Only effect lines. Timing should not be done using this program.
-
     private final PositionalObjectTreeMap<PositionalObject> addedLines;
     private final PositionalObjectTreeMap<PositionalObject> greenLines;
     private final PositionalObjectTreeMap<PositionalObject> redLines;

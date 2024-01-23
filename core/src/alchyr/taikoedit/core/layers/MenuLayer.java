@@ -22,7 +22,6 @@ import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.util.FileDropHandler;
-import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -302,6 +301,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     public void receiveFiles(String[] files) {
         for (String path : files) {
             File f = new File(path);
+
             if (!f.exists()) continue;
             if (!f.isFile()) continue;
             if (!f.canRead()) continue;
@@ -310,7 +310,11 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
             if (!AUDIO_EXTENSIONS.contains(extension)) {
                 textOverlay.setText("File is not a valid audio file.", 2.0f);
-                continue;
+
+                //Copy audio file
+                //Generate and save empty beatmap file
+
+                return;
             }
         }
     }

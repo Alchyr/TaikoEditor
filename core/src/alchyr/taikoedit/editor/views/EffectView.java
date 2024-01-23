@@ -446,7 +446,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         while (current != null) {
             graphPosition = volumeGraphPos(current);
-            sr.setColor(current.kiai ? kiai : green);
+            sr.setColor(current.kiai ? kiai : yellow);
 
             sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
                     getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
@@ -461,8 +461,10 @@ public class EffectView extends MapView implements TextInputReceiver {
             //sv at start of map before first timing point is fixed at 1x
             graphPosition = volumeGraphPos(lastPoint);
             int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
-            if (pos > 0)
+            if (pos > 0) {
+                sr.setColor(yellow);
                 sr.line(0, midY + graphPosition, pos, midY + graphPosition);
+            }
         }
 
         sr.end();

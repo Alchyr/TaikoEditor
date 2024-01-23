@@ -8,10 +8,6 @@ import com.badlogic.gdx.utils.SnapshotArray;
 public class BoundInputMultiplexer implements InputProcessor {
     private final SnapshotArray<BoundInputProcessor> processors = new SnapshotArray<>(4);
 
-    public BoundInputMultiplexer () {
-        super();
-    }
-
     public BoundInputMultiplexer(BoundInputProcessor... processors) {
         this.processors.addAll(processors);
     }
@@ -26,48 +22,48 @@ public class BoundInputMultiplexer implements InputProcessor {
         }
     }
 
-    public void addProcessor (int index, BoundInputProcessor processor) {
+    public void addProcessor(int index, BoundInputProcessor processor) {
         if (processor == null) throw new NullPointerException("processor cannot be null");
         processors.insert(index, processor);
     }
 
-    public void removeProcessor (int index) {
+    public void removeProcessor(int index) {
         processors.removeIndex(index);
     }
 
-    public void addProcessor (BoundInputProcessor processor) {
+    public void addProcessor(BoundInputProcessor processor) {
         if (processor == null) throw new NullPointerException("processor cannot be null");
         processors.add(processor);
     }
 
-    public void removeProcessor (BoundInputProcessor processor) {
+    public void removeProcessor(BoundInputProcessor processor) {
         processors.removeValue(processor, true);
     }
 
     /** @return the number of processors in this multiplexer */
-    public int size () {
+    public int size() {
         return processors.size;
     }
 
-    public void clear () {
+    public void clear() {
         processors.clear();
     }
 
-    public void setProcessors (BoundInputProcessor... processors) {
+    public void setProcessors(BoundInputProcessor... processors) {
         this.processors.clear();
         this.processors.addAll(processors);
     }
 
-    public void setProcessors (Array<BoundInputProcessor> processors) {
+    public void setProcessors(Array<BoundInputProcessor> processors) {
         this.processors.clear();
         this.processors.addAll(processors);
     }
 
-    public SnapshotArray<BoundInputProcessor> getProcessors () {
+    public SnapshotArray<BoundInputProcessor> getProcessors() {
         return processors;
     }
 
-    public boolean keyDown (int keycode) {
+    public boolean keyDown(int keycode) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -78,7 +74,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean keyUp (int keycode) {
+    public boolean keyUp(int keycode) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -89,7 +85,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean keyTyped (char character) {
+    public boolean keyTyped(char character) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -100,7 +96,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean touchDown (int screenX, int screenY, int pointer, int button) {
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -111,7 +107,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean touchUp (int screenX, int screenY, int pointer, int button) {
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -122,7 +118,19 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean touchDragged (int screenX, int screenY, int pointer) {
+    @Override
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        Object[] items = processors.begin();
+        try {
+            for (int i = 0, n = processors.size; i < n; i++)
+                if (((BoundInputProcessor)items[i]).touchCancelled(screenX, screenY, pointer, button)) return true;
+        } finally {
+            processors.end();
+        }
+        return false;
+    }
+
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -133,7 +141,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean mouseMoved (int screenX, int screenY) {
+    public boolean mouseMoved(int screenX, int screenY) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)
@@ -144,7 +152,7 @@ public class BoundInputMultiplexer implements InputProcessor {
         return false;
     }
 
-    public boolean scrolled (float amountX, float amountY) {
+    public boolean scrolled(float amountX, float amountY) {
         Object[] items = processors.begin();
         try {
             for (int i = 0, n = processors.size; i < n; i++)

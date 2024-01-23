@@ -11,19 +11,22 @@ import java.util.Map;
 public class VolumeSetChange extends MapChange {
     private final PositionalObjectTreeMap<PositionalObject> modifiedObjects;
     private final HashMap<PositionalObject, Integer> originalValues;
-    private final int newValue;
+    private final HashMap<PositionalObject, Integer> newValues;
 
     public VolumeSetChange(EditorBeatmap map, PositionalObjectTreeMap<PositionalObject> modifiedObjects, int newValue)
     {
         super(map);
 
         this.modifiedObjects = modifiedObjects;
-        this.newValue = newValue;
 
         this.originalValues = new HashMap<>();
+        this.newValues = new HashMap<>();
+
         for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
-            for (PositionalObject o : objects)
+            for (PositionalObject o : objects) {
                 this.originalValues.put(o, o.getVolume());
+                this.newValues.put(o, newValue);
+            }
         }
     }
 
@@ -43,7 +46,7 @@ public class VolumeSetChange extends MapChange {
         for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
         {
             for (PositionalObject o : e.getValue()) {
-                o.setVolume(newValue);
+                o.setVolume(newValues.get(o));
                 o.registerVolumeChange();
             }
         }
