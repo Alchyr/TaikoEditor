@@ -35,7 +35,7 @@ public class OsuBackgroundLoader implements SpecialLoader {
                     File img = files[i];
                     if (img.exists()) {
                         manager.load(img.getAbsolutePath(), Texture.class, mipmaps);
-                        assetMaster.loadedAssets.put(img.getAbsolutePath().toLowerCase(Locale.ROOT), FileHelper.gdxSeparator(img.getAbsolutePath()));
+                        assetMaster.loadedAssets.put(img.getAbsolutePath().toLowerCase(Locale.ROOT), img.getAbsolutePath());
 
                         loadedBackgrounds.add(img.getAbsolutePath().toLowerCase(Locale.ROOT));
                     }

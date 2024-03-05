@@ -194,6 +194,15 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 5.5f, 250f, "Initial Rate:", df.format(isv), 6, font).setType(TextField.TextType.NUMERIC).blocking();
         finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4.5f, 250f, "Final Rate:", df.format(fsv), 6, font).setType(TextField.TextType.NUMERIC).blocking();
 
+        try { //Remove slight value inconsistencies when decimalformat rounds off very small decimals
+            this.isv = Double.parseDouble(initialSv.text);
+            this.fsv = Double.parseDouble(finalSv.text);
+        }
+        catch (Exception e) {
+            editorLogger.error("Failed to load sv values into SvFunctionLayer.", e);
+            e.printStackTrace();
+        }
+
         generateLines = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 3f, "Generate Lines", font, true);
         fixedSpacing = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 2, "Fixed ", font, false).setOnToggle(this::fixedSpacing);
         snapping = new TextField(fixedSpacing.endX(), middleY + BUTTON_OFFSET * 2, 300f - (fixedSpacing.endX() - LEFT_POS), "Snapping: 1/", "4", 3, font).setType(TextField.TextType.INTEGER).filter('-').blocking();
@@ -260,6 +269,10 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         }
         else {
             trueExp = x -> (isv - isv * Math.pow(fsv / isv, x)) / (isv - fsv);
+            if (trueExp.apply(0.0).isNaN() || trueExp.apply(0.0).isInfinite()) {
+                //weird values
+                trueExp = x -> x;
+            }
             if (fsv < isv) { //decreasing sv
                 flipY = true;
             }

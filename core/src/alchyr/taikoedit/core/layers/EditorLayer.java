@@ -763,9 +763,16 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 return map;
         }
 
-        EditorBeatmap newMap = new EditorBeatmap(set, info);
-        addMap(newMap);
-        return newMap;
+        try {
+            EditorBeatmap newMap = new EditorBeatmap(set, info);
+            addMap(newMap);
+            return newMap;
+        }
+        catch (Exception e) {
+            editorLogger.error("Failed to load map.", e);
+            e.printStackTrace();
+            return null;
+        }
     }
     public void addMap(EditorBeatmap newMap) {
         addMap(newMap, -1);

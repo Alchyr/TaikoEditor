@@ -4,18 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="update">
+    <list default="true" id="035faaab-479c-453b-89e2-dbd2e66a04de" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/TaikoEditor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/AdjustedInputProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/AdjustedInputProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BoundInputMultiplexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/input/BoundInputMultiplexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/EditorLayer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/MenuLayer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/DropdownBox.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/ui/DropdownBox.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/MultiLineAddition.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/MultiLineAddition.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeSetChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/changes/VolumeSetChange.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/VolumeFunctionTool.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/tools/VolumeFunctionTool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/editor/views/EffectView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/SvFunctionLayer.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/core/layers/sub/SvFunctionLayer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/loaders/OsuBackgroundLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/alchyr/taikoedit/management/assets/loaders/OsuBackgroundLoader.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,6 +66,9 @@
   <component name="GithubDefaultAccount">
     <option name="defaultAccountId" value="b43ab0c5-ee90-4ce9-b81a-1be7adaf8ad9" />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.badlogicgames.gdx/gdx/1.12.0/8a9080c5e2d441e43a44fbcbf721374a2e0b9dfa/gdx-1.12.0.jar!/com/badlogic/gdx/assets/AssetManager.class" root0="SKIP_INSPECTION" />
+  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -91,6 +89,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/Projects/springtest&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;settings.json.schema.catalog&quot;
   }
@@ -270,8 +269,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.TaikoEditor:desktop [clean]" />
         <item itemvalue="Application.DesktopLauncher" />
+        <item itemvalue="Gradle.TaikoEditor:desktop [clean]" />
         <item itemvalue="Gradle.TaikoEditor [dist]" />
         <item itemvalue="Gradle.TaikoEditor [buildDependents]" />
         <item itemvalue="Gradle.TaikoEditor [jar]" />
@@ -487,7 +486,15 @@
       <option name="project" value="LOCAL" />
       <updated>1697658285939</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="update">
+      <option name="closed" value="true" />
+      <created>1706010320412</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1706010320412</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -553,7 +560,7 @@
     <select />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/TaikoEditor$DesktopLauncher.ic" NAME="DesktopLauncher Coverage Results" MODIFIED="1690246713817" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
+    <SUITE FILE_PATH="coverage/TaikoEditor$DesktopLauncher.ic" NAME="DesktopLauncher Coverage Results" MODIFIED="1706485802058" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
       <FILTER>alchyr.taikoedit.desktop.*</FILTER>
     </SUITE>
   </component>

@@ -92,7 +92,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     @Override
     public void initialize() {
-        useOsuBackground = !OsuBackgroundLoader.loadedBackgrounds.isEmpty() && MathUtils.randomBoolean();
+        useOsuBackground = !OsuBackgroundLoader.loadedBackgrounds.isEmpty() && MathUtils.randomBoolean(0.8f);
         if (useOsuBackground) {
             osuBackground = assetMaster.get(OsuBackgroundLoader.loadedBackgrounds.get(MathUtils.random(OsuBackgroundLoader.loadedBackgrounds.size() - 1)));
 
