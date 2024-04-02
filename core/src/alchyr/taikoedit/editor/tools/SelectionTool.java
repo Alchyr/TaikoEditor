@@ -378,7 +378,7 @@ public class SelectionTool extends EditorTool {
         {
             if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL) //Render selection effect on objects you are dragging over before they're actually selected
             {
-                int start = selectingView.getPositionFromTime(clickStartTime, SettingsMaster.getMiddleX());
+                int start = selectingView.getPositionFromTime(clickStartTime);
 
                 if (start < selectionEnd)
                 {

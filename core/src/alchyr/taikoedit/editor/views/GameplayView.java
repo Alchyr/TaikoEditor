@@ -457,7 +457,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public float getBasePosition() {
+    public int getBasePosition() {
         return HIT_AREA_X;
     }
 

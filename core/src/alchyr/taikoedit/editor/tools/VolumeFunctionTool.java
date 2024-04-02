@@ -212,8 +212,8 @@ public class VolumeFunctionTool extends EditorTool {
                 {
                     previewView.renderObject(end, sb, sr, previewColor.a);
 
-                    int startPosition = previewView.getPositionFromTime(start.getPos(), SettingsMaster.getMiddleX());
-                    int endPosition = previewView.getPositionFromTime(end.getPos(), SettingsMaster.getMiddleX());
+                    int startPosition = previewView.getPositionFromTime(start.getPos());
+                    int endPosition = previewView.getPositionFromTime(end.getPos());
 
                     if (startPosition < endPosition)
                     {

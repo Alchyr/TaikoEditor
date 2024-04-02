@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor.views;
 
+import alchyr.taikoedit.audio.Waveform;
 import alchyr.taikoedit.core.input.sub.TextInputReceiver;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
@@ -84,7 +85,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
     //Waveform Graph
     private static final Color waveformColor = new Color(81f/255, 68f/255, 1f, 1f);
-    private List<Pair<Float, Float>> waveform = null;
+    private Waveform waveform = null;
     private int waveformMode = -1; //-1 = none, 0 = normal, 1 = absolute value
     private static final int MAX_WAVEFORM_MODE = 1;
 
@@ -167,9 +168,10 @@ public class EffectView extends MapView implements TextInputReceiver {
             waveformMode = -1;
         }
         else {
-            waveform = music.getSpectrogram();
-            if (waveform != null) {
-                ++waveformMode;
+            music.getWaveform((w)->waveform = w);
+            ++waveformMode;
+            if (waveform == null) {
+                parent.showText("Generating waveform...");
             }
         }
     }
@@ -337,7 +339,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         //Render graph for last point
         if (current != null) {
-            int drawPos = getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX());
+            int drawPos = getPositionFromTime(current.getPos());
             graphPosition = svGraphPos(current, maxValue, minValue);
             if (drawPos < SettingsMaster.getWidth() && atEnd(current.getPos())) //This is the last point in map, render after line to end
             {
@@ -358,11 +360,11 @@ public class EffectView extends MapView implements TextInputReceiver {
 
             if (lastPoint.getPos() - current.getPos() >= SMOOTH_GRAPH_DISTANCE) //If they're too far apart, don't show a gradual change as it's kind of inaccurate.
             {
-                sr.line(Math.max(0, getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition,
-                        Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX())), midY + newGraphPosition);
+                sr.line(Math.max(0, getPositionFromTime(current.getPos())), midY + newGraphPosition,
+                        Math.min(SettingsMaster.getWidth(), getPositionFromTime(lastPoint.getPos())), midY + newGraphPosition);
             } else {
-                sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + newGraphPosition,
-                        getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
+                sr.line(getPositionFromTime(current.getPos()), midY + newGraphPosition,
+                        getPositionFromTime(lastPoint.getPos()), midY + graphPosition);
             }
 
             graphPosition = newGraphPosition;
@@ -374,7 +376,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (lastPoint != null && atStart(lastPoint.getPos()))
         {
             //sv at start of map before first timing point is fixed at 1x
-            int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
+            int pos = getPositionFromTime(lastPoint.getPos());
             if (pos > 0)
                 sr.line(0, midY, pos, midY);
         }
@@ -431,7 +433,7 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         //Render graph for last point
         if (current != null) {
-            int drawPos = getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX());
+            int drawPos = getPositionFromTime(current.getPos());
             graphPosition = volumeGraphPos(current);
             if (drawPos < SettingsMaster.getWidth() && atEnd(current.getPos())) //This is the last point in map, render after line to end
             {
@@ -448,8 +450,8 @@ public class EffectView extends MapView implements TextInputReceiver {
             graphPosition = volumeGraphPos(current);
             sr.setColor(current.kiai ? kiai : yellow);
 
-            sr.line(getPositionFromTime(current.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition,
-                    getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX()), midY + graphPosition);
+            sr.line(getPositionFromTime(current.getPos()), midY + graphPosition,
+                    getPositionFromTime(lastPoint.getPos()), midY + graphPosition);
 
             lastPoint = current;
             current = GeneralUtils.iterateListsUntilNull(pointIterator);
@@ -460,7 +462,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         {
             //sv at start of map before first timing point is fixed at 1x
             graphPosition = volumeGraphPos(lastPoint);
-            int pos = getPositionFromTime(lastPoint.getPos(), SettingsMaster.getMiddleX());
+            int pos = getPositionFromTime(lastPoint.getPos());
             if (pos > 0) {
                 sr.setColor(yellow);
                 sr.line(0, midY + graphPosition, pos, midY + graphPosition);
@@ -502,46 +504,89 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         sr.setColor(waveformColor);
 
-        float max, min;
         int stepRounding = (int) Math.ceil(1 / viewScale);
         if (stepRounding % 2 == 0)
             stepRounding += 1;
 
-        for (int x = 0; x <= SettingsMaster.getWidth(); ++x) {
-            int time = (int) (getTimeFromPosition(x) - (music.activeOffset * 1000) - SettingsMaster.waveformOffset); //this -25 is an arbitrary number, may not be accurate.
-            if (time < 0 || time >= waveform.size()) {
-                continue;
+        float offset = (music.activeOffset * 1000) + SettingsMaster.waveformOffset;
+        int startTime = (int) (getTimeFromPosition(0) - offset);
+        int endTime = (int) (getTimeFromPosition(SettingsMaster.getWidth()) - offset);
+
+        startTime = (startTime / stepRounding) * stepRounding;
+        endTime += stepRounding;
+
+        SortedMap<Integer, Pair<Float, Float>> values = waveform.getSection(startTime, endTime);
+
+        //Process "steps", combining steps with the same min/max into "chunks"
+        //startTime: startTime of last chunk. lastMin/lastMax: min/max of last chunk.
+        //nextPos: next step position. "current" position is nextPos - stepRounding
+
+        //At the end of each "step": if min/max are the same as the previous, just increase size of chunk (increment nextPos)
+        //If min/max are different from previous, draw previous chunk and start new chunk.
+
+        int nextPos = startTime + stepRounding;
+        float max = 0, min = 0, lastMin = 0, lastMax = 0;
+        for (Map.Entry<Integer, Pair<Float, Float>> entry : values.entrySet()) {
+            if (entry.getKey() < nextPos) { //This entry is in the current "step", track it and move on
+                min = Math.min(min, entry.getValue().a);
+                max = Math.max(max, entry.getValue().b);
             }
+            else while (entry.getKey() >= nextPos) { //This entry is outside of the current "step". Process stuff.
+                if (min != lastMin || max != lastMax) {
+                    //This completed step is not the same as the "last" step
+                    //So, show the last step, unless it had "no" data
+                    if (lastMin != 0 || lastMax != 0) {
+                        int x = getPositionFromTime(startTime + offset);
+                        int end = getPositionFromTime(nextPos - stepRounding + offset);
+                        //Render values obtained
+                        switch (waveformMode) {
+                            case 0:
+                                sr.rect(x, midY + (SV_AREA * lastMin), end - x, SV_AREA * (lastMax - lastMin));
+                                break;
+                            case 1:
+                                sr.rect(x, midY - SV_AREA, end - x, SV_AREA * (lastMax - lastMin));
+                                break;
+                        }
+                    }
 
-            time = (time / stepRounding) * stepRounding;
-            max = min = 0;
-            int count = 0;
+                    //Create new chunk
+                    startTime = nextPos - stepRounding;
+                    lastMin = min; //Store values of last step
+                    lastMax = max;
+                }
 
-            for (int i = 0; i < stepRounding; ++i) {
-                int pos = time + i;
-                if (pos >= waveform.size())
-                    break;
-
-                Pair<Float, Float> maxMin = waveform.get(time + i);
-                max = Math.max(max, maxMin.a);
-                min = Math.min(min, maxMin.b);
-
-                ++count;
+                //New step, set values. Testing previous is only necessary if entry is "within" current step.
+                min = entry.getValue().a;
+                max = entry.getValue().b;
+                nextPos += stepRounding;
             }
-            //max /= count;
-            //min /= count;
-
-            if (max > 1) max = 1;
-            if (min < -1) min = -1;
-
+        }
+        //Render last two chunks
+        if (lastMin != 0 || lastMax != 0) {
+            int x = getPositionFromTime(startTime + offset);
+            int end = getPositionFromTime(nextPos - stepRounding + offset);
+            //Render values obtained
             switch (waveformMode) {
                 case 0:
-                    max -= min;
-                    sr.rect(x, midY + (SV_AREA * min), 1, SV_AREA * max);
+                    sr.rect(x, midY + (SV_AREA * lastMin), end - x, SV_AREA * (lastMax - lastMin));
                     break;
                 case 1:
-                    sr.rect(x, midY - SV_AREA, 1, SV_AREA * (max - min));
+                    sr.rect(x, midY - SV_AREA, end - x, SV_AREA * (lastMax - lastMin));
                     break;
+            }
+        }
+        if (min != 0 || max != 0) {
+            int x = getPositionFromTime(nextPos + offset);
+            if (x < SettingsMaster.getWidth()) {
+                //Render values obtained
+                switch (waveformMode) {
+                    case 0:
+                        sr.rect(x, midY + (SV_AREA * lastMin), SettingsMaster.getWidth() - x, SV_AREA * (lastMax - lastMin));
+                        break;
+                    case 1:
+                        sr.rect(x, midY - SV_AREA, SettingsMaster.getWidth() - x, SV_AREA * (lastMax - lastMin));
+                        break;
+                }
             }
         }
 

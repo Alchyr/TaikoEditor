@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static org.lwjgl.openal.AL10.*;
 import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
@@ -475,89 +476,30 @@ public abstract class CustomAudio extends OpenALMusic {
 
     protected abstract Iterator<byte[]> audioData();
 
-    private List<Pair<Float, Float>> spectrogram = null;
-    public List<Pair<Float, Float>> getSpectogram()
+    private boolean generatingWaveform = false;
+    private Waveform waveform = null;
+    public void getWaveform(Consumer<Waveform> receiver)
     {
-        if (spectrogram == null) {
-            spectrogram = new ArrayList<>(); //Each point is 10 milliseconds?
-            Iterator<byte[]> itr = audioData();
-
-            //2 bytes per point
-            //one point per channel per sample (2 channels = 2 points for 1 sample)
-            //sampleRate = number of samples in one second
-            double samplesPerChunk = sampleRate / 1000.0;
-            double chunkCounter = 0;
-
-            float sample = 0;
-            int channels = getChannels();
-            int channelCounter = 0;
-
-            float overallMax = 0;
-            float chunkMax = 0, chunkMin = 0;
-
-            short point = 0;
-
-            boolean pos = true;
-            while (itr.hasNext()) {
-                byte[] chunk = itr.next();
-
-                for (byte b : chunk) {
-                    if (pos) {
-                        point = 0;
-                        point |= b;
-                    }
-                    else {
-                        point |= b << 8;
-
-                        sample += point;
-                        ++channelCounter;
-
-                        if (channelCounter >= channels) {
-                            channelCounter = 0;
-
-                            sample /= channels;
-                            if (sample > 0) {
-                                chunkMax = Math.max(chunkMax, sample);
-                            }
-                            else {
-                                chunkMin = Math.min(chunkMin, sample);
-                            }
-                            sample = 0;
-                            ++chunkCounter;
-
-                            if (chunkCounter >= samplesPerChunk) {
-                                spectrogram.add(new Pair<>(chunkMax, chunkMin));
-
-                                overallMax = Math.max(overallMax, chunkMax);
-                                chunkMin = Math.abs(chunkMin);
-                                overallMax = Math.max(overallMax, chunkMin);
-
-                                chunkMax = 0;
-                                chunkMin = 0;
-
-                                chunkCounter -= samplesPerChunk;
-                            }
-
-                        }
-                    }
-                    pos = !pos;
-                }
-            }
-
-            if (chunkCounter > 0) {
-                spectrogram.add(new Pair<>(chunkMax, chunkMin));
-
-                overallMax = Math.max(overallMax, chunkMax);
-                chunkMin = Math.abs(chunkMin);
-                overallMax = Math.max(overallMax, chunkMin);
-            }
-
-            for (Pair<Float, Float> maxMin : spectrogram) {
-                maxMin.a /= overallMax;
-                maxMin.b /= overallMax;
-            }
+        if (waveform != null) {
+            receiver.accept(waveform);
+            return;
         }
 
-        return spectrogram;
+        if (!generatingWaveform) {
+            generatingWaveform = true;
+
+            Thread waveformLoader = new Thread(()->{
+                try {
+                    waveform = new Waveform(audioData(), sampleRate / 1000.0, getChannels());
+                    receiver.accept(waveform);
+                }
+                catch (Exception e) {
+                    TaikoEditor.editorLogger.error("Failed to generate waveform.", e);
+                }
+            });
+            waveformLoader.setName("Waveform Loader " + this);
+            waveformLoader.setDaemon(true);
+            waveformLoader.start();
+        }
     }
 }

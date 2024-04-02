@@ -175,11 +175,15 @@ public abstract class MapView {
         return (getPreciseTime() + (x - offset) / EditorLayer.viewScale);
     }
 
+    public int getPositionFromTime(double time)
+    {
+        return getPositionFromTime(time, getBasePosition());
+    }
     public int getPositionFromTime(double time, int offset)
     {
         return (int) ((time - this.getPreciseTime()) * EditorLayer.viewScale + offset);
     }
-    public float getBasePosition() {
+    public int getBasePosition() {
         return SettingsMaster.getMiddleX();
     }
 

@@ -80,13 +80,20 @@ public class HitTool extends EditorTool {
                 MapView hovered = v.getView(y);
                 if (this.supportsView(hovered))
                 {
-                    Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
-
-                    if (closest != null)
-                    {
+                    if (BindingGroup.alt()) {
                         previewView = hovered;
                         renderPreview = true;
-                        placementObject.setPos(closest.pos);
+                        placementObject.setPos(hovered.getTimeFromPosition(Gdx.input.getX()));
+                    }
+                    else {
+                        Snap closest = hovered.getClosestSnap(hovered.getTimeFromPosition(Gdx.input.getX()), MAX_SNAP_OFFSET);
+
+                        if (closest != null)
+                        {
+                            previewView = hovered;
+                            renderPreview = true;
+                            placementObject.setPos(closest.pos);
+                        }
                     }
                 }
                 return;

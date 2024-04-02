@@ -12,7 +12,6 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
@@ -29,7 +28,7 @@ public class MusicWrapper implements Music.OnCompletionListener {
         baseOffsetMap.put("mp3", -0.09f);
         baseOffsetMap.put("ogg", 0f);
     }
-    public float activeOffset = 0;
+    public float activeOffset = 0; //In seconds
     private static float getBaseOffset(CustomAudio music) {
         return music == null ? 0 : baseOffsetMap.getOrDefault(music.getAudioType(), 0f);
     }
@@ -521,10 +520,10 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return Math.round((activeOffset - getBaseOffset(music)) * 1000);
     }
 
-    public List<Pair<Float, Float>> getSpectrogram() {
+    public void getWaveform(Consumer<Waveform> receiver) {
         if (music == null)
-            return null;
-        return music.getSpectogram();
+            return;
+        music.getWaveform(receiver);
     }
 
     @Override

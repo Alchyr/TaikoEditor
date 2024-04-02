@@ -80,16 +80,6 @@ public class PreloadOgg extends CustomAudio {
             protected Iterator<byte[]> delegate() {
                 return itr;
             }
-
-            @Override
-            public byte[] next() {
-                byte[] original = super.next();
-                byte[] cpy = new byte[original.length];
-                for (int i = 0; i < original.length; ++i) {
-                    cpy[i] = (byte) (original[i] + 256);
-                }
-                return cpy;
-            }
         };
     }
 
