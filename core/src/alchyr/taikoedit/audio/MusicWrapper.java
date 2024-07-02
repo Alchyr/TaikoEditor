@@ -520,10 +520,10 @@ public class MusicWrapper implements Music.OnCompletionListener {
         return Math.round((activeOffset - getBaseOffset(music)) * 1000);
     }
 
-    public void getWaveform(Consumer<Waveform> receiver) {
+    public void getWaveform(Consumer<Waveform> receiver, Consumer<Throwable> failureReceiver) {
         if (music == null)
             return;
-        music.getWaveform(receiver);
+        music.getWaveform(receiver, failureReceiver);
     }
 
     @Override

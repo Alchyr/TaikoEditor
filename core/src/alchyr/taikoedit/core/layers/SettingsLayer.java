@@ -119,7 +119,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         this(null);
     }
 
-    private static final DecimalFormat oneDecimal = new DecimalFormat("#0.#", osuSafe);
+    private static final DecimalFormat oneDecimal = new DecimalFormat("#0.#", osuDecimalFormat);
     @Override
     public void initialize() {
         font = assetMaster.getFont("aller medium");

@@ -13,7 +13,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 
 public class Slider extends HitObject implements ILongObject {
@@ -386,7 +386,7 @@ public class Slider extends HitObject implements ILongObject {
         }
 
         //Cuts off like one decimal places from doubles, as due to the method of storage for sliders they are innately imprecise
-        private static final DecimalFormat limitedDecimals = new DecimalFormat("##0.############", osuSafe);
+        private static final DecimalFormat limitedDecimals = new DecimalFormat("##0.############", osuDecimalFormat);
         @Override
         public String toString()
         {

@@ -58,6 +58,8 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Cut", new InputBinding.InputInfo(Input.Keys.X, true)));
         creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, Maybe.TRUE, Maybe.MAYBE, Maybe.FALSE)));
         creating.addBinding(InputBinding.create("Reverse", new InputBinding.InputInfo(Input.Keys.G, true)));
+        creating.addBinding(InputBinding.create("NudgeLeft", new InputBinding.InputInfo(Input.Keys.LEFT, Maybe.FALSE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("NudgeRight", new InputBinding.InputInfo(Input.Keys.RIGHT, Maybe.FALSE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("ClearSelect", new InputBinding.InputInfo(Input.Keys.GRAVE)));
         creating.addBinding(InputBinding.create("Bookmark", new InputBinding.InputInfo(Input.Keys.B, true)));
         creating.addBinding(InputBinding.create("RemoveBookmark", new InputBinding.InputInfo(Input.Keys.B, false, false, true)));
@@ -71,12 +73,16 @@ public class BindingMaster {
                 .setConflicts((id)->id.equals("SeekLeft"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("SeekLeft", new InputBinding.InputInfo(Input.Keys.LEFT, Maybe.MAYBE), new InputBinding.InputInfo(Input.Keys.Z, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("SeekRight"), InputBinding.ConflictType.CANCELLING));
+
         creating.addBinding(InputBinding.create("RateUp", new InputBinding.InputInfo(Input.Keys.UP)));
         creating.addBinding(InputBinding.create("RateDown", new InputBinding.InputInfo(Input.Keys.DOWN)));
         creating.addBinding(InputBinding.create("ZoomIn", new InputBinding.InputInfo(Input.Keys.UP, false, false, true)));
         creating.addBinding(InputBinding.create("ZoomOut", new InputBinding.InputInfo(Input.Keys.DOWN, false, false, true)));
         creating.addBinding(InputBinding.create("SnapUp", new InputBinding.InputInfo(Input.Keys.UP, true)));
         creating.addBinding(InputBinding.create("SnapDown", new InputBinding.InputInfo(Input.Keys.DOWN, true)));
+        creating.addBinding(InputBinding.create("MoveViewUp", new InputBinding.InputInfo(Input.Keys.UP, false, true, false)));
+        creating.addBinding(InputBinding.create("MoveViewDown", new InputBinding.InputInfo(Input.Keys.DOWN, false, true, false)));
+
         creating.addBinding(InputBinding.create("IncreaseOffset", new InputBinding.InputInfo(Input.Keys.EQUALS, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("DecreaseOffset", new InputBinding.InputInfo(Input.Keys.MINUS, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("IncreaseWaveformOffset", new InputBinding.InputInfo(Input.Keys.EQUALS, Maybe.MAYBE, Maybe.TRUE, Maybe.FALSE)));

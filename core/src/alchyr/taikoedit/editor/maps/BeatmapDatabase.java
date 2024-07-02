@@ -10,12 +10,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
-import java.lang.StringBuilder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class BeatmapDatabase {
     private static final Logger logger = LogManager.getLogger("BeatmapDatabase");
@@ -26,23 +29,24 @@ public class BeatmapDatabase {
 
 
     public static float progress = 0;
+    public static int mapCount = 0;
 
-    public HashMap<String, Mapset> mapsets;
+    public ConcurrentMap<String, Mapset> mapsets;
 
     private CharacterTreeMap<Mapset> indexedMapsets;
 
     public BeatmapDatabase(File songsFolder)
     {
         //First, try to load already generated map database
-
         try
         {
             logger.info("Loading Songs folder: " + songsFolder.getPath());
             long loadStart = System.nanoTime();
 
-            File database = getDatabaseFile();
+            progress = 0;
+            mapCount = 0;
 
-            mapsets = new HashMap<>();
+            File database = getDatabaseFile();
             indexedMapsets = new CharacterTreeMap<>();
 
             if (database.exists())
@@ -103,366 +107,197 @@ public class BeatmapDatabase {
         }
     }
 
-    private static final int TASK_LIMIT = 16, STAGE_LIMIT = TASK_LIMIT - 1;
-    private static final List<List<File>> subLists = new ArrayList<>();
-    private static final List<List<Mapset>> processed = new ArrayList<>();
-    private int activeCount = 0;
-    private int completeCount = 0;
-    private final Object loadWaiter = new Object();
     private void loadData(File songsFolder) {
-        final ExecutorService executor = Executors.newCachedThreadPool();
+        Path songsFolderPath = songsFolder.toPath();
+        Collection<Path> subFolders = new ConcurrentLinkedQueue<>();
 
-        File[] songFolders = songsFolder.listFiles(File::isDirectory);
-        activeCount = 0;
-        completeCount = 0;
+        try (DirectoryStream<Path> songFolders = Files.newDirectoryStream(songsFolderPath)) {
+            Collection<Path> finalSubFolders = subFolders;
+            mapsets = StreamSupport.stream(songFolders.spliterator(), true)
+                    .map((folder)->readFolder(folder, finalSubFolders))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toConcurrentMap((set)->set.key, (set)->set));
 
-        if (songFolders != null)
-        {
-            subLists.clear();
-            processed.clear();
-            for (int i = 0; i < TASK_LIMIT; ++i) {
-                subLists.add(new ArrayList<>());
-                processed.add(new ArrayList<>());
-            }
+            logger.info("Checking subfolders of folders with no maps");
+            while (!subFolders.isEmpty()) {
+                Collection<Path> current = subFolders;
+                subFolders = new ArrayList<>();
 
-            synchronized (loadWaiter) {
-                try {
-
-                    int step = songFolders.length / TASK_LIMIT, stage = 0, limit = step;
-                    //Divide folders into 32 sub-sections and assign a task for each section
-                    for (int i = 0; i < songFolders.length; ++i) {
-                        if (stage < STAGE_LIMIT && i > limit) {
-                            int index = stage;
-                            activeTasks.add(executor.submit(()->{
-                                for (File f : subLists.get(index))
-                                    readFolder(f, index, true);
-
-                                --activeCount;
-                                if (activeCount <= 0)
-                                    loadWaiter.notify();
-                            }));
-                            ++activeCount;
-
-                            ++stage;
-                            limit += step;
-                            progress = (float) completeCount / songFolders.length; //update progress during startup
-                        }
-                        subLists.get(stage).add(songFolders[i]);
+                for (Path sub : current) {
+                    Mapset set = readFolder(sub, subFolders);
+                    if (set != null) {
+                        mapsets.put(set.key, set);
                     }
-                    int index = stage;
-                    activeTasks.add(executor.submit(()->{
-                        for (File f : subLists.get(index))
-                            readFolder(f, index, true);
-
-                        --activeCount;
-                        if (activeCount <= 0)
-                            loadWaiter.notify();
-                    }));
-                    ++activeCount;
-
-                    while (!activeTasks.isEmpty()) {
-                        progress = (float) completeCount / songFolders.length;
-                        activeTasks.removeIf(Future::isDone);
-                        if (!activeTasks.isEmpty())
-                            loadWaiter.wait(250);
-                    }
-                }
-                catch (InterruptedException ignored) {
-
                 }
             }
 
-            executor.shutdownNow();
 
-            logger.info("Collecting processed mapsets.");
-
-            completeCount = 0;
+            int completeCount = 0;
             progress = 0;
-            for (List<Mapset> mapsetList : processed) {
-                for (Mapset set : mapsetList) {
-                    mapsets.put(set.key, set);
-                    index(set);
-                }
+            int total = mapsets.size();
+
+            logger.info("Finished collecting mapsets, starting indexing");
+
+            for (Mapset mapset : mapsets.values()) {
+                index(mapset);
                 ++completeCount;
-                progress = (float) completeCount / processed.size();
+                progress = (float) completeCount / total;
             }
 
             logger.info("Successfully loaded Songs folder.");
-
-            //Save extra map information
+            progress = 1;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        else
-        {
-            executor.shutdownNow();
-            logger.error("Failed to read Songs folder. Incorrect osu! folder path provided?");
-        }
-        subLists.clear();
-        processed.clear();
     }
     private void updateData(HashMap<String, Mapset> oldData, File songsFolder) {
         //Similar to loadData, but first checks old data map.
         //If old data with matching filename exists, it will be used.
         //If filename has no match, it will be loaded normally.
-        final ExecutorService executor = Executors.newCachedThreadPool();
 
-        File[] songFolders = songsFolder.listFiles(File::isDirectory);
-        activeCount = 0;
-        completeCount = 0;
+        Path songsFolderPath = songsFolder.toPath();
+        Collection<Path> subFolders = new ConcurrentLinkedQueue<>();
 
-        if (songFolders != null)
-        {
-            subLists.clear();
-            processed.clear();
-            for (int i = 0; i < TASK_LIMIT; ++i) {
-                subLists.add(new ArrayList<>());
-                processed.add(new ArrayList<>());
-            }
+        int max = oldData.size() * 2;
+        AtomicInteger completeCount = new AtomicInteger();
 
-            synchronized (loadWaiter) {
-                try {
-                    int step = songFolders.length / TASK_LIMIT, stage = 0, limit = step;
-                    //Divide folders into 32 sub-sections and assign a task for each section
-                    for (int i = 0; i < songFolders.length; ++i) {
-                        if (stage < STAGE_LIMIT && i > limit) {
-                            int index = stage;
-                            activeTasks.add(executor.submit(()->{
-                                for (File f : subLists.get(index))
-                                    updateFolder(oldData, f, index, true);
+        try (DirectoryStream<Path> songFolders = Files.newDirectoryStream(songsFolderPath)) {
+            Collection<Path> finalSubFolders = subFolders;
 
-                                --activeCount;
-                                if (activeCount <= 0)
-                                    loadWaiter.notify();
-                            }));
-                            ++activeCount;
+            mapsets = StreamSupport.stream(songFolders.spliterator(), true)
+                    .map((folder)->{
+                        progress = completeCount.incrementAndGet() / (float) max;
+                        return updateFolder(oldData, folder, finalSubFolders);
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toConcurrentMap((set)->set.key, (set)->set));
 
-                            ++stage;
-                            limit += step;
-                            progress = (float) completeCount / songFolders.length; //update progress during startup
-                        }
+            logger.info("Checking subfolders of folders with no maps");
+            while (!subFolders.isEmpty()) {
+                Collection<Path> current = subFolders;
+                subFolders = new ArrayList<>();
 
-                        subLists.get(stage).add(songFolders[i]);
-                    }
-                    int index = stage;
-                    activeTasks.add(executor.submit(()->{
-                        for (File f : subLists.get(index))
-                            updateFolder(oldData, f, index, true);
-
-                        --activeCount;
-                        if (activeCount <= 0)
-                            loadWaiter.notify();
-                    }));
-                    ++activeCount;
-
-                    while (!activeTasks.isEmpty()) {
-                        progress = (float) completeCount / songFolders.length;
-                        activeTasks.removeIf(Future::isDone);
-                        if (!activeTasks.isEmpty())
-                            loadWaiter.wait(250);
+                for (Path sub : current) {
+                    Mapset set = updateFolder(oldData, sub, subFolders);
+                    if (set != null) {
+                        mapsets.put(set.key, set);
                     }
                 }
-                catch (InterruptedException ignored) {
-
-                }
             }
-            executor.shutdownNow();
 
-            logger.info("Collecting processed mapsets.");
 
-            completeCount = 0;
             progress = 0;
-            for (List<Mapset> mapsetList : processed) {
-                for (Mapset set : mapsetList) {
-                    mapsets.put(set.key, set);
-                    index(set);
-                }
-                ++completeCount;
-                progress = (float) completeCount / processed.size();
+            int count = 0;
+            int total = mapsets.size();
+
+            logger.info("Finished collecting mapsets, starting indexing");
+
+            for (Mapset mapset : mapsets.values()) {
+                index(mapset);
+                ++count;
+                progress = (float) count / total;
             }
 
             logger.info("Successfully loaded Songs folder.");
-
-            //Save extra map information
+            progress = 1;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        else
-        {
-            executor.shutdownNow();
-            logger.error("Failed to read Songs folder. Incorrect osu! folder path provided?");
-        }
-        subLists.clear();
-        processed.clear();
     }
 
-    private void readFolder(File folder, int storeIndex, boolean count) {
-        try {
-            boolean hasMap = false;
-            List<File> folders = new ArrayList<>();
-            File[] all = folder.listFiles();
-            if (all != null) {
-                for (File f : all) {
-                    if (f.isDirectory()) {
-                        folders.add(f);
-                    }
-                    else if (f.isFile() && f.getPath().endsWith(".osu")) {
-                        hasMap = true;
-                        break;
-                    }
+    private Mapset readFolder(Path folder, Collection<Path> subFolders) {
+        ++mapCount;
+
+        boolean hasMap = false;
+
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
+            List<Path> folders = new ArrayList<>();
+
+            for (Path file : files) {
+                if (Files.isDirectory(file)) {
+                    folders.add(file);
+                }
+                else if (Files.isRegularFile(file) && file.toString().endsWith(".osu")) {
+                    hasMap = true;
                 }
             }
 
-            if (hasMap)
-            {
-                //logger.info("Mapset: " + folder.getName());
-                Mapset set = new Mapset(folder);
+            if (hasMap) {
+                Mapset set = new Mapset(folder.toFile());
 
-                if (!set.isEmpty())
-                {
-                    processed.get(storeIndex).add(set);
-                    //logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
+                if (!set.isEmpty()) {
+                    return set;
                 }
-                /*else
-                {
-                    logger.info("Mapset " + folder.getName() + " has no taiko maps.");
-                }*/
             }
-            else
-            {
-                //logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
-
-                for (File f : folders)
-                    readFolder(f, storeIndex, false);
+            else {
+                subFolders.addAll(folders);
             }
-        }
-        catch (Exception e) {
-            logger.info("Error occurred reading folder " + folder.getPath());
+        } catch (IOException e) {
+            logger.info("Error occurred reading folder " + folder);
             logger.error(e.getStackTrace());
             e.printStackTrace();
         }
-        finally {
-            if (count) {
-                ++completeCount;
-            }
-        }
+        return null;
     }
-    //Overload will call update first on subfolders rather than immediately trying to read them.
-    private void readFolder(HashMap<String, Mapset> oldData, File folder, int storeIndex, boolean count) {
-        try {
-            boolean hasMap = false;
-            List<File> folders = new ArrayList<>();
-            File[] all = folder.listFiles();
-            if (all != null) {
-                for (File f : all) {
-                    if (f.isDirectory()) {
-                        folders.add(f);
-                    }
-                    else if (f.isFile() && f.getPath().endsWith(".osu")) {
-                        hasMap = true;
-                        break;
-                    }
-                }
-            }
 
-            if (hasMap)
-            {
-                //logger.info("Mapset: " + folder.getName());
-                Mapset set = new Mapset(folder);
-
-                if (!set.isEmpty())
-                {
-                    processed.get(storeIndex).add(set);
-                    //logger.info("Mapset " + folder.getName() + " has " + set.getMaps().size() + " taiko difficulties.");
-                }
-                /*else
-                {
-                    logger.info("Mapset " + folder.getName() + " has no taiko maps.");
-                }*/
-            }
-            else
-            {
-                //logger.info("Folder " + folder.getName() + " has no maps. Checking subfolders.");
-
-                for (File f : folders)
-                    updateFolder(oldData, f, storeIndex, false);
-            }
-        }
-        catch (Exception e) {
-            logger.info("Error occurred reading folder " + folder.getPath());
-            logger.error(e.getStackTrace());
-            e.printStackTrace();
-        }
-        finally {
-            if (count) {
-                ++completeCount;
-            }
-        }
-    }
-    private void updateFolder(HashMap<String, Mapset> oldData, File folder, int storeIndex, boolean count) {
-        Mapset old = oldData.get(folder.getAbsolutePath());
+    private Mapset updateFolder(HashMap<String, Mapset> oldData, Path folder, Collection<Path> subFolders) {
+        Mapset old = oldData.get(folder.toFile().getAbsolutePath());
         if (old == null) {
             //logger.info("Set not found in database: " + folder.getAbsolutePath());
-            readFolder(oldData, folder, storeIndex, count);
-            return;
+            return readFolder(folder, subFolders);
         }
 
-        try {
+        ++mapCount;
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
             boolean hasMap = false;
-            List<File> folders = new ArrayList<>();
+            List<Path> folders = new ArrayList<>();
 
             List<MapInfo> confirmed = new ArrayList<>(), unconfirmed = old.getMaps();
 
-            File[] all = folder.listFiles();
-            if (all != null) {
-                outer:
-                for (File f : all) {
-                    if (!hasMap && f.isDirectory()) {
-                        folders.add(f);
-                    }
-                    else if (f.isFile() && f.getPath().endsWith(".osu")) {
-                        hasMap = true;
-
-                        for (MapInfo info : unconfirmed) {
-                            if (info.getMapFile().equals(f)) {
-                                confirmed.add(info);
-                                continue outer; //This file is all good, move on to the next one.
-                            }
-                        }
-
-                        //This file doesn't exist in the old data. Have to load it.
-                        MapInfo info = new MapInfo(f, old);
-                        if (info.getMode() == 1)
-                        {
-                            confirmed.add(info);
-                            if (!old.getSongFile().equals(info.getSongFile()))
-                                old.sameSong = false;
-                            logger.info("Found added difficulty: " + info.getDifficultyName());
-                        }
-                    }
+            outer:
+            for (Path file : files) {
+                if (Files.isDirectory(file)) {
+                    folders.add(file);
                 }
+                else if (Files.isRegularFile(file) && file.toString().endsWith(".osu")) {
+                    hasMap = true;
 
-                old.setMaps(confirmed);
-                if (!old.isEmpty())
-                {
-                    processed.get(storeIndex).add(old);
+                    File mapFile = file.toFile();
+
+                    for (MapInfo info : unconfirmed) {
+                        if (info.getMapFile().equals(mapFile)) {
+                            confirmed.add(info);
+                            continue outer; //This file is all good, move on to the next one.
+                        }
+                    }
+
+                    //This file doesn't exist in the old data. Have to load it.
+                    MapInfo info = new MapInfo(mapFile, old);
+                    if (info.getMode() == 1)
+                    {
+                        confirmed.add(info);
+                        if (!old.getSongFile().equals(info.getSongFile()))
+                            old.sameSong = false;
+                        logger.info("Found added difficulty: " + info.getDifficultyName());
+                    }
                 }
             }
 
+            old.setMaps(confirmed);
+            if (!old.isEmpty())
+            {
+                return old;
+            }
 
             if (!hasMap) {
-                //logger.info("\t - Folder has no map. Checking subfolders.");
-
-                for (File f : folders)
-                    updateFolder(oldData, f, storeIndex, false);
+                subFolders.addAll(folders);
             }
-        }
-        catch (Exception e) {
-            logger.info("Error occurred reading folder " + folder.getPath());
+        } catch (IOException e) {
+            logger.info("Error occurred reading folder " + folder);
             logger.error(e.getStackTrace());
             e.printStackTrace();
         }
-        finally {
-            if (count) {
-                ++completeCount;
-            }
-        }
+        return null;
     }
 
     private void saveDatabase() {
@@ -471,7 +306,7 @@ public class BeatmapDatabase {
         Writer writer = null;
         Json json = new Json(JsonWriter.OutputType.json);
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(f), StandardCharsets.UTF_8));
+            writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(f.toPath()), StandardCharsets.UTF_8));
             json.setWriter(writer);
 
             json.writeArrayStart();

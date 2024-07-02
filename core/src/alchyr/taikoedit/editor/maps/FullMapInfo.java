@@ -6,7 +6,7 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
 public class FullMapInfo {
     private Mapset parent;
@@ -165,7 +165,7 @@ public class FullMapInfo {
     private final StringBuilder saveBuilder = new StringBuilder();
     @Override
     public String toString() {
-        DecimalFormat df = new DecimalFormat("#0.#", osuSafe);
+        DecimalFormat df = new DecimalFormat("#0.#", osuDecimalFormat);
         return "osu file format v14\r\n" +
             "\r\n" +
             "[General]\r\n" +

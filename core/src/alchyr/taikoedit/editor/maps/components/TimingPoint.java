@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.text.DecimalFormat;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
 public class TimingPoint extends PositionalObject {
     public static final Color RED = Color.RED.cpy();
@@ -128,8 +128,8 @@ public class TimingPoint extends PositionalObject {
         this.value = 60000 / bpm;
     }
 
-    private static final DecimalFormat optionalDecimals = new DecimalFormat("##0.#############", osuSafe);
-    private static final DecimalFormat scientific = new DecimalFormat("0.####E0", osuSafe);
+    private static final DecimalFormat optionalDecimals = new DecimalFormat("##0.#############", osuDecimalFormat);
+    private static final DecimalFormat scientific = new DecimalFormat("0.####E0", osuDecimalFormat);
     @Override
     public String toString()
     {

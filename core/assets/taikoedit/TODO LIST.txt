@@ -1,6 +1,10 @@
 consider improving loading more
 
-Shift + left/right - Nudge selection by 1ms
+
+Would be cool if theres a scale tool for SVs that lets you just multiply a selection of green lines, with a given midpoint. I could see this being nice for situations where I like the concept of what Ive done and just need to nerf/buff the intensity. Or making lower diffs in SVd sets more mild - stuff like that.
+
+Would be nice if theres a timing tool that automatically adjusts the BPM of a red line, and the red line before it so that the nearest barline tick intersects cleanly with it. Would just be nice on those drifting BPM maps
+
 
 
 MAJOR:

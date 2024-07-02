@@ -17,6 +17,7 @@ public abstract class EditorTool {
     public boolean consumesRightClick() {
         return false;
     }
+    public boolean overrideViewClick() { return false; }
 
     public EditorTool(String name)
     {

@@ -33,8 +33,10 @@ import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,17 +49,17 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 355; //x.x.x -> xxx
+    public static final int VERSION = 357; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = false; //ctrl+alt+d
 
     public static final Logger editorLogger = LogManager.getLogger("TaikoEditor");
 
-    public static DecimalFormatSymbols osuSafe;
+    public static DecimalFormatSymbols osuDecimalFormat;
 
     static {
-        osuSafe = new DecimalFormatSymbols(Locale.US);
-        osuSafe.setDecimalSeparator('.');
+        osuDecimalFormat = new DecimalFormatSymbols(Locale.US);
+        osuDecimalFormat.setDecimalSeparator('.');
     }
 
     private SpriteBatch sb;
@@ -240,26 +242,38 @@ public class TaikoEditor extends ApplicationAdapter {
                     layerLock.unlock();
 
                 try {
-                    File f = new File("error.txt");
                     PrintWriter pWriter = null;
 
                     try {
-                        pWriter = new PrintWriter(f);
-                        pWriter.println("Version: " + TaikoEditor.VERSION);
-                        pWriter.println("Error occurred during update:");
-                        e.printStackTrace(pWriter);
+                        StringBuilder crashlog = new StringBuilder("Version: ").append(TaikoEditor.VERSION);
+                        crashlog.append("\nError occurred during update:\n");
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        crashlog.append(sw);
+                        sw.close();
 
                         if (EditorLayer.activeEditor != null) {
-                            pWriter.println();
-                            pWriter.println("Active editor detected. Attempting to save data.");
+                            crashlog.append("\n\nActive editor detected.\n");
                             try {
                                 if (EditorLayer.activeEditor.saveAll(false)) {
-                                    pWriter.println("Successfully saved data.");
+                                    crashlog.append("Saved map successfully.\n");
+                                }
+                                else {
+                                    crashlog.append("Failed to save map.");
                                 }
                             }
-                            catch (Exception ignored) { }
+                            catch (Exception ignored) {
+                                crashlog.append("Failed to save map.");
+                            }
                             EditorLayer.activeEditor = null;
                         }
+
+                        File f = new File("error.txt");
+
+                        pWriter = new PrintWriter(f);
+                        pWriter.println(crashlog);
+
+                        JOptionPane.showMessageDialog(null, crashlog, "Error", JOptionPane.ERROR_MESSAGE);
                     }
                     catch (Exception ex) {
                         Thread.sleep(1500);
@@ -649,7 +663,7 @@ public class TaikoEditor extends ApplicationAdapter {
         try
         {
             textRenderer.setFont(assetMaster.getFont("default"));
-            hoverText.initialize(assetMaster.getFont("aller small"), 16);
+            hoverText.initialize(assetMaster.getFont("base:aller small"), 16);
             showCursor();
         }
         catch (Exception e)

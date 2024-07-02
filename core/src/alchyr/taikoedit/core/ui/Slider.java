@@ -67,7 +67,7 @@ public class Slider {
 
         pix = assetMaster.get("ui:pixel");
         slider = assetMaster.get("ui:slider");
-        font = assetMaster.getFont("aller small");
+        font = assetMaster.getFont("base:aller small");
     }
     public Slider onValueChange(Consumer<Float> receiver) {
         onValueChange = receiver;

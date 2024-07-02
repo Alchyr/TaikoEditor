@@ -78,7 +78,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     //SV Graph
     private static final int SMOOTH_GRAPH_DISTANCE = 300; //Further apart than this, no smooth graph
     private static final int LABEL_SPACING = 36;
-    private static final DecimalFormat svFormat = new DecimalFormat("0.000x", osuSafe);
+    private static final DecimalFormat svFormat = new DecimalFormat("0.000x", osuDecimalFormat);
     public double peakSV, minSV;
     private String peakSVText, minSVText;
     private boolean renderLabels = true; //TODO: Add way to disable labels. Toggle button on overlay?
@@ -104,7 +104,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         addOverlayButton(new ImageButton(assetMaster.get("editor:timing"), assetMaster.get("editor:timingh")).setClick(this::swapTimingEnabled).setAction("Edit Timing"));
         addLockPositionButton();
 
-        font = assetMaster.getFont("aller small");
+        font = assetMaster.getFont("base:aller small");
 
         lastSounded = 0;
         minSV = 0.75;
@@ -168,7 +168,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             waveformMode = -1;
         }
         else {
-            music.getWaveform((w)->waveform = w);
+            music.getWaveform((w)->waveform = w, (e)->{
+                parent.showText("Failed to generate waveform: " + e.getMessage());
+            });
             ++waveformMode;
             if (waveform == null) {
                 parent.showText("Generating waveform...");
@@ -1480,10 +1482,10 @@ public class EffectView extends MapView implements TextInputReceiver {
         return false;
     }
 
-    private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##x", osuSafe);
-    private static final DecimalFormat bpmFormat = new DecimalFormat("##0.## BPM", osuSafe);
-    private static final DecimalFormat precise = new DecimalFormat("##0.0##", osuSafe);
-    private static final DecimalFormat volume = new DecimalFormat("##0", osuSafe);
+    private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##x", osuDecimalFormat);
+    private static final DecimalFormat bpmFormat = new DecimalFormat("##0.## BPM", osuDecimalFormat);
+    private static final DecimalFormat precise = new DecimalFormat("##0.0##", osuDecimalFormat);
+    private static final DecimalFormat volume = new DecimalFormat("##0", osuDecimalFormat);
 
     private static final Color red = Color.RED.cpy();
     private static final Color green = new Color(0.25f, 0.75f, 0.0f, 1.0f);

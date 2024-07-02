@@ -71,7 +71,7 @@ public abstract class MapView {
     protected boolean positionLocked = false;
     protected double lockOffset = 0;
 
-    private static final DecimalFormat svFormat = new DecimalFormat("0", osuSafe);
+    private static final DecimalFormat svFormat = new DecimalFormat("0", osuDecimalFormat);
     private final BitmapFont offsetFont = assetMaster.getFont("aller medium");
 
 
@@ -122,6 +122,12 @@ public abstract class MapView {
     {
         overlayButtons.add(b);
         overlayWidth += b.getWidth();
+    }
+
+    protected void removeOverlayButton(ImageButton b) {
+        if (overlayButtons.remove(b)) {
+            overlayWidth -= b.getWidth();
+        }
     }
 
     protected void addLockPositionButton() {

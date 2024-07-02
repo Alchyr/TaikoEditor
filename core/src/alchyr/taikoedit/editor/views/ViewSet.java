@@ -7,10 +7,12 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.DifficultySettingsLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
+import alchyr.taikoedit.editor.tools.EditorTool;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.core.input.MouseHoldObject;
+import alchyr.taikoedit.util.EditorTime;
 import alchyr.taikoedit.util.structures.PositionalObject;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -141,13 +143,26 @@ public class ViewSet {
                     }
 
                     if (returnVal == null) {
-                        returnVal = view.click(x, y, button);
                     }
 
                     if (owner.tools.changeToolset(view) && returnVal == null)
                     {
-                        //If the current tool is valid for the new toolset, use it immediately
-                        returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
+                        //If current tool does not override "view clicking" input (just break dragging)
+                        //do that first
+                        EditorTool currentTool = owner.tools.getCurrentTool();
+                        if (currentTool.supportsView(view) && currentTool.overrideViewClick()) {
+                            //If the current tool is valid for the new toolset, use it immediately
+                            returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
+                            if (returnVal == null) {
+                                returnVal = view.click(x, y, button);
+                            }
+                        }
+                        else {
+                            returnVal = view.click(x, y, button);
+                            if (returnVal == null && currentTool.supportsView(view)) {
+                                returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
+                            }
+                        }
                     }
                 }
 
@@ -189,6 +204,30 @@ public class ViewSet {
             }
             else if (toAdd instanceof GameplayView) {
                 map.bindGameplayView((GameplayView) toAdd);
+            }
+        }
+        else
+        {
+            throw new IllegalArgumentException("Attempted to add a view of the wrong map to ViewSet.");
+        }
+    }
+    public void insertView(MapView toInsert, int index) {
+        if (toInsert.map.equals(map))
+        {
+            if (views.isEmpty() || index == 0) { //When adding the first view, and then also when removing the first view, the properties button must be added, which can be a single instance based in this class.
+                if (!views.isEmpty()) {
+                    views.get(0).removeOverlayButton(propertiesButton);
+                }
+                toInsert.addOverlayButton(propertiesButton);
+            }
+            views.add(index, toInsert);
+
+            //Causes updates to occur on map changes
+            if (toInsert instanceof EffectView) {
+                map.bindEffectView((EffectView) toInsert);
+            }
+            else if (toInsert instanceof GameplayView) {
+                map.bindGameplayView((GameplayView) toInsert);
             }
         }
         else

@@ -26,6 +26,8 @@ import java.util.function.Function;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class SvFunctionLayer extends ProgramLayer implements InputLayer {
+    private static int selectedFormulaIndex = 0;
+
     private final SvFunctionProcessor processor;
 
     public boolean active = true;
@@ -190,7 +192,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
 
         textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
 
-        DecimalFormat df = new DecimalFormat("0.0###", osuSafe);
+        DecimalFormat df = new DecimalFormat("0.0###", osuDecimalFormat);
         initialSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 5.5f, 250f, "Initial Rate:", df.format(isv), 6, font).setType(TextField.TextType.NUMERIC).blocking();
         finalSv = new TextField(LEFT_POS, middleY + BUTTON_OFFSET * 4.5f, 250f, "Final Rate:", df.format(fsv), 6, font).setType(TextField.TextType.NUMERIC).blocking();
 
@@ -253,7 +255,8 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
             ++index;
         }
 
-        selectedFormula = formulaButtons.get(0);
+        if (selectedFormulaIndex >= formulaButtons.size()) selectedFormulaIndex = 0;
+        selectedFormula = formulaButtons.get(selectedFormulaIndex);
     }
     private void updateFormulas() {
         if (trueExp != null) {
@@ -290,8 +293,10 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         }
     }
     private void selectFormula(int index) {
-        if (index < formulaButtons.size())
+        if (index < formulaButtons.size()) {
+            selectedFormulaIndex = index;
             selectedFormula = formulaButtons.get(index);
+        }
     }
 
     private void cycleInput() {

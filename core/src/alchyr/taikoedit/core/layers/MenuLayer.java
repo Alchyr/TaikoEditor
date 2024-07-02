@@ -346,7 +346,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         return new LoadingLayer()
                 .loadLists("base")
                 .addLayers(true,
-                        new EditorLoadingLayer()
+                        new MenuLoadingLayer()
                             .loadLists("ui", "font", "menu", "editor", "hitsound")
                             .addTask(MapMaster::load).addTracker(MapMaster::getProgress).addTask(Skins::load)
                             .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)

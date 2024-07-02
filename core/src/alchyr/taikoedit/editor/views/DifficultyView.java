@@ -100,7 +100,7 @@ public class DifficultyView extends MapView {
         sb.draw(pix, 0, bottom, SettingsMaster.getWidth(), height);
     }
 
-    private final DecimalFormat df = new DecimalFormat("#0.##", osuSafe);
+    private final DecimalFormat df = new DecimalFormat("#0.##", osuDecimalFormat);
 
     @Override
     public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {

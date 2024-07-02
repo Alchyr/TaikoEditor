@@ -337,7 +337,7 @@ public class VolumeFunctionTool extends EditorTool {
                     PositionalObjectTreeMap<PositionalObject> vol = new PositionalObjectTreeMap<>();
 
                     //Generate lines.
-                    int steps = Math.abs(dvol) * 2 + 1;
+                    int steps = Math.abs(dvol) * 4 + 1;
                     double spacing = steps == 1 ? 0 : dist / (steps - 1);
                     long pos;
 
@@ -360,6 +360,7 @@ public class VolumeFunctionTool extends EditorTool {
                         }
                     }
 
+                    int lastV = -1;
                     for (int i = 0; i < steps; ++i) {
                         pos = start + (long) (spacing * i);
 
@@ -371,12 +372,19 @@ public class VolumeFunctionTool extends EditorTool {
                         }
 
                         TimingPoint closest = basePoint.getValue().get(basePoint.getValue().size() - 1);
-                        TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos)).inherit();
 
+                        if (lastV == -1) lastV = closest.volume;
                         int v = (int) Math.round(ivol + (dvol * info.function.apply((pos - start) / dist)));
-                        p.setVolume(v);
-                        p.registerVolumeChange();
-                        vol.add(p);
+
+                        if (v != lastV) {
+                            TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos)).inherit();
+
+                            p.setVolume(v);
+                            p.registerVolumeChange();
+                            vol.add(p);
+
+                            lastV = v;
+                        }
                     }
 
                     map.registerChange(new MultiLineAddition(map, vol).perform());
@@ -431,6 +439,7 @@ public class VolumeFunctionTool extends EditorTool {
                 //Otherwise just generate a new one.
 
                 Long lastPos = Long.MIN_VALUE;
+                int lastV = -1;
                 boolean adjust = info.adjustExisting && info.basedOnFollowingObject;
                 //if not based on following object, all timing points are treated as their own positions, rather than being "adjusted"
 
@@ -444,12 +453,14 @@ public class VolumeFunctionTool extends EditorTool {
                         lastPos = map.objects.lowerKey(pos);
                         if (lastPos == null || lastPos < basePoint.getKey()) {
                             //There's no other object between the closest green line and the current position.
+                            //Create new timing point on same position with new volume.
                             TimingPoint p = (TimingPoint) basePoint.getValue().get(basePoint.getValue().size() - 1).shiftedCopy(basePoint.getKey());
                             p.inherit();
                             int v = (int) Math.round(ivol + (dvol * info.function.apply((pos - start) / dist)));
                             p.setVolume(v);
                             p.registerVolumeChange();
                             vol.add(p);
+                            lastV = v;
 
                             lastPos = pos;
 
@@ -470,12 +481,18 @@ public class VolumeFunctionTool extends EditorTool {
                     TimingPoint closest = basePoint.getValue().get(basePoint.getValue().size() - 1);
                     if (closest.getPos() <= pos && genPos < closest.getPos())
                         genPos = Math.min(pos, closest.getPos() + 1);
-                    TimingPoint p = ((TimingPoint) closest.shiftedCopy(genPos)).inherit();
+                    if (lastV == -1) lastV = closest.getVolume();
 
                     int v = (int) Math.round(ivol + (dvol * info.function.apply((pos - start) / dist)));
-                    p.setVolume(v);
-                    p.registerVolumeChange();
-                    vol.add(p);
+
+                    if (lastV != v) {
+                        TimingPoint p = ((TimingPoint) closest.shiftedCopy(genPos)).inherit();
+
+                        p.setVolume(v);
+                        p.registerVolumeChange();
+                        vol.add(p);
+                        lastV = v;
+                    }
 
                     lastPos = pos;
                 }

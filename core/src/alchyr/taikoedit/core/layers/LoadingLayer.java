@@ -292,6 +292,7 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
                 if (!tracker.isComplete())
                     tasksDone = false;
             }
+            taskProgress = MathUtils.clamp(taskProgress, 0, 1);
         }
         else if (taskCount > 0)
             taskProgress = completed / taskCount;

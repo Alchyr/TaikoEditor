@@ -47,7 +47,7 @@ public class Timeline {
 
     private EditorTime time;
     private int pos;
-    private DecimalFormat percentFormat = new DecimalFormat("##0.#%", osuSafe);
+    private DecimalFormat percentFormat = new DecimalFormat("##0.#%", osuDecimalFormat);
 
     private MouseHoldObject holdObject;
 
@@ -60,7 +60,7 @@ public class Timeline {
 
     public Timeline(int y, float length)
     {
-        font = assetMaster.getFont("aller small");
+        font = assetMaster.getFont("base:aller small");
 
         this.y = y;
         this.timeX = 20;

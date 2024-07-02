@@ -13,8 +13,8 @@ import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
+import alchyr.taikoedit.editor.changes.ObjectMovement;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.editor.tests.Wavetapper;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.MapView;
@@ -1247,6 +1247,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         textOverlay.setText("Waveform Offset: " + SettingsMaster.waveformOffset, 1.5f);
     }
 
+    private void nudgeSelection(int ms) {
+        if (primaryView != null && primaryView.hasSelection()) {
+            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+            movementCopy.addAll(primaryView.getSelection());
+            primaryView.map.registerChange(new ObjectMovement(primaryView.map, movementCopy, ms).perform());
+        }
+    }
+
     private void toggleFinisher() {
         if (primaryView != null && primaryView.type == MapView.ViewType.OBJECT_VIEW && primaryView.hasSelection()) {
             boolean toFinisher = false;
@@ -1413,8 +1421,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     public static class EditorProcessor extends TextInputProcessor {
         private final EditorLayer sourceLayer;
 
-        private static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuSafe);
-        private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##", osuSafe);
+        private static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuDecimalFormat);
+        private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##", osuDecimalFormat);
 
         public EditorProcessor(EditorLayer source)
         {
@@ -1432,6 +1440,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 bindings.bind("SeekRight", sourceLayer::seekRight, right);
                 bindings.bind("SeekLeft", sourceLayer::seekLeft, left);
 
+                bindings.bind("NudgeRight", () -> sourceLayer.nudgeSelection(1));
+                bindings.bind("NudgeLeft", () -> sourceLayer.nudgeSelection(-1));
+
                 bindings.bind("RateUp", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(0.05f)), 1.0f));
                 bindings.bind("RateDown", () -> sourceLayer.textOverlay.setText("Playback rate " + twoDecimal.format(music.changeTempo(-0.05f)), 1.0f));
 
@@ -1440,6 +1451,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
                 bindings.bind("SnapUp", () -> changeSnapping(-1));
                 bindings.bind("SnapDown", () -> changeSnapping(1));
+
+                bindings.bind("MoveViewUp", () -> moveViewUp());
+                bindings.bind("MoveViewDown", () -> moveViewDown());
             }
 
             bindings.bind("Bookmark", () -> {
@@ -1784,6 +1798,61 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         private void changeSnapping(float direction) {
             sourceLayer.divisorOptions.adjust(direction);
             sourceLayer.textOverlay.setText("Snapping: " + sourceLayer.divisorOptions.toString(), 1.0f);
+        }
+
+        private void moveViewUp() {
+            EditorLayer editor = sourceLayer;
+            onMain(()->{
+                if (editor.primaryView != null) {
+                    //If top view in set, move entire set up
+                    //Otherwise, move up within set
+                    ViewSet set = editor.mapViews.get(editor.primaryView.map);
+                    if (set == null) return;
+
+                    int setIndex = editor.activeMaps.indexOf(editor.primaryView.map);
+                    if (setIndex < 0) return;
+
+                    int viewIndex = set.getViews().indexOf(editor.primaryView);
+                    if (viewIndex < 0) return;
+
+                    if (viewIndex > 0) {
+                        set.getViews().remove(viewIndex);
+                        set.insertView(editor.primaryView, viewIndex - 1);
+                    }
+                    else if (setIndex > 0) {
+                        editor.activeMaps.remove(editor.primaryView.map);
+                        editor.activeMaps.add(setIndex - 1, editor.primaryView.map);
+                    }
+                    sourceLayer.organizeViews();
+                }
+            });
+        }
+        private void moveViewDown() {
+            EditorLayer editor = sourceLayer;
+            onMain(()->{
+                if (editor.primaryView != null) {
+                    //If top view in set, move entire set up
+                    //Otherwise, move up within set
+                    ViewSet set = editor.mapViews.get(editor.primaryView.map);
+                    if (set == null) return;
+
+                    int setIndex = editor.activeMaps.indexOf(editor.primaryView.map);
+                    if (setIndex < 0) return;
+
+                    int viewIndex = set.getViews().indexOf(editor.primaryView);
+                    if (viewIndex < 0) return;
+
+                    if (viewIndex + 1 < set.getViews().size()) {
+                        set.getViews().remove(viewIndex);
+                        set.insertView(editor.primaryView, viewIndex + 1);
+                    }
+                    else if (setIndex + 1 < editor.activeMaps.size()) {
+                        editor.activeMaps.remove(editor.primaryView.map);
+                        editor.activeMaps.add(setIndex + 1, editor.primaryView.map);
+                    }
+                    sourceLayer.organizeViews();
+                }
+            });
         }
     }
 }

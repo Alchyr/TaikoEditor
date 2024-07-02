@@ -53,6 +53,11 @@ public class RedLineTool extends EditorTool {
     }
 
     @Override
+    public boolean overrideViewClick() {
+        return true;
+    }
+
+    @Override
     public void update(int viewsTop, int viewsBottom, List<EditorBeatmap> activeMaps, HashMap<EditorBeatmap, ViewSet> views, float elapsed) {
         float y = SettingsMaster.gameY();
 

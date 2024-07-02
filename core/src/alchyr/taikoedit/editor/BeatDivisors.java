@@ -7,6 +7,8 @@ import alchyr.taikoedit.management.SettingsMaster;
 
 import java.util.*;
 
+import static alchyr.taikoedit.TaikoEditor.editorLogger;
+
 public class BeatDivisors {
     public static final int[] commonSnappings = new int[] {
             1, 2, 3, 4, 5, 6, 7, 8, 12, 16
@@ -46,6 +48,7 @@ public class BeatDivisors {
         barlineSnaps = new TreeMap<>();
 
         generateCommonSnappings();
+        editorLogger.info("Created new BeatDivisors.");
     }
 
     public boolean usesMap(EditorBeatmap map) {
@@ -185,6 +188,10 @@ public class BeatDivisors {
 
     private void generateSnappings(int divisor)
     {
+        if (timingMap == null) {
+            editorLogger.warn("timingMap is null");
+            return;
+        }
         HashSet<Snap> snappings = new HashSet<>();
 
         if (divisor <= 0) //0 = no snaps, negative = Why
@@ -314,10 +321,12 @@ public class BeatDivisors {
 
     public void dispose()
     {
+        divisorOptions.removeDependent(this);
         timingMap = null;
         divisorSnappings.clear();
         combinedSnaps.clear();
         allSnaps.clear();
         activeSnaps.clear();
+        editorLogger.info("Beat Divisors cleaned up.");
     }
 }

@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
 public class GeneralUtils {
     //Placeholder Generics
@@ -28,7 +28,7 @@ public class GeneralUtils {
     }
     public static final VoidMethod doNothing = ()->{};
 
-    public static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuSafe);
+    public static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuDecimalFormat);
     private static final char[] charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789".toCharArray();
 
     public static String generateCode(int len) {

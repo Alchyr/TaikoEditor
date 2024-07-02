@@ -9,6 +9,12 @@
       "name": "load_bar",
       "file": "taikoedit/images/ui/load_bar.png",
       "class": "Texture"
+    },
+    {
+      "name": "aller small",
+      "file": "taikoedit/fonts/Aller/Aller_Bd.ttf",
+      "class": "TrueTypeFont",
+      "params": "s_12 x_0 y_0 k_1"
     }
   ],
   "ui": [
@@ -394,12 +400,6 @@
       "name": "default",
       "file": "taikoedit/fonts/default.fnt",
       "class": "BitmapFont"
-    },
-    {
-      "name": "aller small",
-      "file": "taikoedit/fonts/Aller/Aller_Bd.ttf",
-      "class": "TrueTypeFont",
-      "params": "s_12 x_0 y_0 k_1"
     },
     {
       "name": "aller medium",

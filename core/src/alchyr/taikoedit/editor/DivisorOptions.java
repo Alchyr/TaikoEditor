@@ -40,6 +40,10 @@ public class DivisorOptions {
         dependents.add(divisors);
     }
 
+    public void removeDependent(BeatDivisors divisors) {
+        dependents.remove(divisors);
+    }
+
     public void addDivisor(int divisor)
     {
         divisorOptions.add(divisor);

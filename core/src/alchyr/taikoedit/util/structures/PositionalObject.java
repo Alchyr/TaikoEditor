@@ -5,10 +5,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.text.DecimalFormat;
 
-import static alchyr.taikoedit.TaikoEditor.osuSafe;
+import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
 public abstract class PositionalObject implements Comparable<PositionalObject> {
-    protected static final DecimalFormat limitedDecimals = new DecimalFormat("##0.###########", osuSafe);
+    protected static final DecimalFormat limitedDecimals = new DecimalFormat("##0.###########", osuDecimalFormat);
 
     private double pos = 0;
 

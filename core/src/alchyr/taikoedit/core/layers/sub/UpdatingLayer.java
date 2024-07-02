@@ -18,6 +18,8 @@ import java.net.URL;
 import java.nio.file.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
@@ -97,14 +99,33 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
                         //Download file to temporary location, as to not try to replace currently running jar.
                         in.close();
 
-                        text = "Update downloaded successfully. Press any key to exit and complete update.";
                         state = 4;
+                        text = "Checking validity of file...";
                     }
                     catch (NoSuchFileException e) {
                         System.out.println("Target folder did not exist.");
                         e.printStackTrace();
                         text = "Failed to update. Press any key to return to editor.";
                         state = -1;
+                    }
+                    catch (Exception e) {
+                        System.out.println("Update process failed.");
+                        e.printStackTrace();
+                        text = "Failed to update. Press any key to return to editor.";
+                        state = - 1;
+                    }
+                });
+                break;
+            case 4:
+                executor.submit(()->{
+                    try (JarFile editorJar = new JarFile(updatePath.toFile(), false)) {
+                        JarEntry mainFile = editorJar.getJarEntry("alchyr/taikoedit/TaikoEditor.class");
+                        if (mainFile == null) {
+                            throw new RuntimeException("Downloaded jar is invalid.");
+                        }
+
+                        state = 5;
+                        text = "Update downloaded successfully. Press any key to exit and complete update.";
                     }
                     catch (Exception e) {
                         System.out.println("Update process failed.");
@@ -131,7 +152,7 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
             executor.shutdownNow();
             close();
         }
-        else if (state == 4) {
+        else if (state == 5) {
             //Success.
             try {
                 Path p = destination.resolve("update");
@@ -152,11 +173,11 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
             catch (Exception e) {
                 editorLogger.error("Failed to start update process.");
                 e.printStackTrace();
-                state = 5;
+                state = -2;
                 text = "Failed to start update file copy process.\nYou can manually replace the desktop-1.0.jar file with the temp.jar file in the lib folder.\nPress any key to exit.";
             }
         }
-        else if (state == 5) {
+        else if (state == -2) {
             executor.shutdownNow();
             end();
         }

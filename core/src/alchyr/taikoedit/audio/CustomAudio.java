@@ -2,7 +2,6 @@ package alchyr.taikoedit.audio;
 
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALMusic;
@@ -478,7 +477,7 @@ public abstract class CustomAudio extends OpenALMusic {
 
     private boolean generatingWaveform = false;
     private Waveform waveform = null;
-    public void getWaveform(Consumer<Waveform> receiver)
+    public void getWaveform(Consumer<Waveform> receiver, Consumer<Throwable> failureReceiver)
     {
         if (waveform != null) {
             receiver.accept(waveform);
@@ -494,6 +493,9 @@ public abstract class CustomAudio extends OpenALMusic {
                     receiver.accept(waveform);
                 }
                 catch (Exception e) {
+                    TaikoEditor.onMain(()->{
+                        failureReceiver.accept(e);
+                    });
                     TaikoEditor.editorLogger.error("Failed to generate waveform.", e);
                 }
             });
