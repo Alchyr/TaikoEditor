@@ -29,6 +29,10 @@ allprojects {
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
     }
+
+    tasks.withType(JavaCompile) {
+        options.deprecation = true
+    }
 }
 
 project(":desktop") {
@@ -41,8 +45,8 @@ project(":desktop") {
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 
-        compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
-        compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
+        implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
+        implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
     }
 }
 
@@ -57,10 +61,10 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         //local file
-        compile fileTree(dir: '/lib', include: '*.jar')
+        // implementation fileTree(dir: '/lib', include: '*.jar')
 
-        compile group: 'org.lwjgl', name: 'lwjgl-glfw', version: '3.2.3'
-        compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
-        compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
+        implementation group: 'org.lwjgl', name: 'lwjgl-glfw', version: '3.2.3'
+        implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
+        implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
     }
 }
