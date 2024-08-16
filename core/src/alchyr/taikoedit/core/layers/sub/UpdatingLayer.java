@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.io.File;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -93,7 +93,7 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
                 state = 3;
                 executor.submit(()->{
                     try {
-                        InputStream in = new URL("https://drive.google.com/uc?export=download&id=" + id).openStream();
+                        InputStream in = new URI("https://drive.google.com/uc?export=download&id=" + id).toURL().openStream();
 
                         Files.copy(in, updatePath, StandardCopyOption.REPLACE_EXISTING);
                         //Download file to temporary location, as to not try to replace currently running jar.

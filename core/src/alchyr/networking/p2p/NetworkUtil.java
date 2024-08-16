@@ -3,6 +3,7 @@ package alchyr.networking.p2p;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
 
 public class NetworkUtil {
@@ -15,7 +16,7 @@ public class NetworkUtil {
         for (String provider : providers) {
             BufferedReader in = null;
             try {
-                URL whatismyip = new URL(provider);
+                URL whatismyip = new URI(provider).toURL();
                 in = new BufferedReader(new InputStreamReader(
                         whatismyip.openStream()));
                 String ip = in.readLine();
