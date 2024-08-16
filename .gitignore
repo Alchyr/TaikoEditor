@@ -1,14 +1,12 @@
 # Project exclude paths
 /.gradle/
 /core/build/
-/core/build/classes/java/main/
 /desktop/build/
-/desktop/build/classes/java/main/
-/JDK/
-/Release/
 /settings/
 /Release
 /JDK
 /mapdata.json
 /error.txt
 /releasing.txt
+/Updater/out
+/lib
