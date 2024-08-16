@@ -13,6 +13,7 @@ import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
+import alchyr.taikoedit.editor.changes.LineMovement;
 import alchyr.taikoedit.editor.changes.ObjectMovement;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.views.EffectView;
@@ -1251,7 +1252,20 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (primaryView != null && primaryView.hasSelection()) {
             PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
             movementCopy.addAll(primaryView.getSelection());
-            primaryView.map.registerChange(new ObjectMovement(primaryView.map, movementCopy, ms).perform());
+            boolean isHit = true;
+            for (ArrayList<PositionalObject> stack : primaryView.getSelection().values()) {
+                for (PositionalObject o : stack) {
+                    if (!(o instanceof HitObject)) {
+                        isHit = false;
+                    }
+                }
+            }
+
+            if (isHit) {
+                primaryView.map.registerChange(new ObjectMovement(primaryView.map, movementCopy, ms).perform());
+            } else {
+                primaryView.map.registerChange(new LineMovement(primaryView.map, movementCopy, ms).perform());
+            }
         }
     }
 
