@@ -22,8 +22,6 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
-import com.badlogic.gdx.backends.lwjgl3.OnionExtension;
 import com.badlogic.gdx.backends.lwjgl3.audio.DeviceSwapping;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.graphics.Cursor;
@@ -180,8 +178,8 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
             if (borderless) {
                 Gdx.graphics.setUndecorated(true); //updating size directly in the create method results in issues
                 Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
-                OnionExtension.setBorderlessFullscreen((Lwjgl3Graphics) Gdx.graphics, displayMode.width, displayMode.height + 1); //little +1 to avoid certain fullscreen mode
-                //Gdx.graphics.setWindowedMode(displayMode.width, displayMode.height);
+                //OnionExtension.setBorderlessFullscreen((Lwjgl3Graphics) Gdx.graphics, displayMode.width, displayMode.height + 1); //little +1 to avoid certain fullscreen mode
+                Gdx.graphics.setWindowedMode(displayMode.width, displayMode.height);
             }
             else {
                 Gdx.graphics.setWindowedMode(launchWidth, launchHeight);

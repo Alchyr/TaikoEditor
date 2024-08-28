@@ -4,6 +4,7 @@ import alchyr.taikoedit.TaikoEditor;
 import com.badlogic.gdx.Gdx;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.EXTDisconnect;
+import org.lwjgl.openal.EnumerateAllExt;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
@@ -19,7 +20,7 @@ public class DeviceSwapping {
             audio = (OpenALLwjgl3Audio) Gdx.audio;
 
             //ALC_DEVICE_SPECIFIER 4101 is suggested to use but does not give the necessary info. 4115 is used by lwjgl.
-            currentDeviceIdentifier = ALC10.alcGetString(audio.device, 4115);
+            currentDeviceIdentifier = ALC10.alcGetString(audio.device, EnumerateAllExt.ALC_ALL_DEVICES_SPECIFIER);
             editorLogger.info("Current audio device: " + currentDeviceIdentifier);
 
             editorLogger.info("Available: ");
@@ -36,7 +37,7 @@ public class DeviceSwapping {
         if (enabled && wait < 0 && audio != null) {
             wait = 3;
 
-            String sysDefault = ALC10.alcGetString(0, 4115);
+            String sysDefault = ALC10.alcGetString(0, EnumerateAllExt.ALC_ALL_DEVICES_SPECIFIER);
             if (!currentDeviceIdentifier.equals(sysDefault)) {
                 editorLogger.info("Swapped default device: " + sysDefault);
                 currentDeviceIdentifier = sysDefault;
