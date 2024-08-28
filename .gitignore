@@ -1,5 +1,6 @@
 # Project exclude paths
 /.gradle/
+/.idea/
 /core/build/
 /core/build/classes/java/main/
 /desktop/build/
@@ -12,6 +13,10 @@
 /mapdata.json
 /error.txt
 /releasing.txt
+/Updater/out
+/core/assets/error.txt
+/core/assets/mapdata.json
+/core/assets/settings/
 /Updater/out
 /core/assets/error.txt
 /core/assets/mapdata.json
