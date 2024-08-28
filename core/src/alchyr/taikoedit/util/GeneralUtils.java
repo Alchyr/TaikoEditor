@@ -9,27 +9,24 @@ import org.apache.logging.log4j.Logger;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
 public class GeneralUtils {
     //Placeholder Generics
-    private static final Consumer nConsumer = (o)->{};
+    private static final Consumer<?> nConsumer = (o)->{};
     public static <T> Consumer<T> noConsumer() {
-        return (Consumer<T>)nConsumer;
+        return (Consumer<T>) nConsumer;
     }
-    private static final Supplier nSupplier = ()->null;
+    private static final Supplier<?> nSupplier = ()->null;
     public static <T> Supplier<T> nullSupplier() {
-        return (Supplier<T>)nSupplier;
+        return (Supplier<T>) nSupplier;
     }
     public static final VoidMethod doNothing = ()->{};
 
     public static final DecimalFormat oneDecimal = new DecimalFormat("##0.#", osuDecimalFormat);
-    private static final char[] charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789".toCharArray();
+    private static final char[] charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789".toCharArray();
 
     public static String generateCode(int len) {
         StringBuilder code = new StringBuilder();
@@ -53,6 +50,37 @@ public class GeneralUtils {
                 ++count;
         }
         return count;
+    }
+
+    public static <T> boolean arraySectionEquals(T[] a, T[] b, int start, int len) {
+        if (a == b)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.length != b.length)
+            return false;
+        if (start + len > a.length) return false;
+
+        for (int i = 0; i < len; ++i)
+            if (a[start + i] != b[start + i])
+                return false;
+
+        return true;
+    }
+    public static boolean arraySectionEquals(byte[] a, byte[] b, int start, int len) {
+        if (a == b)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.length != b.length)
+            return false;
+        if (start + len > a.length) return false;
+
+        for (int i = 0; i < len; ++i)
+            if (a[start + i] != b[start + i])
+                return false;
+
+        return true;
     }
 
     public static void readProperties(JsonValue properties, Map<String, Object> propertyMap)
@@ -220,7 +248,22 @@ public class GeneralUtils {
         return pairList;
     }
 
-    public static <T> T iterateListsUntilNull(Iterator<? extends List<T>> iter) {
+    public static <T, U extends Comparable<U>> void insertSorted(List<T> list, T item, Function<T, U> extractKey) {
+        insertSorted(list, item, Comparator.comparing(extractKey));
+    }
+    public static <T> void insertSorted(List<T> list, T item, Comparator<? super T> comparator) {
+        if (list.isEmpty()) {
+            list.add(item);
+            return;
+        }
+
+        int index = Collections.binarySearch(list, item, comparator);
+        if (index < 0)
+            index = ~index;
+        list.add(index, item);
+    }
+
+    public static <T> T iterateListsUntilNull(Iterator<? extends List<? extends T>> iter) {
         if (iter.hasNext())
             return listLast(iter.next());
         else

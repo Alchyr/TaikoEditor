@@ -4,13 +4,13 @@ import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Spinner;
 import alchyr.taikoedit.management.assets.skins.Skins;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 
-public abstract class HitObject extends PositionalObject {
+public abstract class HitObject extends MapObject {
     protected final static int CIRCLE_SIZE = 100;
     protected final static int CIRCLE_OFFSET = CIRCLE_SIZE / 2;
     //protected final static float LARGE_SCALE = 1.5f;

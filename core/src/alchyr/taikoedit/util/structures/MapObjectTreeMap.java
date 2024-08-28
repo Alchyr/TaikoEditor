@@ -34,11 +34,11 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 //Modified version of java.util.TreeMap. See header.
-public class PositionalObjectTreeMap<V extends PositionalObject>
+public class MapObjectTreeMap<V extends MapObject>
         extends AbstractMap<Long, ArrayList<V>>
         implements NavigableMap<Long, ArrayList<V>>, Cloneable, java.io.Serializable
 {
-    transient Collection<ArrayList<V>> values; //Cannot reference values within AbstractMap
+    transient Values values; //Cannot reference values within AbstractMap
 
     /**
      * The comparator used to maintain order in this tree map, or
@@ -77,7 +77,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * {@code put(Object key, Object value)} call will throw a
      * {@code ClassCastException}.
      */
-    public PositionalObjectTreeMap() {
+    public MapObjectTreeMap() {
         comparator = null;
     }
 
@@ -95,7 +95,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *        If {@code null}, the {@linkplain Comparable natural
      *        ordering} of the keys will be used.
      */
-    public PositionalObjectTreeMap(Comparator<? super Long> comparator) {
+    public MapObjectTreeMap(Comparator<? super Long> comparator) {
         this.comparator = comparator;
     }
 
@@ -113,7 +113,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         or are not mutually comparable
      * @throws NullPointerException if the specified map is null
      */
-    public PositionalObjectTreeMap(Map<? extends Long, ? extends ArrayList<V>> m) {
+    public MapObjectTreeMap(Map<? extends Long, ? extends ArrayList<V>> m) {
         comparator = null;
         putAll(m);
     }
@@ -127,7 +127,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      *         and whose comparator is to be used to sort this map
      * @throws NullPointerException if the specified map is null
      */
-    public PositionalObjectTreeMap(SortedMap<Long, ArrayList<? extends V>> m) {
+    public MapObjectTreeMap(SortedMap<Long, ArrayList<? extends V>> m) {
         comparator = m.comparator();
         try {
             buildFromSorted(m.size(), m.entrySet().iterator(), null, null);
@@ -136,9 +136,14 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
 
-    public PositionalObjectTreeMap<V> copy()
+    public MapObjectTreeMap<V> copy()
     {
-        PositionalObjectTreeMap<V> c = new PositionalObjectTreeMap<>();
+        MapObjectTreeMap<V> c = new MapObjectTreeMap<>();
+        for (Map.Entry<Long, ArrayList<V>> entry : entrySet()) {
+            for (V obj : entry.getValue()) {
+                c.addKey(entry.getKey(), (V) obj.shiftedCopy(entry.getKey()));
+            }
+        }
         c.addAll(this);
         return c;
     }
@@ -199,6 +204,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             if (val(value, e.value))
                 return true;
         return false;
+    }
+
+    public boolean containsKeyedValue(long key, Object value) {
+        ArrayList<V> values = get(key);
+        if (values == null || !values.contains(value)) return false;
+        return true;
     }
 
     /**
@@ -272,11 +283,13 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 return;
             }
         }
-        super.putAll(map);
+        for (Map.Entry<? extends Long, ? extends ArrayList<V>> e : map.entrySet()) {
+            put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
     }
 
     @SuppressWarnings("unchecked")
-    public void addAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
+    public void addAll(Map<? extends Long, ? extends ArrayList<? extends MapObject>> map) {
         for (Map.Entry<Long, ArrayList<V>> e : ((Map<Long, ArrayList<V>>)map).entrySet())
         {
             for (V val : e.getValue())
@@ -286,9 +299,16 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
+    public void addAll(Collection<? extends MapObject> collection) {
+        for (MapObject val : collection)
+        {
+            add((V) val);
+        }
+    }
+
     //Add all contents that are not already in this container
     @SuppressWarnings("unchecked")
-    public void addAllUnique(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
+    public void addAllUnique(Map<? extends Long, ? extends ArrayList<? extends MapObject>> map) {
         for (Map.Entry<Long, ArrayList<V>> e : ((Map<Long, ArrayList<V>>)map).entrySet())
         {
             for (V val : e.getValue())
@@ -652,8 +672,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     }
 
     public void add(V value) {
-        long key = value.getPos();
+        addKey(value.getPos(), value);
+    }
 
+    public void addKey(long key, V value) {
         Entry<V> t = root;
         if (t == null) {
             compare(key, key); // type (and possibly null) check
@@ -696,6 +718,66 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 {
                     count++;
                     t.addValue(value);
+                    return;
+                }
+            } while (t != null);
+        }
+        Entry<V> e = new Entry<>(key, value, parent);
+        if (cmp < 0)
+            parent.left = e;
+        else
+            parent.right = e;
+        fixAfterInsertion(e);
+        size++;
+        count++;
+        modCount++;
+    }
+
+    public void addFirst(V value) {
+        long key = value.getPos();
+
+        Entry<V> t = root;
+        if (t == null) {
+            compare(key, key); // type (and possibly null) check
+
+            root = new Entry<>(key, value, null);
+            size = 1;
+            count = 1;
+            modCount++;
+            return;
+        }
+        int cmp;
+        Entry<V> parent;
+        // split comparator and comparable paths
+        Comparator<? super Long> cpr = comparator;
+        if (cpr != null) {
+            do {
+                parent = t;
+                cmp = cpr.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                {
+                    count++;
+                    t.addValueFirst(value);
+                    return;
+                }
+            } while (t != null);
+        }
+        else {
+            do {
+                parent = t;
+                cmp = Long.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                {
+                    count++;
+                    t.addValueFirst(value);
                     return;
                 }
             } while (t != null);
@@ -802,7 +884,27 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return oldValue;
     }
 
-    public PositionalObject removeObject(PositionalObject p) {
+    public boolean removeStack(Object key, List<? extends MapObject> stack) {
+        modCount++;
+
+        Entry<V> p = getEntry(key);
+        if (p == null)
+            return false;
+
+        count -= p.value.size();
+        if (p.value.removeAll(stack)) {
+            count += p.value.size();
+
+            if (p.value.isEmpty()) {
+                deleteEntry(p);
+            }
+            return true;
+        }
+        count += p.value.size();
+        return false;
+    }
+
+    public MapObject removeObject(MapObject p) {
         Entry<V> e = getEntry(p.getPos());
         if (e == null)
             return null;
@@ -836,15 +938,15 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         return changed;
     }
 
-    public boolean removeAll(Map<? extends Long, ? extends ArrayList<? extends PositionalObject>> map) {
+    public boolean removeAll(Map<? extends Long, ? extends ArrayList<? extends MapObject>> map) {
         boolean changed = false;
-        for (Map.Entry<? extends Long, ? extends ArrayList<? extends PositionalObject>> deleting : map.entrySet())
+        for (Map.Entry<? extends Long, ? extends ArrayList<? extends MapObject>> deleting : map.entrySet())
         {
             Entry<V> e = getEntry(deleting.getKey());
             if (e == null) //There is nothing to delete at this position.
                 continue;
 
-            for (PositionalObject val : deleting.getValue())
+            for (MapObject val : deleting.getValue())
             {
                 if (e.getValue().remove(val))
                 {
@@ -876,9 +978,9 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * @return a shallow copy of this map
      */
     public Object clone() {
-        PositionalObjectTreeMap<?> clone;
+        MapObjectTreeMap<?> clone;
         try {
-            clone = (PositionalObjectTreeMap<?>) super.clone();
+            clone = (MapObjectTreeMap<?>) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new InternalError(e);
         }
@@ -959,7 +1061,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     public Long lowerKey(Long key) {
         return keyOrNull(getLowerEntry(key));
     }
-    public Long safeLowerKey(Long key) {
+    public Long safeLowerKey(Long key) { //Returns given value if there is no lower key
         Entry<V> k;
         return (k = getLowerEntry(key)) == null ? key : k.key;
     }
@@ -1111,12 +1213,21 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * support the {@code add} or {@code addAll} operations.
      */
     public Collection<ArrayList<V>> values() {
-        Collection<ArrayList<V>> vs = values;
+        Values vs = values;
         if (vs == null) {
             vs = new Values();
             values = vs;
         }
         return vs;
+    }
+
+    public Iterator<V> singleValuesIterator() {
+        Values vs = values;
+        if (vs == null) {
+            vs = new Values();
+            values = vs;
+        }
+        return vs.valueIterable();
     }
 
     /**
@@ -1318,12 +1429,16 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return new ValueIterator(getFirstEntry());
         }
 
+        public Iterator<V> valueIterable() {
+            return new ValueListIterator(getFirstEntry());
+        }
+
         public int size() {
-            return PositionalObjectTreeMap.this.size();
+            return MapObjectTreeMap.this.size();
         }
 
         public boolean contains(Object o) {
-            return PositionalObjectTreeMap.this.containsValue(o);
+            return MapObjectTreeMap.this.containsValue(o);
         }
 
         public boolean remove(Object o) {
@@ -1337,11 +1452,11 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public void clear() {
-            PositionalObjectTreeMap.this.clear();
+            MapObjectTreeMap.this.clear();
         }
 
         public Spliterator<ArrayList<V>> spliterator() {
-            return new ValueSpliterator<>(PositionalObjectTreeMap.this, null, null, 0, -1, 0);
+            return new ValueSpliterator<>(MapObjectTreeMap.this, null, null, 0, -1, 0);
         }
     }
 
@@ -1373,15 +1488,15 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public int size() {
-            return PositionalObjectTreeMap.this.size();
+            return MapObjectTreeMap.this.size();
         }
 
         public void clear() {
-            PositionalObjectTreeMap.this.clear();
+            MapObjectTreeMap.this.clear();
         }
 
         public Spliterator<Map.Entry<Long, ArrayList<V>>> spliterator() {
-            return new EntrySpliterator<>(PositionalObjectTreeMap.this, null, null, 0, -1, 0);
+            return new EntrySpliterator<>(MapObjectTreeMap.this, null, null, 0, -1, 0);
         }
     }
 
@@ -1406,15 +1521,15 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         KeySet(NavigableMap<Long,?> map) { m = map; }
 
         public Iterator<Long> iterator() {
-            if (m instanceof PositionalObjectTreeMap)
-                return ((PositionalObjectTreeMap<?>)m).keyIterator();
+            if (m instanceof MapObjectTreeMap)
+                return ((MapObjectTreeMap<?>)m).keyIterator();
             else
                 return ((NavigableSubMap<?>)m).keyIterator();
         }
 
         public Iterator<Long> descendingIterator() {
-            if (m instanceof PositionalObjectTreeMap)
-                return ((PositionalObjectTreeMap<?>)m).descendingKeyIterator();
+            if (m instanceof MapObjectTreeMap)
+                return ((MapObjectTreeMap<?>)m).descendingKeyIterator();
             else
                 return ((NavigableSubMap<?>)m).descendingKeyIterator();
         }
@@ -1544,6 +1659,62 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
+    final class ValueListIterator implements Iterator<V> {
+        Entry<V> next;
+        Entry<V> lastReturned;
+        int expectedModCount;
+
+        int index = -1;
+
+        ValueListIterator(Entry<V> first) {
+            expectedModCount = modCount;
+            lastReturned = null;
+            next = first;
+        }
+
+        public final boolean hasNext() {
+            return (lastReturned != null && index < lastReturned.getValue().size() - 1) || next != null;
+        }
+
+        final Entry<V> nextEntry() {
+            Entry<V> e = next;
+            if (e == null)
+                throw new NoSuchElementException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+            next = successor(e);
+            lastReturned = e;
+            return e;
+        }
+
+        public void remove() {
+            if (lastReturned == null)
+                throw new IllegalStateException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+
+            lastReturned.getValue().remove(index);
+
+            if (lastReturned.getValue().isEmpty()) {
+                // deleted entries are replaced by their successors
+                if (lastReturned.left != null && lastReturned.right != null)
+                    next = lastReturned;
+                deleteEntry(lastReturned);
+                expectedModCount = modCount;
+            }
+            lastReturned = null;
+        }
+
+        public V next() {
+            ++index;
+            if (lastReturned == null || index >= lastReturned.getValue().size()) {
+                nextEntry();
+                index = 0;
+            }
+            return lastReturned.getValue().get(index);
+        }
+    }
+
     final class KeyIterator extends PrivateEntryIterator<Long> {
         KeyIterator(Entry<V> first) {
             super(first);
@@ -1627,13 +1798,13 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @serial include
      */
-    abstract static class NavigableSubMap<V extends PositionalObject> extends AbstractMap<Long, ArrayList<V>>
+    abstract static class NavigableSubMap<V extends MapObject> extends AbstractMap<Long, ArrayList<V>>
             implements NavigableMap<Long, ArrayList<V>>, java.io.Serializable {
         private static final long serialVersionUID = -2102997345730753016L;
         /**
          * The backing map.
          */
-        final PositionalObjectTreeMap<V> m;
+        final MapObjectTreeMap<V> m;
 
         /**
          * Endpoints are represented as triples (fromStart, lo,
@@ -1648,7 +1819,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         final boolean loInclusive, hiInclusive;
         final boolean extended;
 
-        NavigableSubMap(PositionalObjectTreeMap<V> m,
+        NavigableSubMap(MapObjectTreeMap<V> m,
                         boolean fromStart, Long lo, boolean loInclusive,
                         boolean toEnd, Long hi, boolean hiInclusive, boolean extended) {
             if (!fromStart && !toEnd) {
@@ -1709,8 +1880,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          */
 
         //ERROR : These will throw exceptions when used in an extended map at the very end of the map.
-        final PositionalObjectTreeMap.Entry<V> absLowest() {
-            PositionalObjectTreeMap.Entry<V> e;
+        final MapObjectTreeMap.Entry<V> absLowest() {
+            MapObjectTreeMap.Entry<V> e;
             if (extended)
             {
                 e = m.getFloorEntry(lo);
@@ -1726,8 +1897,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absHighest() {
-            PositionalObjectTreeMap.Entry<V> e;
+        final MapObjectTreeMap.Entry<V> absHighest() {
+            MapObjectTreeMap.Entry<V> e;
             if (extended)
             {
                 e = m.getCeilingEntry(hi);
@@ -1744,43 +1915,43 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absCeiling(Long key) {
+        final MapObjectTreeMap.Entry<V> absCeiling(Long key) {
             if (tooLow(key))
                 return absLowest();
-            PositionalObjectTreeMap.Entry<V> e = m.getCeilingEntry(key);
+            MapObjectTreeMap.Entry<V> e = m.getCeilingEntry(key);
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absHigher(Long key) {
+        final MapObjectTreeMap.Entry<V> absHigher(Long key) {
             if (tooLow(key))
                 return absLowest();
-            PositionalObjectTreeMap.Entry<V> e = m.getHigherEntry(key);
+            MapObjectTreeMap.Entry<V> e = m.getHigherEntry(key);
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absFloor(Long key) {
+        final MapObjectTreeMap.Entry<V> absFloor(Long key) {
             if (tooHigh(key))
                 return absHighest();
-            PositionalObjectTreeMap.Entry<V> e = m.getFloorEntry(key);
+            MapObjectTreeMap.Entry<V> e = m.getFloorEntry(key);
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
-        final PositionalObjectTreeMap.Entry<V> absLower(Long key) {
+        final MapObjectTreeMap.Entry<V> absLower(Long key) {
             if (tooHigh(key))
                 return absHighest();
-            PositionalObjectTreeMap.Entry<V> e = m.getLowerEntry(key);
+            MapObjectTreeMap.Entry<V> e = m.getLowerEntry(key);
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
         /** Returns the absolute high fence for ascending traversal */
-        final PositionalObjectTreeMap.Entry<V> absHighFence() {
+        final MapObjectTreeMap.Entry<V> absHighFence() {
             return (toEnd ? null :
                     (extended ? m.getHigherThanHigherEntry(hi) :
                             (hiInclusive ? m.getHigherEntry(hi) : m.getCeilingEntry(hi))));
         }
 
         /** Return the absolute low fence for descending traversal  */
-        final PositionalObjectTreeMap.Entry<V> absLowFence() {
+        final MapObjectTreeMap.Entry<V> absLowFence() {
             return (fromStart ? null :
                     (extended ? m.getLowerThanLowerEntry(lo) :
                             (loInclusive ? m.getLowerEntry(lo) : m.getFloorEntry(lo))));
@@ -1789,12 +1960,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         // Abstract methods defined in ascending vs descending classes
         // These relay to the appropriate absolute versions
 
-        abstract PositionalObjectTreeMap.Entry<V> subLowest();
-        abstract PositionalObjectTreeMap.Entry<V> subHighest();
-        abstract PositionalObjectTreeMap.Entry<V> subCeiling(Long key);
-        abstract PositionalObjectTreeMap.Entry<V> subHigher(Long key);
-        abstract PositionalObjectTreeMap.Entry<V> subFloor(Long key);
-        abstract PositionalObjectTreeMap.Entry<V> subLower(Long key);
+        abstract MapObjectTreeMap.Entry<V> subLowest();
+        abstract MapObjectTreeMap.Entry<V> subHighest();
+        abstract MapObjectTreeMap.Entry<V> subCeiling(Long key);
+        abstract MapObjectTreeMap.Entry<V> subHigher(Long key);
+        abstract MapObjectTreeMap.Entry<V> subFloor(Long key);
+        abstract MapObjectTreeMap.Entry<V> subLower(Long key);
 
         /** Returns ascending iterator from the perspective of this submap */
         abstract Iterator<Long> keyIterator();
@@ -1881,7 +2052,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public final Map.Entry<Long, ArrayList<V>> pollFirstEntry() {
-            PositionalObjectTreeMap.Entry<V> e = subLowest();
+            MapObjectTreeMap.Entry<V> e = subLowest();
             Map.Entry<Long, ArrayList<V>> result = exportEntry(e);
             if (e != null)
                 m.deleteEntry(e);
@@ -1889,7 +2060,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         public final Map.Entry<Long, ArrayList<V>> pollLastEntry() {
-            PositionalObjectTreeMap.Entry<V> e = subHighest();
+            MapObjectTreeMap.Entry<V> e = subHighest();
             Map.Entry<Long, ArrayList<V>> result = exportEntry(e);
             if (e != null)
                 m.deleteEntry(e);
@@ -1946,7 +2117,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             }
 
             public boolean isEmpty() {
-                PositionalObjectTreeMap.Entry<V> n = absLowest();
+                MapObjectTreeMap.Entry<V> n = absLowest();
                 return n == null || tooHigh(n.key);
             }
 
@@ -1969,7 +2140,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 Object key = entry.getKey();
                 if (!inRange(key))
                     return false;
-                PositionalObjectTreeMap.Entry<V> node = m.getEntry(key);
+                MapObjectTreeMap.Entry<V> node = m.getEntry(key);
                 if (node!=null && val(node.getValue(),
                         entry.getValue())) {
                     m.deleteEntry(node);
@@ -1983,13 +2154,13 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
          * Iterators for SubMaps
          */
         abstract class SubMapIterator<T> implements Iterator<T> {
-            PositionalObjectTreeMap.Entry<V> lastReturned;
-            PositionalObjectTreeMap.Entry<V> next;
+            MapObjectTreeMap.Entry<V> lastReturned;
+            MapObjectTreeMap.Entry<V> next;
             final Object fenceKey;
             int expectedModCount;
 
-            SubMapIterator(PositionalObjectTreeMap.Entry<V> first,
-                           PositionalObjectTreeMap.Entry<V> fence) {
+            SubMapIterator(MapObjectTreeMap.Entry<V> first,
+                           MapObjectTreeMap.Entry<V> fence) {
                 expectedModCount = m.modCount;
                 lastReturned = null;
                 next = first;
@@ -2000,8 +2171,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 return next != null && next.key != fenceKey;
             }
 
-            final PositionalObjectTreeMap.Entry<V> nextEntry() {
-                PositionalObjectTreeMap.Entry<V> e = next;
+            final MapObjectTreeMap.Entry<V> nextEntry() {
+                MapObjectTreeMap.Entry<V> e = next;
                 if (e == null || e.key == fenceKey)
                     throw new NoSuchElementException();
                 if (m.modCount != expectedModCount)
@@ -2011,8 +2182,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
                 return e;
             }
 
-            final PositionalObjectTreeMap.Entry<V> prevEntry() {
-                PositionalObjectTreeMap.Entry<V> e = next;
+            final MapObjectTreeMap.Entry<V> prevEntry() {
+                MapObjectTreeMap.Entry<V> e = next;
                 if (e == null || e.key == fenceKey)
                     throw new NoSuchElementException();
                 if (m.modCount != expectedModCount)
@@ -2048,8 +2219,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         final class SubMapEntryIterator extends SubMapIterator<Map.Entry<Long, ArrayList<V>>> {
-            SubMapEntryIterator(PositionalObjectTreeMap.Entry<V> first,
-                                PositionalObjectTreeMap.Entry<V> fence) {
+            SubMapEntryIterator(MapObjectTreeMap.Entry<V> first,
+                                MapObjectTreeMap.Entry<V> fence) {
                 super(first, fence);
             }
             public Map.Entry<Long, ArrayList<V>> next() {
@@ -2061,8 +2232,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         final class DescendingSubMapEntryIterator extends SubMapIterator<Map.Entry<Long, ArrayList<V>>> {
-            DescendingSubMapEntryIterator(PositionalObjectTreeMap.Entry<V> last,
-                                          PositionalObjectTreeMap.Entry<V> fence) {
+            DescendingSubMapEntryIterator(MapObjectTreeMap.Entry<V> last,
+                                          MapObjectTreeMap.Entry<V> fence) {
                 super(last, fence);
             }
 
@@ -2077,8 +2248,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         // Implement minimal Spliterator as KeySpliterator backup
         final class SubMapKeyIterator extends SubMapIterator<Long>
                 implements Spliterator<Long> {
-            SubMapKeyIterator(PositionalObjectTreeMap.Entry<V> first,
-                              PositionalObjectTreeMap.Entry<V> fence) {
+            SubMapKeyIterator(MapObjectTreeMap.Entry<V> first,
+                              MapObjectTreeMap.Entry<V> fence) {
                 super(first, fence);
             }
             public Long next() {
@@ -2115,8 +2286,8 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
         final class DescendingSubMapKeyIterator extends SubMapIterator<Long>
                 implements Spliterator<Long> {
-            DescendingSubMapKeyIterator(PositionalObjectTreeMap.Entry<V> last,
-                                        PositionalObjectTreeMap.Entry<V> fence) {
+            DescendingSubMapKeyIterator(MapObjectTreeMap.Entry<V> last,
+                                        MapObjectTreeMap.Entry<V> fence) {
                 super(last, fence);
             }
             public Long next() {
@@ -2151,10 +2322,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
     /**
      * @serial include
      */
-    static final class AscendingSubMap<V extends PositionalObject> extends NavigableSubMap<V> {
+    static final class AscendingSubMap<V extends MapObject> extends NavigableSubMap<V> {
         private static final long serialVersionUID = 912986545866124060L;
 
-        AscendingSubMap(PositionalObjectTreeMap<V> m,
+        AscendingSubMap(MapObjectTreeMap<V> m,
                         boolean fromStart, Long lo, boolean loInclusive,
                         boolean toEnd, Long hi, boolean hiInclusive) {
             super(m, fromStart, lo, loInclusive, toEnd, hi, hiInclusive, false);
@@ -2223,25 +2394,25 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return (es != null) ? es : (entrySetView = new AscendingSubMap<V>.AscendingEntrySetView());
         }
 
-        PositionalObjectTreeMap.Entry<V> subLowest()       { return absLowest(); }
-        PositionalObjectTreeMap.Entry<V> subHighest()      { return absHighest(); }
-        PositionalObjectTreeMap.Entry<V> subCeiling(Long key) { return absCeiling(key); }
-        PositionalObjectTreeMap.Entry<V> subHigher(Long key)  { return absHigher(key); }
-        PositionalObjectTreeMap.Entry<V> subFloor(Long key)   { return absFloor(key); }
-        PositionalObjectTreeMap.Entry<V> subLower(Long key)   { return absLower(key); }
+        MapObjectTreeMap.Entry<V> subLowest()       { return absLowest(); }
+        MapObjectTreeMap.Entry<V> subHighest()      { return absHighest(); }
+        MapObjectTreeMap.Entry<V> subCeiling(Long key) { return absCeiling(key); }
+        MapObjectTreeMap.Entry<V> subHigher(Long key)  { return absHigher(key); }
+        MapObjectTreeMap.Entry<V> subFloor(Long key)   { return absFloor(key); }
+        MapObjectTreeMap.Entry<V> subLower(Long key)   { return absLower(key); }
     }
 
     /**
      * @serial include
      */
-    static final class DescendingSubMap<V extends PositionalObject> extends NavigableSubMap<V> {
+    static final class DescendingSubMap<V extends MapObject> extends NavigableSubMap<V> {
         private static final long serialVersionUID = 912986545866120460L;
-        DescendingSubMap(PositionalObjectTreeMap<V> m,
+        DescendingSubMap(MapObjectTreeMap<V> m,
                          boolean fromStart, Long lo, boolean loInclusive,
                          boolean toEnd, Long hi, boolean hiInclusive) {
             super(m, fromStart, lo, loInclusive, toEnd, hi, hiInclusive, false);
         }
-        DescendingSubMap(PositionalObjectTreeMap<V> m,
+        DescendingSubMap(MapObjectTreeMap<V> m,
                          boolean fromStart, Long lo,
                          boolean toEnd, Long hi, boolean extended) {
             super(m, fromStart, lo, true, toEnd, hi, true, extended);
@@ -2313,12 +2484,12 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             return (es != null) ? es : (entrySetView = new DescendingSubMap<V>.DescendingEntrySetView());
         }
 
-        PositionalObjectTreeMap.Entry<V> subLowest()       { return absHighest(); }
-        PositionalObjectTreeMap.Entry<V> subHighest()      { return absLowest(); }
-        PositionalObjectTreeMap.Entry<V> subCeiling(Long key) { return absFloor(key); }
-        PositionalObjectTreeMap.Entry<V> subHigher(Long key)  { return absLower(key); }
-        PositionalObjectTreeMap.Entry<V> subFloor(Long key)   { return absCeiling(key); }
-        PositionalObjectTreeMap.Entry<V> subLower(Long key)   { return absHigher(key); }
+        MapObjectTreeMap.Entry<V> subLowest()       { return absHighest(); }
+        MapObjectTreeMap.Entry<V> subHighest()      { return absLowest(); }
+        MapObjectTreeMap.Entry<V> subCeiling(Long key) { return absFloor(key); }
+        MapObjectTreeMap.Entry<V> subHigher(Long key)  { return absLower(key); }
+        MapObjectTreeMap.Entry<V> subFloor(Long key)   { return absCeiling(key); }
+        MapObjectTreeMap.Entry<V> subLower(Long key)   { return absHigher(key); }
     }
 
     /**
@@ -2336,7 +2507,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         private boolean fromStart = false, toEnd = false;
         private Long fromKey, toKey;
         private Object readResolve() {
-            return new AscendingSubMap<>(PositionalObjectTreeMap.this,
+            return new AscendingSubMap<>(MapObjectTreeMap.this,
                     fromStart, fromKey, true,
                     toEnd, toKey, false);
         }
@@ -2422,6 +2593,11 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
         public ArrayList<V> addValue(V value) {
             this.value.add(value);
+            return this.value;
+        }
+
+        public ArrayList<V> addValueFirst(V value) {
+            this.value.add(0, value);
             return this.value;
         }
 
@@ -2883,10 +3059,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
             if (defaultVal==null) {
                 Map.Entry<?,?> entry = (Map.Entry<?,?>)it.next();
                 key = (Long)entry.getKey();
-                value = (ArrayList<V>)entry.getValue();
+                value = new ArrayList<>((ArrayList<V>)entry.getValue());
             } else {
                 key = (Long)it.next();
-                value = defaultVal;
+                value = new ArrayList<>(defaultVal);
             }
         } else { // use stream
             key = (Long) str.readObject();
@@ -2942,15 +3118,15 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * returns null.
      */
     static Spliterator<Long> keySpliteratorFor(NavigableMap<Long, ?> m) {
-        if (m instanceof PositionalObjectTreeMap) {
-            @SuppressWarnings("unchecked") PositionalObjectTreeMap<PositionalObject> t =
-                    (PositionalObjectTreeMap<PositionalObject>) m;
+        if (m instanceof MapObjectTreeMap) {
+            @SuppressWarnings("unchecked") MapObjectTreeMap<MapObject> t =
+                    (MapObjectTreeMap<MapObject>) m;
             return t.keySpliterator();
         }
         if (m instanceof DescendingSubMap) {
-            @SuppressWarnings("unchecked") DescendingSubMap<PositionalObject> dm =
-                    (DescendingSubMap<PositionalObject>) m;
-            PositionalObjectTreeMap<PositionalObject> tm = dm.m;
+            @SuppressWarnings("unchecked") DescendingSubMap<MapObject> dm =
+                    (DescendingSubMap<MapObject>) m;
+            MapObjectTreeMap<MapObject> tm = dm.m;
             if (dm == tm.descendingMap) {
                 return tm.descendingKeySpliterator();
             }
@@ -2991,15 +3167,15 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
      * To boostrap initialization, external constructors use
      * negative size estimates: -1 for ascend, -2 for descend.
      */
-    static class TreeMapSpliterator<V extends PositionalObject> {
-        final PositionalObjectTreeMap<V> tree;
+    static class TreeMapSpliterator<V extends MapObject> {
+        final MapObjectTreeMap<V> tree;
         Entry<V> current; // traverser; initially first node in range
         Entry<V> fence;   // one past last, or null
         int side;                   // 0: top, -1: is a left split, +1: right
         int est;                    // size estimate (exact only for top-level)
         int expectedModCount;       // for CME checks
 
-        TreeMapSpliterator(PositionalObjectTreeMap<V> tree,
+        TreeMapSpliterator(MapObjectTreeMap<V> tree,
                            Entry<V> origin, Entry<V> fence,
                            int side, int est, int expectedModCount) {
             this.tree = tree;
@@ -3011,7 +3187,7 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
 
         final int getEstimate() { // force initialization
-            int s; PositionalObjectTreeMap<V> t;
+            int s; MapObjectTreeMap<V> t;
             if ((s = est) < 0) {
                 if ((t = tree) != null) {
                     current = (s == -1) ? t.getFirstEntry() : t.getLastEntry();
@@ -3029,10 +3205,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    static final class KeySpliterator<V extends PositionalObject>
+    static final class KeySpliterator<V extends MapObject>
             extends TreeMapSpliterator<V>
             implements Spliterator<Long> {
-        KeySpliterator(PositionalObjectTreeMap<V> tree,
+        KeySpliterator(MapObjectTreeMap<V> tree,
                        Entry<V> origin, Entry<V> fence,
                        int side, int est, int expectedModCount) {
             super(tree, origin, fence, side, est, expectedModCount);
@@ -3107,10 +3283,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
 
     }
 
-    static final class DescendingKeySpliterator<V extends PositionalObject>
+    static final class DescendingKeySpliterator<V extends MapObject>
             extends TreeMapSpliterator<V>
             implements Spliterator<Long> {
-        DescendingKeySpliterator(PositionalObjectTreeMap<V> tree,
+        DescendingKeySpliterator(MapObjectTreeMap<V> tree,
                                  Entry<V> origin, Entry<V> fence,
                                  int side, int est, int expectedModCount) {
             super(tree, origin, fence, side, est, expectedModCount);
@@ -3180,10 +3356,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    static final class ValueSpliterator<V extends PositionalObject>
+    static final class ValueSpliterator<V extends MapObject>
             extends TreeMapSpliterator<V>
             implements Spliterator<ArrayList<V>> {
-        ValueSpliterator(PositionalObjectTreeMap<V> tree,
+        ValueSpliterator(MapObjectTreeMap<V> tree,
                          Entry<V> origin, Entry<V> fence,
                          int side, int est, int expectedModCount) {
             super(tree, origin, fence, side, est, expectedModCount);
@@ -3252,10 +3428,10 @@ public class PositionalObjectTreeMap<V extends PositionalObject>
         }
     }
 
-    static final class EntrySpliterator<V extends PositionalObject>
+    static final class EntrySpliterator<V extends MapObject>
             extends TreeMapSpliterator<V>
             implements Spliterator<Map.Entry<Long, ArrayList<V>>> {
-        EntrySpliterator(PositionalObjectTreeMap<V> tree,
+        EntrySpliterator(MapObjectTreeMap<V> tree,
                          Entry<V> origin, Entry<V> fence,
                          int side, int est, int expectedModCount) {
             super(tree, origin, fence, side, est, expectedModCount);

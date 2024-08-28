@@ -253,6 +253,7 @@ public class SettingsMaster {
             .addMapping("Offset", Float::parseFloat, (val, params)->TaikoEditor.music.setOffset(val), (set, params)->TaikoEditor.music.getOffset())
             .addMapping("Position", Double::parseDouble, (val, params)->TaikoEditor.music.seekSecond(val), (set, params)->TaikoEditor.music.getSecondTime())
             .addMapping("ViewsetInfo", (s)->s, (val, params)->((EditorLayer) params[0]).loadViewsetInfo(val), (set, params)->((EditorLayer) params[0]).getViewsetInfo());
+
     private static FileHandle mapSettingsFile(Mapset set) {
         String setDirectory = set.getDirectory().getName();
         if (setDirectory.isEmpty())

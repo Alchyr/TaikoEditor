@@ -132,7 +132,7 @@ public class SpinnerTool extends EditorTool {
         {
             if (button == Input.Buttons.LEFT)
             {
-                currentlyPlacing.map.addObject(placementObject, currentlyPlacing.replaceTest);
+                currentlyPlacing.map.registerAndPerformAddObject("Add Spinner", placementObject, currentlyPlacing.replaceTest);
 
                 placementObject = new Spinner(0, 0);
                 renderPreview = false;

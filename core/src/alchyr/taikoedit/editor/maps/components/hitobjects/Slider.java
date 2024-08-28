@@ -4,7 +4,7 @@ import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.Pair;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -237,6 +237,8 @@ public class Slider extends HitObject implements ILongObject {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
+        if (testHidden()) return;
+
         slider.a = alpha;
         float startX = 1 + x + (float) (this.getPos() - pos) * viewScale;
         float endX = 1 + x + (float) (this.endPos - pos) * viewScale;
@@ -294,6 +296,8 @@ public class Slider extends HitObject implements ILongObject {
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
+        if (testHidden()) return;
+
         sb.setColor(Color.WHITE);
         float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
@@ -415,7 +419,7 @@ public class Slider extends HitObject implements ILongObject {
     }
 
     @Override
-    public PositionalObject shiftedCopy(long newPos) {
+    public MapObject shiftedCopy(long newPos) {
         Slider copy = new Slider(this);
         copy.setPos(newPos);
         return copy;

@@ -60,6 +60,8 @@ public class TextField implements UIElement, TextInputReceiver {
 
     public String action = "";
 
+    public String displaySuffix = "";
+
     public TextField(float leftX, float centerY, float maxWidth, String labelText, String inputText, int charLimit, BitmapFont font)
     {
         this.font = font;
@@ -88,6 +90,10 @@ public class TextField implements UIElement, TextInputReceiver {
     }
     public TextField setType(TextType type) {
         this.type = type;
+        return this;
+    }
+    public TextField setDisplaySuffix(String s) {
+        this.displaySuffix = s;
         return this;
     }
     public TextField setOnEnter(Function<String, Boolean> onEnter) {
@@ -221,7 +227,7 @@ public class TextField implements UIElement, TextInputReceiver {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x, this.centerY);
-        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text, this.textX, this.centerY);
+        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text + displaySuffix, this.textX, this.centerY);
 
         if (renderBlip) {
             sb.setColor(Color.WHITE);
@@ -234,7 +240,7 @@ public class TextField implements UIElement, TextInputReceiver {
         dy = y;
 
         textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x + x, this.centerY + y);
-        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text, this.textX + x, this.centerY + y);
+        textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text + displaySuffix, this.textX + x, this.centerY + y);
 
         if (renderBlip) {
             sb.setColor(Color.WHITE);

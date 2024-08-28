@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.StreamUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class FileHelper {
 
         for (int i = 0; i < parts.length; ++i)
         {
-            if (i < parts.length - 1 || !parts[i].contains("."))
+            if (i < parts.length - 1 || !parts[i].contains(".")) //If last element has no extension, will be treated as a path
             {
                 result.append(withSeparator(parts[i]));
             }
@@ -24,6 +25,10 @@ public class FileHelper {
             }
         }
         return result.toString();
+    }
+
+    public static String removeInvalidChars(String filename) {
+        return filename.replaceAll("[\\\\/:*?\"<>|]", "");
     }
 
     public static String getFileExtension(String filename) {
@@ -120,8 +125,9 @@ public class FileHelper {
             InputStream fStream = null;
             try
             {
-                fStream = new FileInputStream(f);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(fStream));
+                fStream = Files.newInputStream(f.toPath());
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fStream), 4096); //1/2 size of default buffer
+                //smaller buffer is used as with stopLine the assumed amount to be read is smaller, especially in the single use of this method
 
                 ArrayList<String> lines = new ArrayList<>();
                 String line;

@@ -2,40 +2,79 @@ package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.interfaces.KnownAmountSupplier;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
+import alchyr.taikoedit.util.structures.Pair;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class ValueSetChange extends MapChange {
-    private final PositionalObjectTreeMap<PositionalObject> modifiedObjects;
-    private final HashMap<PositionalObject, Double> originalValues;
+    private final MapObjectTreeMap<MapObject> modifiedObjects;
+    private final HashMap<MapObject, Double> originalValues;
     private final double newValue;
     private final boolean redLines;
 
-    public ValueSetChange(EditorBeatmap map, boolean redLines, PositionalObjectTreeMap<PositionalObject> modifiedObjects, double newValue)
+
+    @Override
+    public void send(DataOutputStream out) throws IOException {
+        writeObjects(out, modifiedObjects.size(), map.objects, modifiedObjects.singleValuesIterator());
+        out.writeDouble(newValue);
+    }
+
+    public static Supplier<MapChange> build(EditorBeatmap map, DataInputStream in, String nameKey) throws IOException {
+        KnownAmountSupplier<List<MapObject>> mapObjectsSupplier = readObjects(in, map);
+
+        if (mapObjectsSupplier == null) return null;
+
+        double newVal = in.readDouble();
+
+        return ()->{
+            List<MapObject> mapObjects = mapObjectsSupplier.get();
+
+            MapObjectTreeMap<MapObject> modifiedObjects = new MapObjectTreeMap<>();
+
+            for (MapObject obj : mapObjects) {
+                modifiedObjects.add(obj);
+            }
+
+            return new ValueSetChange(map, modifiedObjects, newVal);
+        };
+    }
+
+    @Override
+    public boolean isValid() {
+        return false;
+    }
+
+    public ValueSetChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, double newValue)
     {
-        super(map);
+        super(map, "Set Line Value");
 
         this.modifiedObjects = modifiedObjects;
         this.newValue = newValue;
-        this.redLines = redLines;
+        this.redLines = ((TimingPoint) modifiedObjects.firstEntry().getValue().get(0)).uninherited;
 
         this.originalValues = new HashMap<>();
-        for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
-            for (PositionalObject o : objects) {
+        for (ArrayList<MapObject> objects : modifiedObjects.values()) {
+            for (MapObject o : objects) {
                 this.originalValues.put(o, o.getValue());
             }
         }
     }
 
     @Override
-    public MapChange undo() {
-        for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
+    public void undo() {
+        for (Map.Entry<Long, ArrayList<MapObject>> e : modifiedObjects.entrySet())
         {
-            for (PositionalObject o : e.getValue()) {
+            for (MapObject o : e.getValue()) {
                 o.setValue(originalValues.get(o));
             }
         }
@@ -46,14 +85,12 @@ public class ValueSetChange extends MapChange {
             map.updateSv();
 
         map.gameplayChanged();
-
-        return this;
     }
     @Override
-    public MapChange perform() {
-        for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
+    public void perform() {
+        for (Map.Entry<Long, ArrayList<MapObject>> e : modifiedObjects.entrySet())
         {
-            for (PositionalObject o : e.getValue()) {
+            for (MapObject o : e.getValue()) {
                 o.setValue(newValue);
             }
         }
@@ -64,7 +101,5 @@ public class ValueSetChange extends MapChange {
             map.updateSv();
 
         map.gameplayChanged();
-
-        return this;
     }
 }

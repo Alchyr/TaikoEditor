@@ -10,7 +10,7 @@ import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -120,7 +120,7 @@ public class HitTool extends EditorTool {
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
         {
-            view.map.addObject(placementObject, view.replaceTest);
+            view.map.registerAndPerformAddObject(isRim ? "Add Kat" : "Add Don", placementObject, view.replaceTest);
 
             placementObject = new Hit(0, isRim);
             renderPreview = false;
@@ -135,15 +135,15 @@ public class HitTool extends EditorTool {
         if (view.hasSelection()) { //Type is already checked by supportsView
             List<Hit> hits = new ArrayList<>();
 
-            for (ArrayList<PositionalObject> stack : view.getSelection().values()) {
-                for (PositionalObject h : stack) {
+            for (ArrayList<MapObject> stack : view.getSelection().values()) {
+                for (MapObject h : stack) {
                     if (h instanceof Hit && ((Hit) h).isRim() ^ isRim) {
                         hits.add((Hit) h);
                     }
                 }
             }
 
-            view.map.registerChange(new RimChange(view.map, hits, isRim).perform());
+            view.map.registerChange(new RimChange(view.map, hits, isRim).preDo());
             return false; //Don't swap off of selection tool when modifying selected objects
         }
         else {
@@ -155,7 +155,7 @@ public class HitTool extends EditorTool {
                 time = closest.pos;
             }
 
-            view.map.addObject(new Hit(time, isRim, finisherLock ^ BindingGroup.shift()), view.replaceTest);
+            view.map.registerAndPerformAddObject(isRim ? "Add Kat" : "Add Don", new Hit(time, isRim, finisherLock ^ BindingGroup.shift()), view.replaceTest);
             return true;
         }
     }

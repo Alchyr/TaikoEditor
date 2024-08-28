@@ -5,7 +5,6 @@ import alchyr.taikoedit.core.input.sub.TextInputReceiver;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.changes.ValueSetChange;
 import alchyr.taikoedit.editor.changes.VolumeSetChange;
 import alchyr.taikoedit.editor.tools.*;
@@ -14,14 +13,16 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.GeneralUtils;
+import alchyr.taikoedit.util.structures.MultiMergeIterator;
 import alchyr.taikoedit.util.structures.Pair;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 
 import java.text.DecimalFormat;
 import java.util.*;
@@ -46,7 +47,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     private static final int MARGIN = 40;
     public static final int SV_AREA = (HEIGHT - (MARGIN * 2)) / 2;
     private static final int BOTTOM_VALUE_Y = MARGIN + 10;
-    private static final int TOP_VALUE_Y = HEIGHT - (MARGIN + 1);
+    public static final int TOP_VALUE_Y = HEIGHT - (MARGIN + 1);
 
     //For clicking value of a timing point
     private static final int VALUE_LABEL_TOP = TOP_VALUE_Y + 2;
@@ -62,7 +63,14 @@ public class EffectView extends MapView implements TextInputReceiver {
     private static final Color kiai = new Color(240.0f/255.0f, 164.0f/255.0f, 66.0f/255.0f, 1.0f);
 
     private SortedMap<Long, Snap> activeSnaps;
-    private boolean ignoreSelected = false;
+
+    private enum AdjustMode{
+        NONE,
+        POSSIBLE,
+        ACTIVE
+    }
+    private AdjustMode adjustMode = AdjustMode.NONE;
+    private TimingPoint adjustPoint = null, focus = null;
 
     //Positions
     private int baseMidY;
@@ -144,8 +152,8 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (!hasSelection())
             return true;
 
-        for (ArrayList<PositionalObject> stack : selectedObjects.values()) {
-            for (PositionalObject o : stack) {
+        for (ArrayList<MapObject> stack : selectedObjects.values()) {
+            for (MapObject o : stack) {
                 if (o instanceof TimingPoint && ((TimingPoint) o).uninherited)
                     return false;
             }
@@ -195,7 +203,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> prep() {
         //return graph points
         if (!timingEnabled && !effectPointsEnabled) {
             return Collections.emptyNavigableMap();
@@ -211,6 +219,11 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
     }
 
+    public void setFocus(TimingPoint point) {
+        if (adjustPoint == null)
+            focus = point;
+    }
+
     @Override
     public void update(double exactPos, long msPos, float elapsed, boolean canHover) {
         super.update(exactPos, msPos, elapsed, canHover);
@@ -224,6 +237,27 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         if (adjustMode == AdjustMode.ACTIVE && !parent.tools.getCurrentTool().equals(getToolset().getDefaultTool())) {
             endAdjust();
+        }
+
+        focus = null;
+
+        if (adjustPoint != null) {
+            if (!adjustPoint.testHidden())
+                focus = adjustPoint;
+        }
+        else if (hasSelection()) {
+            MapObjectTreeMap<MapObject> selection = getSelection();
+            if (selection.count() == 1) {
+                ArrayList<MapObject> s = selectedObjects.firstEntry().getValue();
+
+                if (!s.isEmpty()) {
+                    MapObject o = s.get(0);
+
+                    if (o instanceof TimingPoint && !o.testHidden()) {
+                        focus = (TimingPoint) o;
+                    }
+                }
+            }
         }
     }
 
@@ -268,15 +302,11 @@ public class EffectView extends MapView implements TextInputReceiver {
             renderWaveform(sb, sr);
         }
 
-        if (!timingEnabled) { //If timing editing disabled, rendered as part of base.
+        if (!timingEnabled) { //If timing editing disabled, timing points are rendered as part of base.
             TimingPoint t;
             for (ArrayList<TimingPoint> points : map.getEditTimingPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values()) {
                 t = GeneralUtils.listLast(points);
-
-                //If effect point covers and enabled, do not render
-                if (!effectPointsEnabled || !map.effectPoints.containsKey(t.getPos())) {
-                    renderObject(t, sb, sr, 1);
-                }
+                renderObject(t, sb, sr, 1);
             }
         }
     }
@@ -302,10 +332,19 @@ public class EffectView extends MapView implements TextInputReceiver {
             textRenderer.renderText(sb, "0", 0, midY - SV_AREA - 1);
         }
 
+        if (renderLabels) {
+            if (mode) {
+                renderValueLabels(sb, focus);
+            }
+            else {
+                renderVolumeLabels(sb, focus);
+            }
+        }
+
         super.renderOverlay(sb, sr);
     }
 
-    private static float svGraphPos(TimingPoint p, double maxValue, double minValue) {
+    private static float svGraphPos(TimingPoint p, double maxValue, double minValue) { //FIX GRAPH NOT WORKING RIGHT ON TEMP DISPLAY OBJECTS. And not updating limits when doing up/down drag.
         if (p.uninherited) { //red line
             return 0;
         }
@@ -324,8 +363,42 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (map.allPoints.isEmpty())
             return;
 
+        /*if (!additionalDisplayObjects().isEmpty()) {
+            StringBuilder tempSb = new StringBuilder("MapPoints: ");
+            map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).forEach((key, value) -> tempSb.append(key).append("|"));
+            editorLogger.info(tempSb);
+            tempSb.setLength(0);
+            tempSb.append("AddPoints: ");
+            additionalDisplayObjects().descendingMap().forEach((key, value) -> tempSb.append(key).append("|"));
+            editorLogger.info(tempSb);
+            tempSb.setLength(0);
+            tempSb.append("Combined:  ");
+
+            MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, reverseLongComparator);
+            pointIterator.addFilter(MapObject::testHidden); //remove hidden objects
+
+            pointIterator.addIterator(map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+            pointIterator.addIterator(additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->entry.getValue().forEach((obj)->list.add((TimingPoint) obj)), 1);
+
+            pointIterator.forEachRemaining((o)->{
+                tempSb.append(pointIterator.getLastKey());
+                if (!o.isEmpty()) {
+                    tempSb.append("/").append(o.get(0).getPos());
+                }
+                else {
+                    tempSb.append("EMPTY");
+                }
+                tempSb.append("|");
+            });
+            editorLogger.info(tempSb);
+        }*/
+
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, reverseLongComparator);
+        pointIterator.addFilter(MapObject::testHidden); //remove hidden objects
+
+        pointIterator.addIterator(map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+        pointIterator.addIterator(additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->entry.getValue().forEach((obj)->list.add((TimingPoint) obj)), 1);
 
         //*********************GRAPH*********************
         float graphPosition = 0, newGraphPosition; //if new position not same, draw graph line. If new position is same, just pretend this line doesn't exist, unless the next line is different.
@@ -385,28 +458,6 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         sr.end();
         sb.begin();
-
-        //*********************LABELS*********************
-        if (renderLabels) {
-            TimingPoint focus = null;
-
-            if (adjustPoint != null) {
-                focus = adjustPoint;
-            }
-            else if (hasSelection() && selectedObjects.size() == 1) {
-                ArrayList<PositionalObject> s = selectedObjects.firstEntry().getValue();
-
-                if (!s.isEmpty()) {
-                    PositionalObject o = s.get(s.size() - 1);
-
-                    if (o instanceof TimingPoint) {
-                        focus = (TimingPoint) o;
-                    }
-                }
-            }
-
-            renderValueLabels(sb, focus);
-        }
     }
 
     private static float volumeGraphPos(TimingPoint p) {
@@ -419,7 +470,11 @@ public class EffectView extends MapView implements TextInputReceiver {
         //TODO - FIX - RENDERS VALUE OF NEXT (reverse order, previous) POINT RATHER THAN CURRENT POINT
 
         //Returns from first line before visible area, to first line after visible area
-        Iterator<ArrayList<TimingPoint>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).values().iterator();
+        MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, reverseLongComparator);
+        pointIterator.addFilter(MapObject::testHidden); //remove hidden objects
+
+        pointIterator.addIterator(map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+        pointIterator.addIterator(additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->entry.getValue().forEach((obj)->list.add((TimingPoint) obj)), 1);
 
         //*********************GRAPH*********************
         float graphPosition = 0;
@@ -473,28 +528,6 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         sr.end();
         sb.begin();
-
-        //*********************LABELS*********************
-        if (renderLabels) {
-            TimingPoint focus = null;
-
-            if (adjustPoint != null) {
-                focus = adjustPoint;
-            }
-            else if (hasSelection() && selectedObjects.size() == 1) {
-                ArrayList<PositionalObject> s = selectedObjects.firstEntry().getValue();
-
-                if (!s.isEmpty()) {
-                    PositionalObject o = s.get(s.size() - 1);
-
-                    if (o instanceof TimingPoint) {
-                        focus = (TimingPoint) o;
-                    }
-                }
-            }
-
-            renderVolumeLabels(sb, focus);
-        }
     }
 
     private void renderWaveform(SpriteBatch sb, ShapeRenderer sr) {
@@ -596,54 +629,60 @@ public class EffectView extends MapView implements TextInputReceiver {
         sb.begin();
     }
 
-    private void renderValueLabels(SpriteBatch sb, TimingPoint adjust) {
-        long lastRenderable = adjust == null ? 0 : adjust.getPos() + (long)(LABEL_SPACING / viewScale);
+    private void renderValueLabels(SpriteBatch sb, TimingPoint focusPoint) {
+        long lastRenderable = focusPoint == null ? 0 : focusPoint.getPos() + (long)(LABEL_SPACING / viewScale);
         double svLabelSpacing = 0;
         double bpmLabelSpacing = 0;
 
-        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator();
+        MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, 3, reverseLongComparator);
+        pointIterator.addFilter(MapObject::testHidden); //remove hidden objects
+
+        pointIterator.addIterator(map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+        pointIterator.addIterator(additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->entry.getValue().forEach((obj)->list.add((TimingPoint) obj)), 1);
 
         if (!pointIterator.hasNext())
             return;
 
-        Map.Entry<Long, ArrayList<TimingPoint>> stack, previous = null;
+        ArrayList<TimingPoint> stack, previous = null;
+        long key, previousKey;
         stack = pointIterator.next();
+        previousKey = key = pointIterator.getLastKey();
 
         TimingPoint effect, timing;
 
         while (stack != null) {
-            if (adjust != null) {
-                if (stack.getKey() < lastRenderable - (long)(LABEL_SPACING / viewScale))
-                    adjust = null; //Passed the adjustment point somehow, clear it.
+            if (focusPoint != null) {
+                if (key < lastRenderable - (long)(LABEL_SPACING / viewScale))
+                    focusPoint = null; //Passed the focus point somehow, clear it
             }
 
             timing = null;
             effect = null;
 
-            int stackX = (int) (SettingsMaster.getMiddleX() + (stack.getKey() - preciseTime) * viewScale + 4);
+            int stackX = (int) (SettingsMaster.getMiddleX() + (key - preciseTime) * viewScale + 4);
 
             if (previous != null) {
-                bpmLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
-                svLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
+                bpmLabelSpacing -= (previousKey - key) * viewScale;
+                svLabelSpacing -= (previousKey - key) * viewScale;
             }
 
-            if (adjust != null && stack.getKey() <= lastRenderable) { //Adjust point not null and within range of it.
-                for (TimingPoint point : stack.getValue()) {
+            if (focusPoint != null && key <= lastRenderable) { //Adjust point not null and within range of it.
+                for (TimingPoint point : stack) {
                     if (point.uninherited) {
                         //if adjustment point is not red (so this doesn't matter), or this is the adjustment point
-                        if (!adjust.uninherited || adjust.equals(point)) timing = point;
+                        if (!focusPoint.uninherited || focusPoint.equals(point)) timing = point;
                     }
                     else {
                         //if this is the adjustment point
-                        if (adjust.uninherited || adjust.equals(point)) effect = point;
+                        if (focusPoint.uninherited || focusPoint.equals(point)) effect = point;
                     }
                 }
 
 
                 if (effect != null && svLabelSpacing <= 0) {
-                    if (effect.equals(adjust)) {
+                    if (effect.equals(focusPoint)) {
                         renderAdjustableLabel(sb, effect, stackX, bottom + TOP_VALUE_Y);
-                        adjust = null;
+                        focusPoint = null;
                     }
                     else {
                         renderLabel(sb, twoDecimal.format(effect.value), stackX, bottom + TOP_VALUE_Y);
@@ -652,9 +691,9 @@ public class EffectView extends MapView implements TextInputReceiver {
                 }
 
                 if (timing != null && bpmLabelSpacing <= 0) {
-                    if (timing.equals(adjust)) {
+                    if (timing.equals(focusPoint)) {
                         renderAdjustableLabel(sb, timing, stackX, bottom + BOTTOM_VALUE_Y);
-                        adjust = null;
+                        focusPoint = null;
 
                         //If svLabelSpacing <= 0, effect must be null. Render a label, the adjust point isn't sv.
                         if (svLabelSpacing <= 0) {
@@ -671,8 +710,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 }
             }
             else {
-                for (int i = stack.getValue().size() - 1; i >= 0 && (timing == null || effect == null); --i) {
-                    TimingPoint point = stack.getValue().get(i);
+                for (int i = stack.size() - 1; i >= 0 && (timing == null || effect == null); --i) {
+                    TimingPoint point = stack.get(i);
                     if (point.uninherited && timing == null)
                         timing = point;
                     else if (!point.uninherited && effect == null)
@@ -700,9 +739,11 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
 
             previous = stack;
+            previousKey = key;
 
             if (pointIterator.hasNext()) {
                 stack = pointIterator.next();
+                key = pointIterator.getLastKey();
             }
             else {
                 stack = null;
@@ -715,32 +756,40 @@ public class EffectView extends MapView implements TextInputReceiver {
         double volumeLabelSpacing = 0;
         double bpmLabelSpacing = 0;
 
+        MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, 3, reverseLongComparator);
+        pointIterator.addFilter(MapObject::testHidden); //remove hidden objects
+
+        pointIterator.addIterator(map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+        pointIterator.addIterator(additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->entry.getValue().forEach((obj)->list.add((TimingPoint) obj)), 1);
+        
+        if (!pointIterator.hasNext())
+            return;
+
+        ArrayList<TimingPoint> stack, previous = null;
+        long key, previousKey;
+        stack = pointIterator.next();
+        previousKey = key = pointIterator.getLastKey();
+
         TimingPoint effect, timing;
-
-        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> pointIterator = map.getEditPoints(time - EditorLayer.viewTime, time + EditorLayer.viewTime).entrySet().iterator();
-        Map.Entry<Long, ArrayList<TimingPoint>> stack = null, previous = null;
-
-        if (pointIterator.hasNext())
-            stack = pointIterator.next();
 
         while (stack != null) {
             if (adjust != null) {
-                if (stack.getKey() < lastRenderable - (long)(LABEL_SPACING / viewScale))
+                if (key < lastRenderable - (long)(LABEL_SPACING / viewScale))
                     adjust = null; //Passed the adjust point somehow, clear it.
             }
 
             timing = null;
             effect = null;
 
-            int stackX = (int) (SettingsMaster.getMiddleX() + (stack.getKey() - preciseTime) * viewScale + 4);
+            int stackX = (int) (SettingsMaster.getMiddleX() + (key - preciseTime) * viewScale + 4);
 
             if (previous != null) {
-                bpmLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
-                volumeLabelSpacing -= (previous.getKey() - stack.getKey()) * viewScale;
+                bpmLabelSpacing -= (previousKey - key) * viewScale;
+                volumeLabelSpacing -= (previousKey - key) * viewScale;
             }
 
-            if (adjust != null && stack.getKey() <= lastRenderable) { //Adjust point not null and within range of it.
-                for (TimingPoint point : stack.getValue()) {
+            if (adjust != null && key <= lastRenderable) { //Adjust point not null and within range of it.
+                for (TimingPoint point : stack) {
                     if (point.uninherited) {
                         //if adjustment point is not red (so this doesn't matter), or this is the adjustment point
                         if (!adjust.uninherited || adjust.equals(point)) timing = point;
@@ -762,8 +811,8 @@ public class EffectView extends MapView implements TextInputReceiver {
                 }
             }
             else {
-                for (int i = stack.getValue().size() - 1; i >= 0 && (timing == null || effect == null); --i) {
-                    TimingPoint point = stack.getValue().get(i);
+                for (int i = stack.size() - 1; i >= 0 && (timing == null || effect == null); --i) {
+                    TimingPoint point = stack.get(i);
                     if (point.uninherited && timing == null)
                         timing = point;
                     else if (!point.uninherited && effect == null)
@@ -791,9 +840,11 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
 
             previous = stack;
+            previousKey = key;
 
             if (pointIterator.hasNext()) {
                 stack = pointIterator.next();
+                key = pointIterator.getLastKey();
             }
             else {
                 stack = null;
@@ -801,7 +852,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
     }
 
-    private void renderLabel(SpriteBatch sb, String text, int x, int y) {
+    public void renderLabel(SpriteBatch sb, String text, int x, int y) {
         textRenderer.setFont(font).renderText(sb, text, x, y, Color.WHITE);
     }
     private void renderAdjustableLabel(SpriteBatch sb, TimingPoint p, int x, int y) {
@@ -846,13 +897,13 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void renderStack(ArrayList<? extends PositionalObject> objects, SpriteBatch sb, ShapeRenderer sr) {
+    public void renderStack(ArrayList<? extends MapObject> objects, SpriteBatch sb, ShapeRenderer sr) {
         if (objects.isEmpty())
             return;
 
-        PositionalObject selected = null, mainObj = GeneralUtils.listLast(objects);
+        MapObject selected = null, mainObj = GeneralUtils.listLast(objects);
         int type = 0;
-        for (PositionalObject o : objects) {
+        for (MapObject o : objects) {
             if (o.selected)
                 selected = o;
 
@@ -882,7 +933,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
+    public void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
         if (o instanceof TimingPoint) {
             if (((TimingPoint) o).uninherited) { //red line rendered through this method = red
                 ((TimingPoint) o).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, red, alpha);
@@ -900,29 +951,29 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
+    public void renderSelection(MapObject o, SpriteBatch sb, ShapeRenderer sr) {
         o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom);
     }
 
     @Override
-    public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
+    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
         endAdjust();
         long offset, targetPos;
 
         offset = time - copyObjects.firstKey();
 
-        PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
+        MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
 
-        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : copyObjects.entrySet())
+        for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
         {
             targetPos = entry.getKey() + offset;
-            for (PositionalObject o : entry.getValue())
+            for (MapObject o : entry.getValue())
             {
                 placementCopy.add(o.shiftedCopy(targetPos));
             }
         }
 
-        this.map.pasteLines(placementCopy);
+        this.map.registerAndPerformAddObjects("Paste Lines", placementCopy, replaceTest);
     }
 
     @Override
@@ -931,13 +982,13 @@ public class EffectView extends MapView implements TextInputReceiver {
             return;
 
         endAdjust();
-        this.map.reverse(MapChange.ChangeType.GREEN_LINE, false, selectedObjects);
+        this.map.registerReverse(false, selectedObjects);
         refreshSelection();
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = prep();
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end) {
+        NavigableMap<Long, ? extends ArrayList<? extends MapObject>> source = prep();
 
         if (source.isEmpty())
             return null;
@@ -957,14 +1008,15 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
+    public void updateSelectionPositions() {
+        MapObjectTreeMap<MapObject> selected = getSelection();
         //Change position in maps, but don't update anything else about the map.
-        map.timingPoints.removeAll(getSelection());
-        map.effectPoints.removeAll(getSelection());
-        map.allPoints.removeAll(getSelection());
+        map.timingPoints.removeAll(selected);
+        map.effectPoints.removeAll(selected);
+        map.allPoints.removeAll(selected);
 
-        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : moved.entrySet()) {
-            for (PositionalObject o : entry.getValue()) {
+        for (Map.Entry<Long, ArrayList<MapObject>> entry : selected.entrySet()) {
+            for (MapObject o : entry.getValue()) {
                 if (o instanceof TimingPoint) {
                     if (((TimingPoint) o).uninherited) {
                         map.timingPoints.add((TimingPoint) o);
@@ -975,45 +1027,44 @@ public class EffectView extends MapView implements TextInputReceiver {
                 }
             }
         }
-        map.allPoints.addAll(moved);
+        map.allPoints.addAll(selected);
+
+        refreshSelection();
     }
 
     @Override
-    public void updateVerticalDrag(double totalVerticalOffset) {
-        if (mode) {
-            for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
-            {
-                for (PositionalObject o : e.getValue()) {
-                    if (o instanceof TimingPoint && !((TimingPoint) o).uninherited)
-                        o.tempModification(totalVerticalOffset);
+    public void updateVerticalDrag(MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double adjustment) {
+        //copyMap is original -> copy
+        if (mode) { //sv mode
+            for (Map.Entry<MapObject, MapObject> copyPair : copyMap.entrySet()) {
+                if (copyPair.getValue() instanceof TimingPoint && !(((TimingPoint) copyPair.getValue()).uninherited)) {
+                    copyPair.getValue().setValue(Math.max(TimingPoint.MIN_SV, copyPair.getKey().getValue() - (adjustment / 20.0)));
                 }
             }
         }
         else {
-            for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
-            {
-                for (PositionalObject o : e.getValue()) {
-                    o.volumeModification(totalVerticalOffset);
+            for (Map.Entry<MapObject, MapObject> copyPair : copyMap.entrySet()) {
+                if (copyPair.getValue() instanceof TimingPoint && !(((TimingPoint) copyPair.getValue()).uninherited)) {
+                    copyPair.getValue().setVolume(MathUtils.clamp((int) (copyPair.getKey().getVolume() + Math.round(adjustment / 2)), 1, 100));
                 }
             }
         }
 
-        //Do not check for removed points here for simpler check.
         //Proper update will occur on release.
-        map.updateLines(getSelection().entrySet(), null);
+        map.updateLines(getSelection().entrySet(), null, false);
     }
 
     @Override
-    public void deleteObject(PositionalObject o) {
+    public void deleteObject(MapObject o) {
         endAdjust();
-        this.map.delete(o);
+        this.map.registerAndPerformDelete(o);
     }
     @Override
     public void deleteSelection() {
         if (selectedObjects != null)
         {
             endAdjust();
-            this.map.delete(selectedObjects);
+            this.map.registerAndPerformDelete(selectedObjects);
             clearSelection();
         }
     }
@@ -1021,32 +1072,47 @@ public class EffectView extends MapView implements TextInputReceiver {
     public void registerMove(long totalMovement) {
         if (selectedObjects != null)
         {
-            ignoreSelected = false;
             map.regenerateDivisor();
             if (totalMovement != 0) {
-                PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+                MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
                 movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-                this.map.registerLineMovement(movementCopy, totalMovement);
+                this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
             }
         }
     }
     @Override
-    public void registerValueChange() {
+    public void registerValueChange(HashMap<MapObject, MapObject> copyMap) {
         if (selectedObjects != null)
         {
-            PositionalObjectTreeMap<PositionalObject> adjustCopy = new PositionalObjectTreeMap<>();
-            adjustCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerValueChange(adjustCopy);
-            this.map.updateSv();
+            Map<MapObject, Double> newValueMap = new HashMap<>();
+            MapObjectTreeMap<MapObject> adjustCopy = new MapObjectTreeMap<>();
+
+            getSelection().forEachObject((obj)->{
+                MapObject cpy = copyMap.get(obj);
+                if (cpy != null && obj instanceof TimingPoint) {
+                    newValueMap.put(obj, cpy.getValue());
+                    adjustCopy.add(obj);
+                }
+            });
+            this.map.registerAndPerformValueChange(adjustCopy, newValueMap);
         }
     }
-    public void registerVolumeChange() {
+    public void registerVolumeChange(HashMap<MapObject, MapObject> copyMap) {
         if (selectedObjects != null)
         {
-            PositionalObjectTreeMap<PositionalObject> adjusted = new PositionalObjectTreeMap<>();
-            adjusted.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerVolumeChange(adjusted, getStackedSelection());
-            this.map.updateLines(adjusted.entrySet(), null); //for just a volume check, this is good enough
+            Map<Long, Integer> newVolumeMap = new HashMap<>();
+
+            MapObjectTreeMap<MapObject> adjustCopy = new MapObjectTreeMap<>();
+            getSelection().forEachObject((obj)->{
+                MapObject cpy = copyMap.get(obj);
+                if (cpy != null && obj instanceof TimingPoint) {
+                    newVolumeMap.put(obj.getPos(), cpy.getVolume());
+                    //((TimingPoint) obj).tempSetVolume(cpy.getVolume());
+                }
+                adjustCopy.add(obj);
+            }); //Change to registerAndPerformVolumeChange
+
+            this.map.registerAndPerformVolumeChange(adjustCopy, newVolumeMap);
         }
     }
 
@@ -1055,26 +1121,22 @@ public class EffectView extends MapView implements TextInputReceiver {
         {
             float variance = 0.01f; //1% variance
 
-            for (ArrayList<PositionalObject> points : selectedObjects.values())
-            {
-                for (PositionalObject t : points)
-                {
-                    TimingPoint point = (TimingPoint) t;
-                    if (!((TimingPoint) t).uninherited)
-                        point.value += point.value * (variance * (Math.random() - 0.5f) * 2.0f);
+            Map<MapObject, Double> newValueMap = new HashMap<>();
+            MapObjectTreeMap<MapObject> adjustCopy = new MapObjectTreeMap<>();
+
+            getSelection().forEachObject((obj)->{
+                if (!((TimingPoint) obj).uninherited) {
+                    newValueMap.put(obj, obj.getValue() * (1 + (variance * (Math.random() - 0.5f) * 2.0f)));
+                    adjustCopy.add(obj);
                 }
-            }
+            });
 
-            map.registerValueChange(selectedObjects);
+            map.registerAndPerformValueChange(adjustCopy, newValueMap);
         }
-
-        minSV = 0.75;
-        peakSV = 1.3;
-        recheckSvLimits();
     }
 
     @Override
-    public void select(PositionalObject p) {
+    public void select(MapObject p) {
         super.select(p);
 
         if (selectedObjects.size() != 1)
@@ -1086,7 +1148,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         endAdjust();
         clearSelection();
 
-        selectedObjects = new PositionalObjectTreeMap<>();
+        selectedObjects = new MapObjectTreeMap<>();
 
         if (timingEnabled && effectPointsEnabled)
             selectedObjects.addAll(map.allPoints);
@@ -1095,8 +1157,8 @@ public class EffectView extends MapView implements TextInputReceiver {
         else if (timingEnabled)
             selectedObjects.addAll(map.timingPoints);
 
-        for (ArrayList<? extends PositionalObject> stuff : selectedObjects.values())
-            for (PositionalObject o : stuff)
+        for (ArrayList<? extends MapObject> stuff : selectedObjects.values())
+            for (MapObject o : stuff)
                 o.selected = true;
     }
 
@@ -1106,7 +1168,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (startTime == endTime)
             return;
 
-        PositionalObjectTreeMap<TimingPoint> src;
+        MapObjectTreeMap<TimingPoint> src;
         if (timingEnabled && effectPointsEnabled)
             src = map.allPoints;
         else if (timingEnabled)
@@ -1117,15 +1179,15 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         if (selectedObjects == null)
         {
-            PositionalObjectTreeMap<PositionalObject> newSelection = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
             if (startTime > endTime)
                 newSelection.addAll(src.descendingSubMap(endTime, true, startTime, true));
             else
                 newSelection.addAll(src.descendingSubMap(startTime, true, endTime, true));
 
             selectedObjects = newSelection;
-            for (ArrayList<PositionalObject> stuff : selectedObjects.values())
-                for (PositionalObject o : stuff)
+            for (ArrayList<MapObject> stuff : selectedObjects.values())
+                for (MapObject o : stuff)
                     o.selected = true;
         }
         else
@@ -1139,34 +1201,27 @@ public class EffectView extends MapView implements TextInputReceiver {
 
             selectedObjects.addAllUnique(newSelected);
 
-            for (ArrayList<PositionalObject> stuff : selectedObjects.values())
-                for (PositionalObject o : stuff)
+            for (ArrayList<MapObject> stuff : selectedObjects.values())
+                for (MapObject o : stuff)
                     o.selected = true;
         }
     }
 
-    private enum AdjustMode{
-        NONE,
-        POSSIBLE,
-        ACTIVE
-    }
-    private AdjustMode adjustMode = AdjustMode.NONE;
-    private TimingPoint adjustPoint = null;
     @Override
     public void movingObjects() {
-        if (!ignoreSelected) {
+        /*if (!ignoreSelected) {
             ignoreSelected = true;
             if (map.timingPoints.removeAll(selectedObjects)) {
                 if (!map.timingPoints.isEmpty()) //If there are timing points other than selected ones, ignore them
                     map.regenerateDivisor(true);
 
                 //And put them back.
-                for (Map.Entry<Long, ArrayList<PositionalObject>> stack : selectedObjects.entrySet())
-                    for (PositionalObject o : stack.getValue())
+                for (Map.Entry<Long, ArrayList<MapObject>> stack : selectedObjects.entrySet())
+                    for (MapObject o : stack.getValue())
                         if (((TimingPoint) o).uninherited)
                             map.timingPoints.add((TimingPoint) o);
             }
-        }
+        }*/
         endAdjust();
     }
     @Override
@@ -1180,14 +1235,14 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public PositionalObject clickObject(float x, float y) {
+    public MapObject clickObject(float x, float y) {
         endAdjust();
         return getObjectAt(x, y);
     }
-    public PositionalObject getObjectAt(float x, float y) {
+    public MapObject getObjectAt(float x, float y) {
         //Check if y location is on sv label area
         //If so, allow wider x area for clicking.
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep();
+        NavigableMap<Long, ? extends ArrayList<? extends MapObject>> selectable = prep();
         if (selectable == null || y < bottom || y > top)
             return null;
 
@@ -1200,7 +1255,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
 
         if (selectable.containsKey((long) time)) {
-            ArrayList<? extends PositionalObject> selectableObjects = selectable.get((long) time);
+            ArrayList<? extends MapObject> selectableObjects = selectable.get((long) time);
             if (selectableObjects.isEmpty())
             {
                 editorLogger.error("WTF? Empty arraylist of objects in object map.");
@@ -1211,8 +1266,8 @@ public class EffectView extends MapView implements TextInputReceiver {
             }
         }
 
-        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> lower = selectable.higherEntry((long) time);
-        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> higher = selectable.lowerEntry((long) time);
+        Map.Entry<Long, ? extends ArrayList<? extends MapObject>> lower = selectable.higherEntry((long) time);
+        Map.Entry<Long, ? extends ArrayList<? extends MapObject>> higher = selectable.lowerEntry((long) time);
         double higherDist, lowerDist;
         double adjustLimit = adjustMode == AdjustMode.POSSIBLE ? ADJUST_DIST : SELECTION_DIST;
 
@@ -1275,13 +1330,13 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, float x) {
+    public boolean clickedEnd(MapObject o, float x) {
         return false;
     }
 
     @Override
     public boolean rightClick(float x, float y) {
-        PositionalObject close = clickObject(x, y);
+        MapObject close = clickObject(x, y);
 
         if (close != null) {
             if (close.selected && hasSelection()) {
@@ -1337,6 +1392,22 @@ public class EffectView extends MapView implements TextInputReceiver {
                     minSV = p.value;
             }
         }
+        for (ArrayList<MapObject> points : additionalDisplayObjects().values())
+        {
+            for (MapObject o : points)
+            {
+                if (!(o instanceof TimingPoint)) continue;
+
+                TimingPoint p = (TimingPoint) o;
+
+                if (!p.uninherited) {
+                    if (p.value > peakSV)
+                        peakSV = p.value;
+                    if (p.value < minSV)
+                        minSV = p.value;
+                }
+            }
+        }
         peakSVText = svFormat.format(peakSV);
         minSVText = svFormat.format(minSV);
     }
@@ -1383,8 +1454,9 @@ public class EffectView extends MapView implements TextInputReceiver {
         EditorLayer.processor.setTextReceiver(this);
     }
     private void endAdjust() {
-        if (adjustMode == AdjustMode.ACTIVE && adjustPoint != null && changed && selectedObjects != null) {
+        if (adjustMode == AdjustMode.ACTIVE && adjustPoint != null && changed && hasSelection()) {
             try {
+                MapObjectTreeMap<MapObject> changeObjects = getSelection();
                 if (mode) {
                     double newValue = Double.parseDouble(textInput);
                     if (adjustPoint.uninherited)
@@ -1394,11 +1466,11 @@ public class EffectView extends MapView implements TextInputReceiver {
                         parent.showText("Invalid value entered.");
                     }
                     else {
-                        PositionalObjectTreeMap<PositionalObject> adjustCopy = new PositionalObjectTreeMap<>();
-                        adjustCopy.addAll(selectedObjects);
+                        MapObjectTreeMap<MapObject> adjustCopy = new MapObjectTreeMap<>();
+                        adjustCopy.addAll(changeObjects);
                         //Only keep points of the same uninherited state
                         adjustCopy.removeIf((p)->(!(p instanceof TimingPoint) || (((TimingPoint) p).uninherited != adjustPoint.uninherited)));
-                        map.registerChange(new ValueSetChange(map, adjustPoint.uninherited, adjustCopy, newValue).perform());
+                        map.registerChange(new ValueSetChange(map, adjustCopy, newValue).preDo());
                     }
                 }
                 else {
@@ -1408,7 +1480,7 @@ public class EffectView extends MapView implements TextInputReceiver {
                         parent.showText("Invalid value entered.");
                     }
                     else {
-                        map.registerChange(new VolumeSetChange(map, getStackedSelection(), nVol).perform());
+                        map.registerChange(new VolumeSetChange(map, map.getStackedObjects(changeObjects, map.allPoints), nVol).preDo());
                     }
                 }
             }
@@ -1420,19 +1492,6 @@ public class EffectView extends MapView implements TextInputReceiver {
         EditorLayer.processor.disableTextReceiver(this);
         adjustMode = AdjustMode.NONE;
         adjustPoint = null;
-    }
-
-    private PositionalObjectTreeMap<PositionalObject> getStackedSelection() {
-        PositionalObjectTreeMap<PositionalObject> allStacked = new PositionalObjectTreeMap<>();
-        ArrayList<TimingPoint> stack;
-        for (Long k : selectedObjects.keySet()) {
-            stack = map.allPoints.get(k);
-            if (stack != null)
-                for (PositionalObject o : stack)
-                    allStacked.add(o);
-        }
-
-        return allStacked;
     }
 
     @Override
@@ -1482,7 +1541,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         return false;
     }
 
-    private static final DecimalFormat twoDecimal = new DecimalFormat("##0.##x", osuDecimalFormat);
+    public static final DecimalFormat twoDecimal = new DecimalFormat("##0.##x", osuDecimalFormat);
     private static final DecimalFormat bpmFormat = new DecimalFormat("##0.## BPM", osuDecimalFormat);
     private static final DecimalFormat precise = new DecimalFormat("##0.0##", osuDecimalFormat);
     private static final DecimalFormat volume = new DecimalFormat("##0", osuDecimalFormat);

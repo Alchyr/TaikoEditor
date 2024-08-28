@@ -8,10 +8,12 @@ import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.layers.*;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.CursorHoverText;
+import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.*;
 import alchyr.taikoedit.management.assets.skins.Skins;
+import alchyr.taikoedit.util.EventWindowListener;
 import alchyr.taikoedit.util.RunningAverage;
 import alchyr.taikoedit.util.Sync;
 import alchyr.taikoedit.util.TextRenderer;
@@ -48,8 +50,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
-public class TaikoEditor extends ApplicationAdapter {
-    public static final int VERSION = 357; //x.x.x -> xxx
+public class TaikoEditor extends ApplicationAdapter implements EventWindowListener.WindowEventReceiver {
+    public static final int VERSION = 360; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = false; //ctrl+alt+d
 
@@ -162,6 +164,16 @@ public class TaikoEditor extends ApplicationAdapter {
         hoverText = new CursorHoverText();
     }
 
+    @Override
+    public void subscribe(EventWindowListener eventWindowListener) {
+        eventWindowListener.listen(EventWindowListener.FOCUS_GAIN, ()->{
+            paused = false;
+        });
+        eventWindowListener.listen(EventWindowListener.FOCUS_LOST, ()->{
+            paused = true;
+        });
+    }
+
     private void postCreate() {
         if (launchWidth != -1 && launchHeight != -1) {
             //windowed/borderless
@@ -191,6 +203,8 @@ public class TaikoEditor extends ApplicationAdapter {
 
         BindingMaster.initialize();
 
+        MapChange.registerMapChanges();
+
         if (directOpen != null) {
             //Check if valid. If it isn't, error message and end.
             if (!open(directOpen)) {
@@ -200,11 +214,8 @@ public class TaikoEditor extends ApplicationAdapter {
                 return;
             }
         }
-        else if (useFastMenu) {
-            addLayer(new FastMenuLayer().getLoader());
-        }
         else {
-            addLayer(new MenuLayer().getLoader());
+            addLayer(new MenuLayer(useFastMenu).getLoader());
         }
 
         //Setup and start update thread
@@ -219,7 +230,7 @@ public class TaikoEditor extends ApplicationAdapter {
                 double time;
                 float elapsed;
                 while (!end) {
-                    sync.sync(1000);
+                    sync.sync(paused ? 24 : 480, paused ? 25 : 2);
 
                     time = getTime();
                     elapsed = (float)(time - lastTime);
@@ -232,7 +243,7 @@ public class TaikoEditor extends ApplicationAdapter {
 
                     lastTime = time;
 
-                    DeviceSwapping.updateActiveDevice(time - lastTime);
+                    DeviceSwapping.updateActiveDevice(elapsed);
                     ++updateCount;
                 }
             } catch (Exception e) {
@@ -288,6 +299,7 @@ public class TaikoEditor extends ApplicationAdapter {
             }
 
             try {
+                editorLogger.info("Update thread done.");
                 end();
                 //Gdx.graphics.setContinuousRendering(true);
             }

@@ -11,6 +11,7 @@ import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -31,7 +32,8 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
     //Positions
     private static final int BUTTON_Y = 80;
-    private static final int BUTTON_SPACING = 160;
+    private static final int HORIZONTAL_SPACING = 160;
+    private static final int VERTICAL_SPACING = 40;
     private final int middleY = SettingsMaster.getHeight() / 2;
 
     //Parts
@@ -53,14 +55,34 @@ public class ConfirmationLayer extends ProgramLayer implements InputLayer {
 
         this.text = text;
 
-        if (cancel) {
-            cancelButton = new Button(SettingsMaster.getMiddleX() - BUTTON_SPACING, middleY - BUTTON_Y, "Cancel", assetMaster.getFont("default")).setClick(this::cancel);
-            denyButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
-            confirmButton = new Button(SettingsMaster.getMiddleX() + BUTTON_SPACING, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+        BitmapFont font = assetMaster.getFont("default");
+
+        float maxLength = textRenderer.setFont(font).getWidth(confirm);
+        maxLength = Math.max(maxLength, textRenderer.getWidth(deny));
+
+        float xSpacing, ySpacing;
+
+        if (maxLength > 120) {
+            xSpacing = 0;
+            ySpacing = VERTICAL_SPACING;
         }
         else {
-            denyButton = new Button(SettingsMaster.getMiddleX() - BUTTON_SPACING / 2, middleY - BUTTON_Y, deny, assetMaster.getFont("default")).setClick(this::no);
-            confirmButton = new Button(SettingsMaster.getMiddleX() + BUTTON_SPACING / 2, middleY - BUTTON_Y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            xSpacing = HORIZONTAL_SPACING;
+            ySpacing = 0;
+        }
+
+        float y = middleY - BUTTON_Y;
+
+        if (cancel) {
+            confirmButton = new Button(SettingsMaster.getMiddleX() + xSpacing, y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            y -= ySpacing;
+            denyButton = new Button(SettingsMaster.getMiddleX(), y, deny, assetMaster.getFont("default")).setClick(this::no);
+            y -= ySpacing;
+            cancelButton = new Button(SettingsMaster.getMiddleX() - xSpacing, y, "Cancel", font).setClick(this::cancel);
+        }
+        else {
+            confirmButton = new Button(SettingsMaster.getMiddleX() - xSpacing / 2, y, confirm, assetMaster.getFont("default")).setClick(this::yes);
+            denyButton = new Button(SettingsMaster.getMiddleX() + xSpacing / 2, y - ySpacing, deny, assetMaster.getFont("default")).setClick(this::no);
             cancelButton = null;
         }
 

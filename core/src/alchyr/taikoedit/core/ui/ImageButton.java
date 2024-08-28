@@ -31,6 +31,7 @@ public class ImageButton implements UIElement {
     public boolean hovered;
 
     private Consumer<Integer> onClick = null;
+    private VoidMethod onHover = null;
 
     public String action = "";
 
@@ -86,6 +87,11 @@ public class ImageButton implements UIElement {
 
     public ImageButton setClick(VoidMethod onClick) {
         this.onClick = (i)->onClick.run();
+        return this;
+    }
+
+    public ImageButton setHovered(VoidMethod onHover) {
+        this.onHover = onHover;
         return this;
     }
 
@@ -145,6 +151,9 @@ public class ImageButton implements UIElement {
     public void update(float elapsed)
     {
         hovered = x + dx < Gdx.input.getX() && y + dy < SettingsMaster.gameY() && Gdx.input.getX() < x2 + dx && SettingsMaster.gameY() < y2 + dy;
+        if (onHover != null && hovered) {
+            onHover.run();
+        }
     }
 
     @Override

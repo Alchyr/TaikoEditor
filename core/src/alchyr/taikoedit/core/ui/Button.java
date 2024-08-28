@@ -16,8 +16,8 @@ import java.util.function.Consumer;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public class Button implements UIElement {
-    private static final float BORDER_THICKNESS = 3 * SettingsMaster.SCALE;
-    private static final float UNDERLINE_OFFSET = 5 * SettingsMaster.SCALE;
+    private static final float BORDER_THICKNESS = Math.max(2, 3 * SettingsMaster.SCALE);
+    private static final float UNDERLINE_OFFSET = Math.max(2, 5 * SettingsMaster.SCALE);
 
     private static final float X_BUFFER = 4;
 

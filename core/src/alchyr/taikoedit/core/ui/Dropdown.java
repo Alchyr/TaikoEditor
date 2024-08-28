@@ -56,6 +56,13 @@ public class Dropdown<T> {
     }
 
     @SafeVarargs
+    public final Dropdown<T> addElements(List<DropdownElement<T>>... addElements) {
+        for (List<DropdownElement<T>> elementSet : addElements)
+            this.elements.addAll(elementSet);
+        return this;
+    }
+
+    @SafeVarargs
     public final void open(List<DropdownElement<T>>... newElements) {
         setElements(newElements);
         open();

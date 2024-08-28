@@ -33,12 +33,16 @@ public class ConnectionHost {
         CONCLUSION:
         UDP Hole punching is too unreliable and overall, still not very convenient unless you have a server to communicate with.
         Forcing the host to perform port forwarding will likely end up being the easiest way.
+     */
+
+    /*
+        pwnat - no straightforward "raw" socket support in java
 
      */
     public ConnectionHost() {
         try {
             listener = new UDPListener();
-            pass = GeneralUtils.generateCode(16);
+            pass = GeneralUtils.generateCode(64);
             logger.info("Server input port: " + listener.getLocalPort());
             listener.listen();
         } catch (IOException e) {

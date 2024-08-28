@@ -134,7 +134,7 @@ public class SliderTool extends EditorTool {
         {
             if (button == Input.Buttons.LEFT)
             {
-                currentlyPlacing.map.addObject(placementObject, currentlyPlacing.replaceTest);
+                currentlyPlacing.map.registerAndPerformAddObject("Add Slider", placementObject, currentlyPlacing.replaceTest);
 
                 placementObject = new Slider(0, 0);
                 renderPreview = false;

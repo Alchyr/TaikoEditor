@@ -12,7 +12,8 @@ import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -21,6 +22,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -48,15 +50,12 @@ public class SelectionTool extends EditorTool {
     //Selection data
     private MapView selectingView;
     private double clickStartTime;
-    private int clickStartY;
     private float selectionEnd;
 
     //used for dragging objects
     private DragMode dragMode; //At start of drag, doesn't enable immediately. Requires a small amount of cursor distance before dragging will actually occur.
-    private PositionalObject dragObject;
-    private long dragObjStartPos;
-    private long totalHorizontalOffset;
-    private double totalVerticalOffset;
+
+    private RenderableMouseHold hold = null;
 
     private enum DragMode {
         NONE,
@@ -74,17 +73,9 @@ public class SelectionTool extends EditorTool {
     private final Texture pix = assetMaster.get("ui:pixel");
 
 
-    private final SelectionMouseHoldObject selection;
-    private final DraggingMouseHoldObject dragging;
-    private final EndDraggingMouseHoldObject draggingEnd;
-
-
     private SelectionTool()
     {
         super("Selection");
-        selection = new SelectionMouseHoldObject();
-        dragging = new DraggingMouseHoldObject();
-        draggingEnd = new EndDraggingMouseHoldObject();
         mode = SelectionToolMode.NONE;
     }
 
@@ -135,9 +126,10 @@ public class SelectionTool extends EditorTool {
                 cancel();
                 return MouseHoldObject.nothing;
             case NONE:
+                hold = null;
                 boolean delete = button == Input.Buttons.RIGHT;
                 selectingView = view;
-                dragObject = selectingView.clickObject(x, y);
+                MapObject dragObject = selectingView.clickObject(x, y);
                 boolean shift = (modifiers & InputBinding.InputInfo.SHIFT_ID) != 0;
                 boolean canDrag = true;
                 boolean canSelect = false;
@@ -244,28 +236,22 @@ public class SelectionTool extends EditorTool {
                 if (canDrag)
                 {
                     clickStartTime = selectingView.getTimeFromPosition(x);
-                    clickStartY = Gdx.input.getY();
-                    dragObjStartPos = dragObject.getPos();
+                    int clickStartY = Gdx.input.getY();
                     mode = SelectionToolMode.DRAGGING;
-                    totalHorizontalOffset = 0;
-                    totalVerticalOffset = 0;
-                    return dragging;
+                    return hold = new DraggingMouseHoldObject(this, selectingView, dragObject, clickStartY);
                 }
                 else if (canSelect)
                 {
                     clickStartTime = selectingView.getTimeFromPosition(x);
                     mode = SelectionToolMode.SELECTING;
                     selectionEnd = x;
-                    return selection;
+                    return hold = new SelectionMouseHoldObject(tool, selectingView);
                 }
                 else if (dragEnd)
                 {
                     clickStartTime = selectingView.getTimeFromPosition(x);
-                    dragObjStartPos = ((ILongObject) dragObject).getEndPos();
                     mode = SelectionToolMode.DRAGGING_END;
-                    totalHorizontalOffset = 0;
-                    totalVerticalOffset = 0;
-                    return draggingEnd;
+                    return hold = new EndDraggingMouseHoldObject(this, selectingView, dragObject);
                 }
                 dragMode = DragMode.NONE;
                 selectingView = null;
@@ -284,87 +270,12 @@ public class SelectionTool extends EditorTool {
         return null;
     }
 
-    private void updateSelectionDrag(float x, float y)
-    {
-        if (dragMode == DragMode.HORIZONTAL || selectionEnd - x < -MIN_DRAG_DIST || selectionEnd - x > MIN_DRAG_DIST)
-        {
-            dragMode = DragMode.HORIZONTAL;
-            selectionEnd = x;
-        }
-    }
-    private void releaseSelection(float x, float y)
-    {
-        if (selectingView != null)
-        {
-            if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL)
-            {
-                selectingView.addSelectionRange((long) clickStartTime, (long) selectingView.getTimeFromPosition(x));
-            }
-        }
-        reset();
-    }
-    private void releaseDrag(float x, float y)
-    {
-        if (selectingView != null)
-        {
-            if (mode == SelectionToolMode.DRAGGING && selectingView.hasSelection())
-            {
-                if (dragMode == DragMode.HORIZONTAL)
-                {
-                    selectingView.registerMove(totalHorizontalOffset);
-                }
-                if (totalVerticalOffset != 0 && dragMode == DragMode.VERTICAL)
-                {
-                    if (selectingView instanceof EffectView && !effectMode) {
-                        ((EffectView) selectingView).registerVolumeChange();
-                    }
-                    else {
-                        selectingView.registerValueChange();
-                    }
-                }
-                //Trigger it here. Should not be triggered as you move objects as that would add a bunch of extra items to undo queue.
-                if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))
-                {
-                    editorLogger.info("Cancelled drag by right clicking. Delete selection.");
-                    selectingView.deleteSelection(); //Deletion occurs after movement, so this is saved as two separate actions.
-                }
-                else if (dragMode == DragMode.NONE) {
-                    selectingView.dragRelease();
-                }
-            }
-        }
-        reset();
-    }
-    private void releaseEndDrag(float x, float y)
-    {
-        if (selectingView != null)
-        {
-            if (mode == SelectionToolMode.DRAGGING_END && dragObject != null)
-            {
-                if (totalHorizontalOffset != 0)
-                {
-                    //This only supports ILongObjects so there's no need to abstract it by going through the view
-                    selectingView.map.registerDurationChange((ILongObject)dragObject, totalHorizontalOffset);
-                }
-                //Trigger it here. Should not be triggered as you move objects as that would add a bunch of extra items to undo queue.
-                if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))
-                {
-                    selectingView.deselect(dragObject);
-                    selectingView.deleteObject(dragObject);
-                }
-            }
-        }
-        reset();
-    }
-
     private void reset()
     {
         selectingView = null;
-        dragObject = null;
-        dragObjStartPos = 0;
         dragMode = DragMode.NONE;
-        totalHorizontalOffset = 0;
         mode = SelectionToolMode.NONE;
+        hold = null;
     }
 
     @Override
@@ -374,41 +285,9 @@ public class SelectionTool extends EditorTool {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         seeked = false;
-        if (selectingView != null)
+        if (selectingView != null && hold != null)
         {
-            if (mode == SelectionToolMode.SELECTING && dragMode == DragMode.HORIZONTAL) //Render selection effect on objects you are dragging over before they're actually selected
-            {
-                int start = selectingView.getPositionFromTime(clickStartTime);
-
-                if (start < selectionEnd)
-                {
-                    NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> hovered = selectingView.getVisibleRange((long) clickStartTime, (long) selectingView.getTimeFromPosition(selectionEnd));
-
-                    if (hovered != null)
-                    {
-                        for (ArrayList<? extends PositionalObject> list : hovered.values())
-                            for (PositionalObject o : list)
-                                selectingView.renderSelection(o, sb, sr);
-                    }
-
-                    sb.setColor(selectionColor);
-                    sb.draw(pix, start, selectingView.bottom, selectionEnd - start, selectingView.height);
-                }
-                else if (start > selectionEnd)
-                {
-                    NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> hovered = selectingView.getVisibleRange((long) selectingView.getTimeFromPosition(selectionEnd), (long) clickStartTime);
-
-                    if (hovered != null)
-                    {
-                        for (ArrayList<? extends PositionalObject> list : hovered.values())
-                            for (PositionalObject o : list)
-                                selectingView.renderSelection(o, sb, sr);
-                    }
-
-                    sb.setColor(selectionColor);
-                    sb.draw(pix, selectionEnd, selectingView.bottom, start - selectionEnd, selectingView.height);
-                }
-            }
+            hold.render(sb, sr);
         }
     }
 
@@ -419,38 +298,62 @@ public class SelectionTool extends EditorTool {
 
     private boolean tryCancel() {
         boolean cancel = mode != SelectionToolMode.NONE;
-        if (mode == SelectionToolMode.SELECTING)
-        {
-            EditorLayer.processor.cancelMouseHold(selection);
-        }
-        else if (mode == SelectionToolMode.DRAGGING)
-        {
-            releaseDrag(0, 0);
 
-            EditorLayer.processor.cancelMouseHold(dragging);
+        if (hold != null) {
+            hold.onRelease(Gdx.input.getX(), 0);
+            EditorLayer.processor.cancelMouseHold(hold);
         }
-        else if (mode == SelectionToolMode.DRAGGING_END)
-        {
-            if (totalHorizontalOffset != 0)
-            {
-                selectingView.map.registerDurationChange((ILongObject)dragObject, totalHorizontalOffset);
-            }
-            EditorLayer.processor.cancelMouseHold(draggingEnd);
-        }
+
         reset();
         return cancel;
     }
 
-    private class SelectionMouseHoldObject extends MouseHoldObject
+    private static abstract class RenderableMouseHold extends MouseHoldObject {
+        public RenderableMouseHold(BiConsumer<Float, Float> onDrag, BiConsumer<Float, Float> onRelease) {
+            super(onDrag, onRelease);
+        }
+
+        public void render(SpriteBatch sb, ShapeRenderer sr) {
+
+        }
+    }
+
+    private static class SelectionMouseHoldObject extends RenderableMouseHold
     {
-        public SelectionMouseHoldObject()
+        private final SelectionTool tool;
+        private final MapView view;
+
+        public SelectionMouseHoldObject(SelectionTool tool, MapView selectingView)
         {
-            super(SelectionTool.this::updateSelectionDrag, SelectionTool.this::releaseSelection);
+            super(null, null);
+
+            this.tool = tool;
+            this.view = selectingView;
+
+            onDrag = this::updateSelectionDrag;
+            onRelease = (x,y)->this.releaseSelection(view, x, y);
+        }
+
+        private void updateSelectionDrag(float x, float y)
+        {
+            if (tool.dragMode == DragMode.HORIZONTAL || tool.selectionEnd - x < -MIN_DRAG_DIST || tool.selectionEnd - x > MIN_DRAG_DIST)
+            {
+                tool.dragMode = DragMode.HORIZONTAL;
+                tool.selectionEnd = x;
+            }
+        }
+        private void releaseSelection(MapView view, float x, float y)
+        {
+            if (tool.mode == SelectionToolMode.SELECTING && tool.dragMode == DragMode.HORIZONTAL)
+            {
+                view.addSelectionRange((long) tool.clickStartTime, (long) view.getTimeFromPosition(x));
+            }
+            tool.reset();
         }
 
         @Override
         public void update(float elapsed) {
-            if (mode == SelectionToolMode.SELECTING)
+            if (tool.mode == SelectionToolMode.SELECTING)
             {
                 float mul = BindingGroup.alt() ? 4 : 1;
                 if (Gdx.input.getX() <= 1)
@@ -459,75 +362,180 @@ public class SelectionTool extends EditorTool {
                         TaikoEditor.onMain(()->{
                             if (!seeked) {
                                 seeked = true;
-                                music.seekSecond(music.getSecondTime() - mul * Math.max(0.1, Gdx.graphics.getDeltaTime() * 12));
+                                music.seekSecond(music.getSecondTime() - mul * Math.max(0.12, Gdx.graphics.getDeltaTime() * 12));
                             }
                         });
                     }
                     else {
-                        music.seekSecond(music.getSecondTime() - mul * elapsed * 6);
+                        music.seekSecond(music.getSecondTime() - Math.max(0.01, mul * elapsed * 6));
                     }
                 }
                 else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                 {
-                    music.seekSecond(music.getSecondTime() + mul * elapsed * 6);
+                    music.seekSecond(music.getSecondTime() + Math.max(0.01, mul * elapsed * 6));
+                }
+            }
+        }
+
+        public void render(SpriteBatch sb, ShapeRenderer sr) {
+            if (tool.mode == SelectionToolMode.SELECTING && tool.dragMode == DragMode.HORIZONTAL) //Render selection effect on objects you are dragging over before they're actually selected
+            {
+                int start = view.getPositionFromTime(tool.clickStartTime);
+
+                if (start < tool.selectionEnd)
+                {
+                    NavigableMap<Long, ? extends ArrayList<? extends MapObject>> hovered = view.getVisibleRange((long) tool.clickStartTime, (long) view.getTimeFromPosition(tool.selectionEnd));
+
+                    if (hovered != null)
+                    {
+                        for (ArrayList<? extends MapObject> list : hovered.values())
+                            for (MapObject o : list)
+                                view.renderSelection(o, sb, sr);
+                    }
+
+                    sb.setColor(selectionColor);
+                    sb.draw(tool.pix, start, view.bottom, tool.selectionEnd - start, view.height);
+                }
+                else if (start > tool.selectionEnd)
+                {
+                    NavigableMap<Long, ? extends ArrayList<? extends MapObject>> hovered = view.getVisibleRange((long) view.getTimeFromPosition(tool.selectionEnd), (long) tool.clickStartTime);
+
+                    if (hovered != null)
+                    {
+                        for (ArrayList<? extends MapObject> list : hovered.values())
+                            for (MapObject o : list)
+                                view.renderSelection(o, sb, sr);
+                    }
+
+                    sb.setColor(selectionColor);
+                    sb.draw(tool.pix, tool.selectionEnd, view.bottom, start - tool.selectionEnd, view.height);
                 }
             }
         }
     }
 
-    private class DraggingMouseHoldObject extends MouseHoldObject
+    private static class DraggingMouseHoldObject extends RenderableMouseHold
     {
-        public DraggingMouseHoldObject()
+        private final SelectionTool tool;
+        private final MapView view;
+        private double lastY;
+
+        private final MapObjectTreeMap<MapObject> copyObjects;
+        private final HashMap<MapObject, MapObject> copyMap; //map of original object -> copy object
+
+        private final MapObject referenceObject;
+        private final long dragObjStartPos;
+
+        private long totalHorizontalOffset = 0;
+        private double totalVerticalOffset = 0;
+
+        public DraggingMouseHoldObject(SelectionTool tool, MapView selectingView, MapObject dragObject, double lastY)
         {
-            super(null, SelectionTool.this::releaseDrag);
+            super(null, null);
+
+            this.tool = tool;
+            this.view = selectingView;
+            this.lastY = lastY;
+            this.dragObjStartPos = dragObject.getPos();
+
+            MapObjectTreeMap<MapObject> selection = selectingView.getSelection();
+            copyObjects = new MapObjectTreeMap<>();
+            copyMap = new HashMap<>(selection.count());
+
+            selection.forEachObject((obj)->{
+                obj.hide(()->this.onRelease == null);
+                MapObject copy = obj.shiftedCopy(obj.getPos());
+                copyObjects.add(copy);
+                copyMap.put(obj, copy);
+            });
+
+
+            referenceObject = copyObjects.get(dragObjStartPos).get(0);
+            copyObjects.forEachObject((obj)->{
+                obj.selected = true;
+            });
+
+            onRelease = (x, y)->this.releaseDrag(this.view);
+        }
+
+        private void releaseDrag(MapView view)
+        {
+            if (tool.mode == SelectionToolMode.DRAGGING && view.hasSelection())
+            {
+                if (tool.dragMode == DragMode.HORIZONTAL && totalHorizontalOffset != 0)
+                {
+                    //transfer copy positions? Probably not necessary. Amount changed is known, just move the objects in registerMove.
+                    view.registerMove(totalHorizontalOffset);
+                }
+                if (tool.dragMode == DragMode.VERTICAL && totalVerticalOffset != 0)
+                {
+                    if (view instanceof EffectView && !tool.effectMode) {
+                        ((EffectView) view).registerVolumeChange(copyMap);
+                    }
+                    else {
+                        view.registerValueChange(copyMap);
+                    }
+                }
+                //Trigger it here. Should not be triggered as you move objects as that would add a bunch of extra items to undo queue.
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))
+                {
+                    editorLogger.info("Cancelled drag by right clicking. Delete selection.");
+                    view.deleteSelection(); //Deletion occurs after movement, so this is saved as two separate actions.
+                }
+                else if (tool.dragMode == DragMode.NONE) {
+                    view.dragRelease(); //Did not do any dragging, treat this as a delayed "click"
+                }
+            }
+            tool.reset();
         }
 
         @Override
         public void update(float elapsed) {
-            if (selectingView != null && selectingView.hasSelection() && mode == SelectionToolMode.DRAGGING)
+            if (view.hasSelection() && tool.mode == SelectionToolMode.DRAGGING)
             {
-                long newPosition = (long) selectingView.getTimeFromPosition(Gdx.input.getX());
-                long horizontalChange = newPosition - (long) clickStartTime; //different from current time and start time
-                double verticalChange = (Gdx.input.getY() - clickStartY);
+                view.displayAdditionalObjects(copyObjects);
+
+                long newPosition = (long) view.getTimeFromPosition(Gdx.input.getX());
+                long horizontalChange = newPosition - (long) tool.clickStartTime; //different from current time and start time
+                double verticalChange = (Gdx.input.getY() - lastY); //Should not use Gdx.input.getY when actual position matters, but only care about difference.
                 //Find closest snap to this new offset
 
-                if (dragMode == DragMode.NONE && selectingView.allowVerticalDrag() && (verticalChange > MIN_VERTICAL_DRAG_DIST || verticalChange < -MIN_VERTICAL_DRAG_DIST)) {
-                    dragMode = DragMode.VERTICAL;
+                if (tool.dragMode == DragMode.NONE && view.allowVerticalDrag() && (verticalChange > MIN_VERTICAL_DRAG_DIST || verticalChange < -MIN_VERTICAL_DRAG_DIST)) {
+                    tool.dragMode = DragMode.VERTICAL;
                 }
 
                 verticalChange *= (shift() ? 0.01 : 0.05);
 
-                if (dragMode == DragMode.HORIZONTAL || (dragMode == DragMode.NONE && (horizontalChange * viewScale > MIN_DRAG_DIST || horizontalChange * viewScale < -MIN_DRAG_DIST)))
+                if (tool.dragMode == DragMode.HORIZONTAL || (tool.dragMode == DragMode.NONE && (horizontalChange * viewScale > MIN_DRAG_DIST || horizontalChange * viewScale < -MIN_DRAG_DIST)))
                 {
-                    Snap closest = selectingView.getClosestSnap(dragObjStartPos + horizontalChange, 500);
+                    Snap closest = view.getClosestSnap(dragObjStartPos + horizontalChange, 500);
 
                     //horizontalChange = distance between initial click and current position
                     //Target position should be relative to drag object, so move distance equal to offset from dragObject's position
 
                     if (closest == null || BindingGroup.alt()) {
-                        horizontalChange = newPosition - dragObject.getPos();
+                        horizontalChange = newPosition - referenceObject.getPos();
                     }
                     else {
-                        horizontalChange = closest.pos - dragObject.getPos();
+                        horizontalChange = closest.pos - referenceObject.getPos();
                     }
 
                     if (horizontalChange != 0) {
-                        dragMode = DragMode.HORIZONTAL;
-                        selectingView.movingObjects();
+                        tool.dragMode = DragMode.HORIZONTAL;
+                        view.movingObjects();
                         totalHorizontalOffset += horizontalChange;
 
-                        for (Map.Entry<Long, ArrayList<PositionalObject>> e : selectingView.getSelection().entrySet())
+                        for (Map.Entry<Long, ArrayList<MapObject>> e : copyObjects.entrySet())
                         {
-                            for (PositionalObject o : e.getValue())
-                                o.setPos(e.getKey() + horizontalChange);
+                            for (MapObject o : e.getValue())
+                                o.setPos(o.getPos() + horizontalChange);
                         }
 
-                        selectingView.updatePositions(selectingView.getSelection());
-                        selectingView.refreshSelection();
+                        //view.updateSelectionPositions();
                     }
 
                     //Should move slower than normal selection.
-                    if (dragMode == DragMode.HORIZONTAL) {
+                    if (tool.dragMode == DragMode.HORIZONTAL) {
                         if (Gdx.input.getX() <= 1)
                         {
                             float mul = BindingGroup.alt() ? 4 : 1;
@@ -535,65 +543,119 @@ public class SelectionTool extends EditorTool {
                                 TaikoEditor.onMain(()->{
                                     if (!seeked) {
                                         seeked = true;
-                                        music.seekSecond(music.getSecondTime() - mul * Math.max(0.15, Gdx.graphics.getDeltaTime() * 10));
+                                        music.seekSecond(music.getSecondTime() - mul * Math.max(0.12, Gdx.graphics.getDeltaTime() * 12));
                                     }
                                 });
                             }
                             else {
-                                music.seekSecond(music.getSecondTime() - mul * elapsed * 2);
+                                music.seekSecond(music.getSecondTime() - Math.max(0.01, mul * elapsed * 6));
                             }
                         }
                         else if (Gdx.input.getX() >= SettingsMaster.getWidth() - 1)
                         {
-                            music.seekSecond(music.getSecondTime() + (music.isPlaying() ? elapsed * 8 : elapsed * 2) * (BindingGroup.alt() ? 4 : 1));
+                            music.seekSecond(music.getSecondTime() + Math.max(0.01, (BindingGroup.alt() ? 4 : 1) * elapsed * 6));
                         }
                     }
                 }
-                else if (dragMode == DragMode.VERTICAL) {
-                    selectingView.updateVerticalDrag(totalVerticalOffset);
-
+                else if (tool.dragMode == DragMode.VERTICAL) {
+                    //Lazy way - just disable hiding and use the original objects if vertical drag is triggered?
+                    //proper way - pass copy objects into updateVerticalDrag
+                    //then copy final values over on release. This also avoids any fuckery if another editor sets value of a line being dragged during adjustment.
                     totalVerticalOffset += verticalChange; //Track separately every time so holding shift can adjust just new input
-                    clickStartY = Gdx.input.getY();
+                    view.updateVerticalDrag(copyObjects, copyMap, totalVerticalOffset);
+
+                    lastY = Gdx.input.getY();
                 }
             }
         }
+
+        /*@Override
+        public void render(SpriteBatch sb, ShapeRenderer sr) {
+            view.getSelection().forEachObject((obj)->{
+                MapObject cpy = copyMap.get(obj);
+                if (cpy != null) {
+                    view.renderObject(cpy, sb, sr);
+                }
+            });
+        }*/
     }
 
-    private class EndDraggingMouseHoldObject extends MouseHoldObject
+    private static class EndDraggingMouseHoldObject extends RenderableMouseHold
     {
-        public EndDraggingMouseHoldObject()
+        private final SelectionTool tool;
+        private final MapObject dragObject;
+        private final MapObject copyObject;
+        private final MapView view;
+
+        private final long initialEnd;
+
+        private long totalHorizontalOffset = 0;
+
+        public EndDraggingMouseHoldObject(SelectionTool tool, MapView selectingView, MapObject dragObject)
         {
-            super(null, SelectionTool.this::releaseEndDrag);
+            super(null, null);
+
+            this.tool = tool;
+            this.initialEnd = ((ILongObject) dragObject).getEndPos();
+            this.dragObject = dragObject;
+            this.copyObject = dragObject.shiftedCopy(dragObject.getPos());
+            copyObject.selected = true;
+            this.view = selectingView;
+
+            dragObject.hide(()->this.onRelease == null);
+
+            this.onRelease = (x, y)->this.releaseEndDrag();
+        }
+
+        private void releaseEndDrag()
+        {
+            if (tool.mode == SelectionToolMode.DRAGGING_END)
+            {
+                if (totalHorizontalOffset != 0)
+                {
+                    //This only supports ILongObjects so there's no need to abstract it by going through the view
+                    view.map.registerAndPerformDurationChange((ILongObject)dragObject, totalHorizontalOffset);
+                }
+
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT))
+                {
+                    view.deselect(dragObject);
+                    view.deleteObject(dragObject);
+                }
+            }
+            tool.reset();
         }
 
         @Override
         public void update(float elapsed) {
-            if (selectingView != null && selectingView.hasSelection() && mode == SelectionToolMode.DRAGGING_END)
+            if (view.hasSelection() && tool.mode == SelectionToolMode.DRAGGING_END)
             {
-                double newPosition = selectingView.getTimeFromPosition(Gdx.input.getX());
-                long offsetChange = (long) (newPosition - clickStartTime); //different from current time and start time
+                view.displayAdditionalObject(copyObject);
+
+                double newPosition = view.getTimeFromPosition(Gdx.input.getX());
+                long offsetChange = (long) (newPosition - tool.clickStartTime); //different from current time and start time
                 //Find closest snap to this new offset
 
-                if (dragMode == DragMode.HORIZONTAL || offsetChange * viewScale > MIN_DRAG_DIST || offsetChange * viewScale < -MIN_DRAG_DIST) {
-                    dragMode = DragMode.HORIZONTAL;
+                if (tool.dragMode == DragMode.HORIZONTAL || offsetChange * viewScale > MIN_DRAG_DIST || offsetChange * viewScale < -MIN_DRAG_DIST) {
+                    tool.dragMode = DragMode.HORIZONTAL;
 
                     //In this case, dragObjStartPos
-                    Snap closest = selectingView.getClosestSnap(dragObjStartPos + offsetChange, 500);
+                    Snap closest = view.getClosestSnap(initialEnd + offsetChange, 500);
 
 
                     if (closest == null || BindingGroup.alt()) { //Just go to cursor position
-                        offsetChange = (long) newPosition - ((ILongObject) dragObject).getEndPos();
+                        offsetChange = (long) newPosition - ((ILongObject) copyObject).getEndPos();
                     }
                     else { //Snap to closest snap
-                        offsetChange = closest.pos - ((ILongObject) dragObject).getEndPos();
+                        offsetChange = closest.pos - ((ILongObject) copyObject).getEndPos();
                     }
 
-                    long newEnd = ((ILongObject) dragObject).getEndPos() + offsetChange;
-                    if (newEnd <= dragObject.getPos())
-                        newEnd = dragObject.getPos() + 1;
+                    long newEnd = ((ILongObject) copyObject).getEndPos() + offsetChange;
+                    if (newEnd <= copyObject.getPos())
+                        newEnd = copyObject.getPos() + 1;
 
-                    totalHorizontalOffset += newEnd - ((ILongObject) dragObject).getEndPos();
-                    ((ILongObject) dragObject).setEndPos(newEnd);
+                    totalHorizontalOffset += newEnd - ((ILongObject) copyObject).getEndPos();
+                    ((ILongObject) copyObject).setEndPos(newEnd);
 
 
 
@@ -620,6 +682,11 @@ public class SelectionTool extends EditorTool {
                 }
             }
         }
+
+        /*@Override
+        public void render(SpriteBatch sb, ShapeRenderer sr) {
+            view.renderObject(copyObject, sb, sr);
+        }*/
     }
 
     @Override

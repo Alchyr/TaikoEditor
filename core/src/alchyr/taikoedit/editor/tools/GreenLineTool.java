@@ -1,8 +1,9 @@
 package alchyr.taikoedit.editor.tools;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.SingleLineAddition;
+import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -20,6 +21,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.util.*;
 
 import static alchyr.taikoedit.core.input.BindingGroup.shift;
+import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class GreenLineTool extends EditorTool {
     private static final int MAX_SNAP_OFFSET = 40;
@@ -94,6 +96,9 @@ public class GreenLineTool extends EditorTool {
         {
             previewView.renderObject(placementObject, sb, sr, previewColor.a);
         }
+        /*else if (hold != null) {
+            hold.render(sb, sr);
+        }*/
     }
 
     @Override
@@ -109,9 +114,6 @@ public class GreenLineTool extends EditorTool {
                 //No previous point, just use default values
                 TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(placementObject.getPos())).inherit();
                 p.kiai = BindingGroup.shift();
-
-                view.map.effectPoints.add(p);
-                view.map.allPoints.add(p);
 
                 return hold = new SvAdjustHold(view, Gdx.input.getY(), p);
             }
@@ -129,9 +131,6 @@ public class GreenLineTool extends EditorTool {
             }
 
             renderPreview = false;
-
-            view.map.effectPoints.add(p);
-            view.map.allPoints.add(p);
 
             return hold = new SvAdjustHold(view, Gdx.input.getY(), p);
         }
@@ -162,7 +161,7 @@ public class GreenLineTool extends EditorTool {
             TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(time)).inherit();
             p.kiai = BindingGroup.shift();
 
-            view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+            view.map.registerAndPerformAddObject("Add Green Line", p, view.replaceTest);
             return true;
         }
         else if (lastEffect == null) {
@@ -179,7 +178,7 @@ public class GreenLineTool extends EditorTool {
             p.kiai = !p.kiai;
         }
 
-        view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+        view.map.registerAndPerformAddObject("Add Green Line", p, view.replaceTest);
         return true;
     }
 
@@ -203,8 +202,9 @@ public class GreenLineTool extends EditorTool {
     {
         private static final float MIN_DRAG_DIST = 10;
 
-        private MapView placingView;
-        private TimingPoint adjusting;
+        private final MapView placingView;
+        private final TimingPoint adjusting;
+        private final double initialValue;
         private double totalVerticalOffset;
         private int lastY;
 
@@ -216,30 +216,31 @@ public class GreenLineTool extends EditorTool {
 
             placingView = view;
             adjusting = point;
+            initialValue = adjusting.getValue();
             lastY = placementY;
 
             totalVerticalOffset = 0;
-        }
 
-        @Override
-        public void onRelease(float x, float y) {
-            //register object placement
-            adjusting.registerChange();
+            onRelease = (x, y)->{
+                //register object placement
+                this.placingView.map.registerAndPerformAddObject("Add Green Line", adjusting, placingView.replaceTest);
 
-            placingView.map.effectPoints.removeObject(adjusting);
-            placingView.map.allPoints.removeObject(adjusting);
-            placingView.map.registerChange(new SingleLineAddition(placingView.map, adjusting).perform());
-
-            hold = null;
+                hold = null;
+            };
         }
 
         private void cancel() {
-            placingView.map.effectPoints.removeObject(adjusting);
-            placingView.map.allPoints.removeObject(adjusting);
+            //placingView.map.effectPoints.removeObject(adjusting);
+            //placingView.map.allPoints.removeObject(adjusting);
         }
 
         @Override
         public void update(float elapsed) {
+            if (!(placingView instanceof EffectView)) return;
+
+            placingView.displayAdditionalObject(adjusting);
+            ((EffectView) placingView).setFocus(adjusting);
+
             double verticalChange = (Gdx.input.getY() - lastY);
             //Find closest snap to this new offset
 
@@ -250,14 +251,23 @@ public class GreenLineTool extends EditorTool {
             verticalChange *= (shift() ? 0.01f : 0.05f);
 
             if (dragging) {
-                adjusting.tempModification(totalVerticalOffset);
+                adjusting.setValue(Math.max(TimingPoint.MIN_SV, initialValue - (totalVerticalOffset / 20.0)));
 
                 totalVerticalOffset += verticalChange; //Track separately every time so holding shift can adjust just new input
                 lastY = Gdx.input.getY();
+                ((EffectView) placingView).recheckSvLimits();
                 //Do not check for removed points here for simpler check.
                 //Proper update will occur on release.
-                placingView.map.updateLines(Collections.singleton(new Pair<>(adjusting.getPos(), Collections.singletonList(adjusting))), null, false);
+                //placingView.map.updateLines(Collections.singleton(new Pair<>(adjusting.getPos(), Collections.singletonList(adjusting))), null, false);
             }
         }
+
+        /*public void render(SpriteBatch sb, ShapeRenderer sr) {
+            placingView.renderObject(adjusting, sb, sr);
+            if (placingView instanceof EffectView) {
+                int stackX = (int) (SettingsMaster.getMiddleX() + (adjusting.getPos() - placingView.preciseTime) * viewScale + 4);
+                ((EffectView) placingView).renderLabel(sb, EffectView.twoDecimal.format(adjusting.value), stackX, placingView.bottom + EffectView.TOP_VALUE_Y);
+            }
+        }*/
     }
 }

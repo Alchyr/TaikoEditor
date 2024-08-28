@@ -64,14 +64,14 @@ public class Sync {
      *
      * @param fps - the desired frame rate, in frames per second
      */
-    public void sync(int fps) {
+    public void sync(int fps, long sleepTime) {
         if (fps <= 0) return;
         if (!initialised) initialise();
 
         try {
             // sleep until the average sleep time is greater than the time remaining till nextFrame
             for (long t0 = getTime(), t1; (nextFrame - t0) > sleepDurations.avg(); t0 = t1) {
-                Thread.sleep(1);
+                Thread.sleep(sleepTime);
                 sleepDurations.add((t1 = getTime()) - t0); // update average sleep time
             }
 

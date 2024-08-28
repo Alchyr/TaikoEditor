@@ -7,8 +7,8 @@ import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.changes.BreakAdjust;
 import alchyr.taikoedit.editor.changes.BreakRemoval;
-import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.changes.RepositionChange;
+import alchyr.taikoedit.editor.maps.BreakInfo;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
@@ -16,9 +16,8 @@ import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.tools.*;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.EditorTime;
-import alchyr.taikoedit.util.structures.Pair;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -69,7 +68,7 @@ public class GimmickView extends MapView {
 
     private SortedMap<Long, Snap> activeSnaps;
 
-    private static final BiFunction<PositionalObject, PositionalObject, Boolean> replaceSameType = (placed, existing)->{
+    private static final BiFunction<MapObject, MapObject, Boolean> replaceSameType = (placed, existing)->{
         if (placed instanceof HitObject && existing instanceof HitObject) {
             return ((HitObject) placed).type == ((HitObject) existing).type;
         }
@@ -170,17 +169,17 @@ public class GimmickView extends MapView {
             Color startColor, endColor;
             Optional<HitObject> longest;
 
-            for (Pair<Long, Long> breakSection : map.getBreaks()) {
+            for (BreakInfo breakSection : map.getBreaks()) {
                 startColor = endColor = faintBreakColor;
 
-                breakEnd = (breakSection.b - preciseTime) * viewScale + SettingsMaster.getMiddleX();
+                breakEnd = (breakSection.end - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
-                stack = map.objects.ceilingEntry(breakSection.b);
+                stack = map.objects.ceilingEntry(breakSection.end);
                 if (stack != null) {
                     //if distance is <= min distance, color is gray
                     //Otherwise, color is blue to denote extended break delay
                     //Do the same for start delay, except end delay is dynamic based on AR.
-                    if (stack.getKey() - breakSection.b > map.getBreakEndDelay())
+                    if (stack.getKey() - breakSection.end > map.getBreakEndDelay())
                         endColor = fakeBreakColor;
 
                     end = (stack.getKey() - preciseTime) * viewScale + SettingsMaster.getMiddleX();
@@ -192,14 +191,14 @@ public class GimmickView extends MapView {
                 if (end < 0)
                     continue;
 
-                breakStart = (breakSection.a - preciseTime) * viewScale + SettingsMaster.getMiddleX();
+                breakStart = (breakSection.start - preciseTime) * viewScale + SettingsMaster.getMiddleX();
 
-                stack = map.objects.floorEntry(breakSection.a);
+                stack = map.objects.floorEntry(breakSection.start);
                 if (stack != null) {
                     longest = stack.getValue().stream().max(Comparator.comparingLong(HitObject::getEndPos));
                     startTime = longest.map(HitObject::getEndPos).orElse(0L);
 
-                    if (breakSection.a - startTime > 200)
+                    if (breakSection.start - startTime > 200)
                         startColor = fakeBreakColor;
 
                     start = (startTime - preciseTime) * viewScale + SettingsMaster.getMiddleX();
@@ -236,18 +235,18 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
+    public void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
         o.render(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY, alpha);
     }
     @Override
-    public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
+    public void renderSelection(MapObject o, SpriteBatch sb, ShapeRenderer sr) {
         o.renderSelection(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), objectY);
     }
 
     private NavigableMap<Long, ArrayList<HitObject>> prevObjects = null;
-    private final PositionalObjectTreeMap<HitObject> filtered = new PositionalObjectTreeMap<>();
+    private final MapObjectTreeMap<HitObject> filtered = new MapObjectTreeMap<>();
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> prep() {
         NavigableMap<Long, ArrayList<HitObject>> objs = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
 
         /*if (objs.equals(prevObjects)) {
@@ -270,7 +269,7 @@ public class GimmickView extends MapView {
     public void selectAll() {
         clearSelection();
 
-        selectedObjects = new PositionalObjectTreeMap<>();
+        selectedObjects = new MapObjectTreeMap<>();
 
         for (Map.Entry<Long, ArrayList<HitObject>> entry : map.objects.entrySet()) {
             for (HitObject h : entry.getValue()) {
@@ -283,8 +282,8 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = prep();
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end) {
+        NavigableMap<Long, ? extends ArrayList<? extends MapObject>> source = prep();
 
         if (source.isEmpty())
             return null;
@@ -334,10 +333,10 @@ public class GimmickView extends MapView {
             }
 
             Iterator<Map.Entry<Long, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
-            Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> selectionObjects = selectedObjects.entrySet().iterator();
+            Iterator<Map.Entry<Long, ArrayList<MapObject>>> selectionObjects = selectedObjects.entrySet().iterator();
 
             Map.Entry<Long, ArrayList<HitObject>> currentList = null;
-            Map.Entry<Long, ArrayList<PositionalObject>> selectedObjectList = null;
+            Map.Entry<Long, ArrayList<MapObject>> selectedObjectList = null;
 
             if (allObjects.hasNext())
                 currentList = allObjects.next();
@@ -400,11 +399,11 @@ public class GimmickView extends MapView {
         if (startTime == endTime)
             return;
 
-        PositionalObjectTreeMap<PositionalObject> newSelection;
+        MapObjectTreeMap<MapObject> newSelection;
 
         if (selectedObjects == null)
         {
-            newSelection = new PositionalObjectTreeMap<>();
+            newSelection = new MapObjectTreeMap<>();
             if (startTime > endTime) {
                 long tmp = startTime;
                 startTime = endTime;
@@ -419,8 +418,8 @@ public class GimmickView extends MapView {
             }
 
             selectedObjects = newSelection;
-            for (ArrayList<PositionalObject> stuff : selectedObjects.values())
-                for (PositionalObject o : stuff)
+            for (ArrayList<MapObject> stuff : selectedObjects.values())
+                for (MapObject o : stuff)
                     o.selected = true;
         }
         else
@@ -455,8 +454,8 @@ public class GimmickView extends MapView {
         if (breaks) {
             double time = getTimeFromPosition(x);
 
-            Iterator<Pair<Long, Long>> breakIterator = map.getBreaks().iterator();
-            Pair<Long, Long> breakSection;
+            Iterator<BreakInfo> breakIterator = map.getBreaks().iterator();
+            BreakInfo breakSection;
             long startTime, endTime;
             boolean adjustable;
             Map.Entry<Long, ArrayList<HitObject>> stack;
@@ -465,7 +464,7 @@ public class GimmickView extends MapView {
             while (breakIterator.hasNext()) {
                 breakSection = breakIterator.next();
                 adjustable = true;
-                stack = map.objects.ceilingEntry(breakSection.b);
+                stack = map.objects.ceilingEntry(breakSection.end);
                 if (stack != null) {
                     endTime = stack.getKey();
                 }
@@ -474,7 +473,7 @@ public class GimmickView extends MapView {
                     adjustable = false;
                 }
 
-                stack = map.objects.floorEntry(breakSection.a);
+                stack = map.objects.floorEntry(breakSection.start);
                 if (stack != null) {
                     longest = stack.getValue().stream().max(Comparator.comparingLong(HitObject::getEndPos));
                     startTime = longest.map(HitObject::getEndPos).orElse(Long.MIN_VALUE);
@@ -502,20 +501,20 @@ public class GimmickView extends MapView {
                         //left clicking on one of the break's "transition" points allows adjustment.
                         double startDist, endDist;
 
-                        startDist = Math.abs(time - breakSection.a) / viewScale;
-                        endDist = Math.abs(time - breakSection.b) / viewScale;
+                        startDist = Math.abs(time - breakSection.start) / viewScale;
+                        endDist = Math.abs(time - breakSection.end) / viewScale;
 
                         //overlay is exceedingly unlikely since there's a minimum 650 ms gap between start and end, but in that case end is prioritized
                         if (endDist < 10) {
-                            return new BreakAdjustingMouseHoldObject(this, breakSection, false, time, Math.max(breakSection.a + 650, endTime - 5000), endTime - map.getBreakEndDelay());
+                            return new BreakAdjustingMouseHoldObject(this, breakSection, false, time, Math.max(breakSection.start + 650, endTime - 5000), endTime - map.getBreakEndDelay());
                         }
                         else if (startDist < 10) {
-                            return new BreakAdjustingMouseHoldObject(this, breakSection, true, time, startTime + 200, Math.min(breakSection.b - 650, startTime + 5000));
+                            return new BreakAdjustingMouseHoldObject(this, breakSection, true, time, startTime + 200, Math.min(breakSection.end - 650, startTime + 5000));
                         }
                     }
                     return null;
                 }
-                else if (time < breakSection.a) {
+                else if (time < breakSection.start) {
                     return null;
                 }
             }
@@ -524,15 +523,15 @@ public class GimmickView extends MapView {
         return null;
     }
 
-    public PositionalObject getObjectAt(float x, float y)
+    public MapObject getObjectAt(float x, float y)
     {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> selectable = prep();
+        NavigableMap<Long, ? extends ArrayList<? extends MapObject>> selectable = prep();
         if (selectable == null || y < bottom + MAX_SELECTION_OFFSET || y > top - MAX_SELECTION_OFFSET)
             return null;
 
         double time = getTimeFromPosition(x);
 
-        ArrayList<? extends PositionalObject> selectableObjects = selectable.get((long) time);
+        ArrayList<? extends MapObject> selectableObjects = selectable.get((long) time);
         if (selectableObjects != null) {
             if (selectableObjects.isEmpty())
             {
@@ -545,8 +544,8 @@ public class GimmickView extends MapView {
             }
         }
 
-        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> lower = selectable.higherEntry((long) time); //These are reversed because prep/editObjects returns a descending map.
-        Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> higher = selectable.lowerEntry((long) time);
+        Map.Entry<Long, ? extends ArrayList<? extends MapObject>> lower = selectable.higherEntry((long) time); //These are reversed because prep/editObjects returns a descending map.
+        Map.Entry<Long, ? extends ArrayList<? extends MapObject>> higher = selectable.lowerEntry((long) time);
         double higherDist, lowerDist;
         //boolean isLower = true;
 
@@ -715,7 +714,7 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, float x) {
+    public boolean clickedEnd(MapObject o, float x) {
         if (o instanceof ILongObject)
         {
             ILongObject obj = (ILongObject) o;
@@ -749,11 +748,11 @@ public class GimmickView extends MapView {
 
     private void reposition() {
         if (hasSelection()) {
-            map.registerChange(new RepositionChange(map, selectedObjects).perform());
+            map.registerChange(new RepositionChange(map, selectedObjects).preDo());
             parent.showText("Repositioned selected objects.");
         }
         else {
-            map.registerChange(new RepositionChange(map).perform());
+            map.registerChange(new RepositionChange(map).preDo());
             parent.showText("Repositioned all objects.");
         }
     }
@@ -830,20 +829,20 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
-        map.objects.removeAll(getSelection());
-        getSelection().clear();
-        map.objects.addAll(moved);
-        getSelection().addAll(moved);
+    public void updateSelectionPositions() {
+        MapObjectTreeMap<MapObject> selected = getSelection();
+        map.objects.removeAll(selected);
+        map.objects.addAll(selected);
+        refreshSelection();
     }
 
     @Override
-    public void deleteObject(PositionalObject o) {
-        this.map.delete(o);
+    public void deleteObject(MapObject o) {
+        this.map.registerAndPerformDelete(o);
     }
 
     @Override
-    public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
+    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
         //This should overwrite existing objects.
 
         //Make copies of the hitobjects (add a copy() method to the HitObject class) and shift their position appropriately
@@ -855,10 +854,10 @@ public class GimmickView extends MapView {
         offset = closest == null ? time : closest.pos;
         offset -= copyObjects.firstKey();
 
-        PositionalObjectTreeMap<PositionalObject> placementCopy = new PositionalObjectTreeMap<>();
+        MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
         TreeMap<Long, Snap> snaps = map.getAllSnaps();
 
-        for (Map.Entry<Long, ArrayList<PositionalObject>> entry : copyObjects.entrySet())
+        for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
         {
             targetPos = entry.getKey() + offset;
 
@@ -870,13 +869,13 @@ public class GimmickView extends MapView {
             if (closest != null)
                 targetPos = closest.pos;
 
-            for (PositionalObject o : entry.getValue())
+            for (MapObject o : entry.getValue())
             {
                 placementCopy.add(o.shiftedCopy(targetPos));
             }
         }
 
-        this.map.paste(placementCopy, replaceTest);
+        this.map.registerAndPerformAddObjects("Paste Objects", placementCopy, replaceTest);
     }
 
     @Override
@@ -884,7 +883,7 @@ public class GimmickView extends MapView {
         if (!hasSelection())
             return;
 
-        this.map.reverse(MapChange.ChangeType.OBJECTS, true, selectedObjects);
+        this.map.registerReverse(true, selectedObjects);
         refreshSelection();
     }
 
@@ -903,7 +902,7 @@ public class GimmickView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(selectedObjects);
+            this.map.registerAndPerformDelete(selectedObjects);
             clearSelection();
         }
     }
@@ -912,9 +911,9 @@ public class GimmickView extends MapView {
     public void registerMove(long totalMovement) {
         if (selectedObjects != null && totalMovement != 0)
         {
-            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
         }
     }
 
@@ -928,13 +927,13 @@ public class GimmickView extends MapView {
 
     private static class BreakAdjustingMouseHoldObject extends MouseHoldObject {
         GimmickView parent;
-        Pair<Long, Long> breakSection;
+        BreakInfo breakSection;
         boolean start; //true, adjusting start. false, adjusting end.
         double initialClick;
         long initialPosition, min, max;
         long lastChange = 0;
 
-        public BreakAdjustingMouseHoldObject(GimmickView parent, Pair<Long, Long> breakSection, boolean start, double initialClick, long min, long max) {
+        public BreakAdjustingMouseHoldObject(GimmickView parent, BreakInfo breakSection, boolean start, double initialClick, long min, long max) {
             super(null, null);
 
             this.parent = parent;
@@ -942,14 +941,13 @@ public class GimmickView extends MapView {
             this.start = start;
 
             this.initialClick = initialClick;
-            this.initialPosition = start ? breakSection.a : breakSection.b;
+            this.initialPosition = start ? breakSection.start : breakSection.end;
             this.min = min;
             this.max = max;
-        }
 
-        @Override
-        public void onRelease(float x, float y) {
-            parent.map.registerChange(new BreakAdjust(parent.map, breakSection, start, initialPosition, start ? breakSection.a : breakSection.b));
+            onRelease = (x, y)->{
+                this.parent.map.registerChange(new BreakAdjust(this.parent.map, this.breakSection, this.start, this.initialPosition, this.start ? this.breakSection.start : this.breakSection.end));
+            };
         }
 
         @Override
@@ -976,10 +974,10 @@ public class GimmickView extends MapView {
                 newPos = max;
 
             if (start) {
-                breakSection.a = newPos;
+                breakSection.start = newPos;
             }
             else {
-                breakSection.b = newPos;
+                breakSection.end = newPos;
             }
 
             //Should move slower than normal selection.

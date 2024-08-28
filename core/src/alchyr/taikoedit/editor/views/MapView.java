@@ -4,12 +4,14 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.changes.MapObjectChange;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -24,14 +26,14 @@ import java.util.function.BiFunction;
 import static alchyr.taikoedit.TaikoEditor.*;
 
 public abstract class MapView {
-
     public enum ViewType {
         OBJECT_VIEW,
         GIMMICK_VIEW,
         TIMING_VIEW,
         EFFECT_VIEW,
         GAMEPLAY_VIEW,
-        DIFFICULTY_VIEW
+        DIFFICULTY_VIEW,
+        CHANGELOG_VIEW
     }
     public abstract String typeString();
     public static MapView fromTypeString(String typeString, EditorLayer editor, EditorBeatmap map) {
@@ -54,8 +56,9 @@ public abstract class MapView {
 
 
     private static final Color selectionGlow = new Color(0.8f, 0.7f, 0.4f, 1.0f);
-    private static final float GLOW_THICKNESS = 2.0f * SettingsMaster.SCALE;
-    private static final float SEPARATION_THICKNESS = 1.0f * SettingsMaster.SCALE;
+    private static final float GLOW_THICKNESS = Math.max(2, 2.0f * SettingsMaster.SCALE);
+    private static final float SEPARATION_THICKNESS = Math.max(1, 1.0f * SettingsMaster.SCALE);
+    public static final Comparator<Long> reverseLongComparator = Comparator.reverseOrder();
 
     EditorLayer parent;
     public EditorBeatmap map;
@@ -66,7 +69,7 @@ public abstract class MapView {
     protected boolean isPrimary;
 
     //Position within song in milliseconds
-    protected double preciseTime = 0;
+    public double preciseTime = 0;
     protected long time = 0;
     protected boolean positionLocked = false;
     protected double lockOffset = 0;
@@ -92,11 +95,13 @@ public abstract class MapView {
     protected Texture pix = assetMaster.get("ui:pixel");
     //protected Texture overlayEnd = assetMaster.get("editor:overlay end");
 
-    private static final BiFunction<PositionalObject, PositionalObject, Boolean> defaultReplace = (placed, existing)->true;
-    public BiFunction<PositionalObject, PositionalObject, Boolean> replaceTest = defaultReplace;
+    private static final BiFunction<MapObject, MapObject, Boolean> defaultReplace = (placed, existing)->true;
+    public BiFunction<MapObject, MapObject, Boolean> replaceTest = defaultReplace;
 
     //Selection
-    protected PositionalObjectTreeMap<PositionalObject> selectedObjects;
+    protected MapObjectTreeMap<MapObject> selectedObjects;
+
+    private final MapObjectTreeMap<MapObject> additionalDisplayObjects = new MapObjectTreeMap<>();
 
     private final List<ImageButton> overlayButtons;
 
@@ -242,7 +247,17 @@ public abstract class MapView {
     //Prep -> update -> rendering
 
     //Ensure map is ready for rendering. Exact details will depend on the view.
-    public abstract NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep();
+    public abstract NavigableMap<Long, ? extends ArrayList<? extends MapObject>> prep();
+    public MapObjectTreeMap<MapObject> additionalDisplayObjects() {
+        return additionalDisplayObjects;
+    }
+    public void displayAdditionalObject(MapObject object) {
+        additionalDisplayObjects.addIfAbsent(object);
+    }
+    public void displayAdditionalObjects(Map<? extends Long, ? extends ArrayList<? extends MapObject>> map) {
+        additionalDisplayObjects.addAllUnique(map);
+    }
+
     public void setOffset(int offset)
     {
         this.yOffset = offset;
@@ -270,17 +285,17 @@ public abstract class MapView {
         }
     }
     public abstract void renderBase(SpriteBatch sb, ShapeRenderer sr);
-    public void renderStack(ArrayList<? extends PositionalObject> objects, SpriteBatch sb, ShapeRenderer sr) {
-        for (PositionalObject o : objects) {
+    public void renderStack(ArrayList<? extends MapObject> objects, SpriteBatch sb, ShapeRenderer sr) {
+        for (MapObject o : objects) {
             renderObject(o, sb, sr);
         }
     }
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr)
+    public void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr)
     {
         renderObject(o, sb, sr, 1.0f);
     }
-    public abstract void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha);
-    public abstract void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr); //for objects that are not actually selected (while selecting)
+    public abstract void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr, float alpha);
+    public abstract void renderSelection(MapObject o, SpriteBatch sb, ShapeRenderer sr); //for objects that are not actually selected (while selecting)
 
     //Update that occurs only if it is the primary view
     public void primaryUpdate(boolean isPlaying)
@@ -318,6 +333,8 @@ public abstract class MapView {
             sb.setColor(Color.WHITE);
             textRenderer.setFont(offsetFont).renderTextCentered(sb, svFormat.format(lockOffset), SettingsMaster.getMiddleX(), bottom + (height / 2f), Color.WHITE);
         }
+
+        additionalDisplayObjects.clear();
     }
 
     public Snap getPreviousSnap(long pos) {
@@ -394,7 +411,7 @@ public abstract class MapView {
             clearSelection();
         }
         else {
-            PositionalObject close = clickObject(x, y);
+            MapObject close = clickObject(x, y);
 
             if (close != null) {
                 deleteObject(close);
@@ -403,7 +420,7 @@ public abstract class MapView {
         }
     }
     public boolean rightClick(float x, float y) { //delete clicked object, or entire selection of object is selected (Mouse input.)
-        PositionalObject close = clickObject(x, y);
+        MapObject close = clickObject(x, y);
 
         if (close != null) {
             if (close.selected && hasSelection()) {
@@ -420,27 +437,22 @@ public abstract class MapView {
 
     //specifically updates positions in the EditorBeatmap's lists.
     //Should be called with objects in their positions in the map *before* being moved, while the positional property of the objects themselves have been adjusted.
-    public abstract void updatePositions(PositionalObjectTreeMap<PositionalObject> moved);
-    public void updateVerticalDrag(double totalVerticalOffset) {
-        for (Map.Entry<Long, ArrayList<PositionalObject>> e : getSelection().entrySet())
-        {
-            for (PositionalObject o : e.getValue()) {
-                o.tempModification(totalVerticalOffset);
-            }
-        }
-    }
-    public abstract void deleteObject(PositionalObject o);
-    public abstract void deleteSelection();
-    public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support. May be called with 0 movement.
-    public void registerValueChange() { //Registers a modification of currently selected objects with underlying map for undo/redo support
+    public abstract void updateSelectionPositions();
+    public void updateVerticalDrag(MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double totalVerticalOffset) {
 
     }
-    public abstract void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects);
+    public abstract void deleteObject(MapObject o);
+    public abstract void deleteSelection();
+    public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support. May be called with 0 movement.
+    public void registerValueChange(HashMap<MapObject, MapObject> copyMap) { //Registers a modification of currently selected objects with underlying map for undo/redo support
+
+    }
+    public abstract void pasteObjects(MapObjectTreeMap<MapObject> copyObjects);
     public abstract void reverse();
 
     //Selection logic
-    public abstract NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end);
-    public PositionalObjectTreeMap<PositionalObject> getSelection() {
+    public abstract NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end);
+    public MapObjectTreeMap<MapObject> getSelection() {
         return selectedObjects;
     } //Selected objects should be actual objects that will be modified
     public abstract String getSelectionString();
@@ -454,9 +466,9 @@ public abstract class MapView {
     {
         if (selectedObjects != null)
         {
-            for (List<? extends PositionalObject> stuff : selectedObjects.values())
+            for (List<? extends MapObject> stuff : selectedObjects.values())
             {
-                for (PositionalObject o : stuff)
+                for (MapObject o : stuff)
                     o.selected = false;
             }
             selectedObjects = null;
@@ -467,7 +479,7 @@ public abstract class MapView {
         if (!hasSelection())
             return;
 
-        PositionalObjectTreeMap<PositionalObject> selectionCopy = new PositionalObjectTreeMap<>();
+        MapObjectTreeMap<MapObject> selectionCopy = new MapObjectTreeMap<>();
         selectionCopy.addAll(selectedObjects);
 
         this.selectedObjects = selectionCopy;
@@ -482,20 +494,20 @@ public abstract class MapView {
     }
     public void dragRelease() { //method called when mouse released without entering a dragging mode
     }
-    public PositionalObject clickObject(float x, float y) {
+    public MapObject clickObject(float x, float y) {
         return getObjectAt(x, y);
     }
-    public abstract PositionalObject getObjectAt(float x, float y);
-    public abstract boolean clickedEnd(PositionalObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
-    public void select(PositionalObject p) //Add a single object to selection.
+    public abstract MapObject getObjectAt(float x, float y);
+    public abstract boolean clickedEnd(MapObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
+    public void select(MapObject p) //Add a single object to selection.
     {
         p.selected = true;
         if (selectedObjects == null)
-            selectedObjects = new PositionalObjectTreeMap<>();
+            selectedObjects = new MapObjectTreeMap<>();
 
         selectedObjects.add(p);
     }
-    public void deselect(PositionalObject p)
+    public void deselect(MapObject p)
     {
         p.selected = false;
         if (selectedObjects != null)
@@ -510,15 +522,16 @@ public abstract class MapView {
         if (!onlySelected)
             selectAll();
 
-        PositionalObjectTreeMap<PositionalObject> resnapped = new PositionalObjectTreeMap<>();
-        TreeMap<Long, Snap> allSnaps = map.getAllSnaps();
+        TreeMap<Long, Snap> allSnaps = map.getCurrentSnaps();
         int changed = 0;
 
-        for (Map.Entry<Long, ArrayList<PositionalObject>> objs : selectedObjects.entrySet())
+        MapObjectTreeMap<MapObject> tempSelection = getSelection();
+        MapObjectTreeMap<MapObject> oldPositions = new MapObjectTreeMap<>(tempSelection);
+
+        for (Map.Entry<Long, ArrayList<MapObject>> objs : tempSelection.entrySet())
         {
             if (allSnaps.containsKey(objs.getKey()))
             {
-                resnapped.put(objs.getKey(), objs.getValue());
                 continue;
             }
 
@@ -553,23 +566,18 @@ public abstract class MapView {
 
             if (newSnap != objs.getKey())
             {
-                for (PositionalObject h : objs.getValue())
+                for (MapObject h : objs.getValue())
                 {
                     h.setPos(newSnap);
                 }
                 changed += objs.getValue().size();
             }
-
-            resnapped.put(newSnap, objs.getValue());
         }
 
-        updatePositions(selectedObjects);
-        selectedObjects.clear();
-        selectedObjects.addAll(resnapped);
+        updateSelectionPositions();
+        map.registerChange(new MapObjectChange(map, "Resnap", oldPositions, new MapObjectTreeMap<>(getSelection())));
 
         parent.showText("Resnapped " + changed + " objects.");
-
-        refreshSelection();
 
         if (!onlySelected)
             clearSelection();

@@ -50,7 +50,7 @@ public class FullMapInfo {
 
     //[Events]
     List<String[]> backgroundEvents = new ArrayList<>(); //For changing
-    List<Pair<Long, Long>> breakPeriods = new ArrayList<>(); //For changing
+    List<BreakInfo> breakPeriods = new ArrayList<>(); //For changing
     List<String> fullStoryboard = new ArrayList<>(); //Should not be modified in this program
 
     public FullMapInfo(Mapset set, MapInfo base)
@@ -94,8 +94,8 @@ public class FullMapInfo {
         this.sliderTickRate = base.sliderTickRate;
 
         this.backgroundEvents.addAll(base.backgroundEvents);
-        for (Pair<Long, Long> breakPeriod : base.breakPeriods)
-            this.breakPeriods.add(new Pair<>(breakPeriod.a, breakPeriod.b));
+        for (BreakInfo breakPeriod : base.breakPeriods)
+            this.breakPeriods.add(new BreakInfo(breakPeriod));
         this.fullStoryboard.addAll(base.fullStoryboard);
 
         File f = new File(base.getMapFile().getParentFile(), generateFilename(diffName));
@@ -216,6 +216,8 @@ public class FullMapInfo {
 
     public String tagText()
     {
+        if (tags.length == 0) return "";
+
         saveBuilder.setLength(0);
         int i;
         for (i = 0; i < tags.length - 1; ++i)
@@ -255,8 +257,8 @@ public class FullMapInfo {
     }
     private String breaks() {
         saveBuilder.setLength(0);
-        for (Pair<Long, Long> breakPeriod : breakPeriods) {
-            saveBuilder.append("2,").append(breakPeriod.a).append(",").append(breakPeriod.b).append("\r\n");
+        for (BreakInfo breakPeriod : breakPeriods) {
+            saveBuilder.append(breakPeriod.toString()).append("\r\n");
         }
         return saveBuilder.toString();
     }

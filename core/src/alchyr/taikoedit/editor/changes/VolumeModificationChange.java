@@ -2,94 +2,74 @@ package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.util.GeneralUtils;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class VolumeModificationChange extends MapChange {
-    private final PositionalObjectTreeMap<PositionalObject> modifiedObjects;
-    private final HashMap<PositionalObject, Integer> originalVolumes;
-    private final HashMap<PositionalObject, Integer> newVolumes;
+    private final MapObjectTreeMap<MapObject> modifiedObjects;
+    private final Map<MapObject, Integer> originalVolumes;
+    private final Map<Long, Integer> newVolumes;
 
-    public VolumeModificationChange(EditorBeatmap map, PositionalObjectTreeMap<PositionalObject> modifiedObjects, PositionalObjectTreeMap<PositionalObject> allChangeObjects)
+
+    @Override
+    public void send(DataOutputStream out) throws IOException {
+        //out.write();
+    }
+
+    public static Supplier<MapChange> build(EditorBeatmap map, DataInputStream in, String nameKey) throws IOException {
+        return null;
+    }
+
+    @Override
+    public boolean isValid() {
+        return false;
+    }
+
+    public VolumeModificationChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, Map<Long, Integer> newVolumeMap)
     {
-        super(map);
+        super(map, "Adjust Volume");
 
         this.originalVolumes = new HashMap<>();
-        this.newVolumes = new HashMap<>();
+        this.newVolumes = newVolumeMap;
+        this.modifiedObjects = modifiedObjects;
 
-        //Transfer changes from the modified objects to all other objects with the same positions
-        Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> modified = modifiedObjects.entrySet().iterator(),
-                toChange = allChangeObjects.entrySet().iterator();
-
-        Map.Entry<Long, ArrayList<PositionalObject>> focus, secondary;
-        if (toChange.hasNext()) {
-            secondary = toChange.next();
+        for (ArrayList<MapObject> points : map.getStackedObjects(modifiedObjects, map.allPoints).values()) {
+            for (MapObject point : points) {
+                this.originalVolumes.put(point, point.getVolume());
+            }
         }
-        else { //No auto-modification of stacked objects
-            this.modifiedObjects = modifiedObjects;
+    }
 
-            for (ArrayList<PositionalObject> objects : modifiedObjects.values()) {
-                for (PositionalObject o : objects) {
-                    this.originalVolumes.put(o, o.registerVolumeChange());
-                    this.newVolumes.put(o, o.getVolume());
-                }
-            }
-            return;
-        }
-
-        //go through each stack
-        while (modified.hasNext()) {
-            focus = modified.next();
-
-            for (PositionalObject o : focus.getValue()) {
-                this.originalVolumes.put(o, o.registerVolumeChange());
-                this.newVolumes.put(o, o.getVolume());
-            }
-
-            //find next corresponding stack
-            while (secondary.getKey() < focus.getKey() && toChange.hasNext()) {
-                secondary = toChange.next();
-            }
-
-            //corresponds
-            if (secondary.getKey().equals(focus.getKey())) {
-                int volume = GeneralUtils.listLast(focus.getValue()).getVolume();
-                for (PositionalObject o : secondary.getValue()) {
-                    this.originalVolumes.putIfAbsent(o, o.getVolume());
-                    this.newVolumes.putIfAbsent(o, volume);
-                    o.setVolume(volume);
+    @Override
+    public void undo() {
+        for (Map.Entry<Long, ArrayList<MapObject>> points : map.getStackedObjects(modifiedObjects, map.allPoints).entrySet()) {
+            for (MapObject point : points.getValue()) {
+                Integer originalVol = originalVolumes.get(point);
+                if (originalVol != null) {
+                    point.setVolume(originalVol);
                 }
             }
         }
 
-        this.modifiedObjects = allChangeObjects;
+        map.updateLines(modifiedObjects.entrySet(), null);
     }
+    @Override
+    public void perform() {
+        for (Map.Entry<Long, ArrayList<MapObject>> points : map.getStackedObjects(modifiedObjects, map.allPoints).entrySet()) {
+            for (MapObject point : points.getValue()) {
+                point.setVolume(newVolumes.get(points.getKey()));
+            }
+        }
 
-    @Override
-    public MapChange undo() {
-        for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
-        {
-            for (PositionalObject o : e.getValue()) {
-                o.setVolume(originalVolumes.get(o));
-            }
-        }
         map.updateLines(modifiedObjects.entrySet(), null);
-        return this;
-    }
-    @Override
-    public MapChange perform() {
-        for (Map.Entry<Long, ArrayList<PositionalObject>> e : modifiedObjects.entrySet())
-        {
-            for (PositionalObject o : e.getValue()) {
-                o.setVolume(newVolumes.get(o));
-            }
-        }
-        map.updateLines(modifiedObjects.entrySet(), null);
-        return this;
     }
 }

@@ -1,6 +1,6 @@
 package alchyr.taikoedit.core.ui;
 
-import alchyr.taikoedit.audio.MusicWrapper;
+import alchyr.taikoedit.editor.maps.BeatmapDatabase;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.MapMaster;
@@ -88,7 +88,7 @@ public class MapSelect implements Scrollable {
     private boolean sortingEnabled = true;
     private int firstRender = -1;
     private Mapset selected = null;
-    private float mapLoadingAlpha = 0;
+    private float mapLoadingAlpha = 0, mapUpdatingAlpha = 0;
 
     //map info
     private String currentThumbnail = null;
@@ -156,7 +156,7 @@ public class MapSelect implements Scrollable {
     }
 
     public void reloadDatabase() {
-        if (!MapMaster.loading) {
+        if (MapMaster.canTryLoad()) {
             setSelected(null);
             activeGroups.clear();
             allMappers.clear();
@@ -225,9 +225,8 @@ public class MapSelect implements Scrollable {
         MapperGroup group;
         for (Mapset set : maps) {
             group = allMappers.computeIfAbsent(set.getCreator(), MapperGroup::new);
-            if (!cleared.contains(group)) {
+            if (cleared.add(group)) {
                 group.clear();
-                cleared.add(group);
                 activeGroups.add(group);
                 scrollBottom += LINE_GAP;
             }
@@ -240,7 +239,7 @@ public class MapSelect implements Scrollable {
 
     private boolean loadingMusic = false;
     private TrackedThread musicLoading = null;
-    private void setSelected(Mapset set) {
+    public void setSelected(Mapset set) {
         selected = set;
 
         if (selected != null) {
@@ -284,6 +283,13 @@ public class MapSelect implements Scrollable {
         }
         else {
             mapLoadingAlpha = Math.max(0, mapLoadingAlpha - elapsed * 4);
+
+            if (BeatmapDatabase.updating) {
+                mapUpdatingAlpha = Math.min(1, mapUpdatingAlpha + elapsed * 3);
+            }
+            else {
+                mapUpdatingAlpha = Math.max(0, mapUpdatingAlpha - elapsed * 4);
+            }
         }
 
         if (mapperSortAscending) {
@@ -508,6 +514,13 @@ public class MapSelect implements Scrollable {
             sb.draw(pix, hovered.x(), hovered.y(), hovered.getWidth(), hovered.getHeight());
         }
 
+        if (mapUpdatingAlpha > 0) {
+            Color.WHITE.a = mapUpdatingAlpha;
+            textRenderer.renderTextCentered(sb, "Updating maps", infoCenterX, 42, Color.WHITE);
+            textRenderer.renderTextCentered(sb, BeatmapDatabase.updateCount.toString(), infoCenterX, 14, Color.WHITE);
+            Color.WHITE.a = 1;
+        }
+
         //render overlay lines
         sb.setColor(Color.WHITE);
         sb.draw(pix, divider, 0, 2, top);
@@ -545,7 +558,7 @@ public class MapSelect implements Scrollable {
             //map info area
             int index = MathUtils.floor(((gameY - (difficultyY + 10)) * -1) / LINE_GAP);
             if (index >= 0 && index < selected.getMaps().size()) {
-                return new MapOpenInfo(selected).setInitial(selected.getMaps().get(index));
+                return new MapOpenInfo(selected).addInitialMap(selected.getMaps().get(index));
             }
         }
         return null;
@@ -705,14 +718,15 @@ public class MapSelect implements Scrollable {
 
     public static class MapOpenInfo {
         Mapset set;
-        MapInfo open = null;
+        final List<MapInfo> toOpen = new ArrayList<>();
 
         public MapOpenInfo(Mapset set) {
             this.set = set;
         }
 
-        public MapOpenInfo setInitial(MapInfo initial) {
-            open = initial;
+        public MapOpenInfo addInitialMap(MapInfo initial) {
+            if (!toOpen.contains(initial))
+                toOpen.add(initial);
             return this;
         }
 
@@ -720,8 +734,8 @@ public class MapSelect implements Scrollable {
             return set;
         }
 
-        public MapInfo getInitialDifficulty() {
-            return open;
+        public List<MapInfo> getInitialDifficulties() {
+            return toOpen;
         }
     }
 }

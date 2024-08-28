@@ -4,6 +4,7 @@ import alchyr.taikoedit.management.assets.FileHelper;
 
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 
 public class MapInfo {
     private File mapFile;
@@ -165,5 +166,18 @@ public class MapInfo {
                 ", mode=" + mode +
                 ", difficultyName='" + difficultyName + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MapInfo mapInfo = (MapInfo) o;
+        return getMode() == mapInfo.getMode() && Objects.equals(getMapFile(), mapInfo.getMapFile()) && Objects.equals(getSongFile(), mapInfo.getSongFile()) && Objects.equals(getBackground(), mapInfo.getBackground()) && Objects.equals(getDifficultyName(), mapInfo.getDifficultyName());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getMapFile(), getSongFile(), getBackground(), getMode(), getDifficultyName());
     }
 }

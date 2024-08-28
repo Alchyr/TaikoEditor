@@ -11,6 +11,11 @@ public class CharacterTreeMap<T> {
         head = new CharacterTreeNode(false);
     }
 
+    public void clear() {
+        starting.clear();
+        head.clear();
+    }
+
     public List<T> search(String[] keys, float leniency) {
         //Results are sorted by total score
         Map<T, Float> results = new HashMap<>();
@@ -136,6 +141,11 @@ public class CharacterTreeMap<T> {
             {
                 t.getAllValues(results);
             }
+        }
+
+        void clear() {
+            values.clear();
+            children.clear();
         }
 
         void put(String key, WeightedEntry value)

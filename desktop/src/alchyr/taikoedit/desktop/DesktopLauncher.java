@@ -5,15 +5,13 @@ import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.desktop.config.ConfigMenu;
 import alchyr.taikoedit.desktop.config.ProgramConfig;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.EventWindowListener;
 import alchyr.taikoedit.util.FileDropHandler;
 import alchyr.taikoedit.util.SystemUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
 import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Graphics;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
+import com.badlogic.gdx.backends.lwjgl3.*;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
@@ -51,7 +49,10 @@ public class DesktopLauncher {
 		initCommandlineArgs(args);
 		processCommandlineArgs(args);
 
-		initialize();
+		Lwjgl3ApplicationConfiguration config = initialize();
+		if (config != null) {
+			launch(config);
+		}
 	}
 
 	private static void initCommandlineArgs(String [] args) {
@@ -96,87 +97,18 @@ public class DesktopLauncher {
 
 	public static void launch(Lwjgl3ApplicationConfiguration config)
 	{
-		//MAYBE:
-		//Add this if people run into pixelformat exceptions.
-		//Catch that exception and set this before attempting launch again.
-		//System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true");
-		logger.info("Launching.");
-		logger.info(" - Resolution: " + (width == -1 && height == -1 ? "Fullscreen" : width + "x" + height));
-		logger.info(" - Borderless: " + (borderless ? "Yes" : "No"));
-		//logger.info(" - FPS Setting: " + (fpsMode == 0 ? "VSync" : (fpsMode == 2 ? "Unlimited" : fps)));
-		logger.info(" - Menu: " + (fast ? "Fast" : "Normal"));
-		new Lwjgl3Application(new TaikoEditor(width, height, borderless, fast, directOpen), config);
-	}
-
-	private static void initialize()
-	{
-		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-
-		config.setAudioConfig(16, 2048, 6);
-		config.useVsync(true);
-
-		config.setWindowIcon(Files.FileType.Internal, "taikoedit/images/icon_48.png", "taikoedit/images/icon_32.png", "taikoedit/images/icon_16.png");
-
-		config.setWindowListener(new Lwjgl3WindowAdapter() {
-			@Override
-			public void filesDropped(String[] files) {
-				FileDropHandler.receive(files);
-			}
-
-		});
-
 		try {
-			boolean success = true;
+			//MAYBE:
+			//Add this if people run into pixelformat exceptions.
+			//Catch that exception and set this before attempting launch again.
+			//System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true");
 
-			FileHandle configFile = getLocalFile(settingsPrefix + "config.cfg");
-			Graphics.DisplayMode primaryDesktopMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
-
-			if (configFile.exists()) {
-				try
-				{
-					ProgramConfig programConfig = new ProgramConfig(configFile.readString());
-
-					//load/save/setup config
-
-					if (programConfig.fullscreen) {
-						config.setFullscreenMode(primaryDesktopMode);
-						config.setAutoIconify(true);
-						width = -1;
-						height = -1;
-						borderless = false;
-					}
-					else {
-						width = Math.min(programConfig.width, primaryDesktopMode.width);
-						height = Math.min(programConfig.height, primaryDesktopMode.height);
-
-						borderless = (width >= primaryDesktopMode.width) && (height >= primaryDesktopMode.height);
-						/*if (borderless) {
-							--height;
-						}*/
-
-						config.setWindowedMode(400, 400);
-						config.setResizable(false);
-						config.setAutoIconify(false);
-					}
-
-					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
-				}
-				catch (Exception e)
-				{
-					logger.error("Failed while attempting to load graphical config file.");
-					e.printStackTrace();
-
-					success = graphicsConfig(config, primaryDesktopMode, configFile);
-				}
-			}
-			else {
-				success = graphicsConfig(config, primaryDesktopMode, configFile);
-			}
-
-			if (success)
-				launch(config);
-			else
-				logger.error("Initialization failed; launch cancelled.");
+			logger.info("Launching.");
+			logger.info(" - Resolution: " + (width == -1 && height == -1 ? "Fullscreen" : width + "x" + height));
+			logger.info(" - Borderless: " + (borderless ? "Yes" : "No"));
+			//logger.info(" - FPS Setting: " + (fpsMode == 0 ? "VSync" : (fpsMode == 2 ? "Unlimited" : fps)));
+			logger.info(" - Menu: " + (fast ? "Fast" : "Normal"));
+			new Lwjgl3Application(new TaikoEditor(width, height, borderless, fast, directOpen), config);
 		}
 		catch (Exception e)
 		{
@@ -219,15 +151,134 @@ public class DesktopLauncher {
 		}
 	}
 
-	private static boolean graphicsConfig(Lwjgl3ApplicationConfiguration config, Graphics.DisplayMode displayMode, FileHandle configFile)
+	private static Lwjgl3ApplicationConfiguration initialize()
 	{
-		ProgramConfig programConfig = new ProgramConfig(displayMode);
-		programConfig.fullscreen = false;
+		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 
+		config.setAudioConfig(16, 2048, 6);
+		config.useVsync(true);
+
+		config.setWindowIcon(Files.FileType.Internal, "taikoedit/images/icon_48.png", "taikoedit/images/icon_32.png", "taikoedit/images/icon_16.png");
+
+		config.setWindowListener(new EventWindowListener() {
+			@Override
+			public void filesDropped(String[] files) {
+				FileDropHandler.receive(files);
+			}
+		});
+
+		try {
+			boolean success = true;
+
+			FileHandle configFile = getLocalFile(settingsPrefix + "config.cfg");
+			Graphics.DisplayMode primaryDesktopMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
+
+			if (configFile.exists()) {
+				try
+				{
+					ProgramConfig programConfig = new ProgramConfig(configFile.readString());
+
+					if (!programConfig.complete) {
+						success = graphicsConfig(programConfig, config, primaryDesktopMode, configFile);
+					}
+
+					//load/save/setup config
+
+					if (programConfig.fullscreen) {
+						config.setFullscreenMode(primaryDesktopMode);
+						config.setAutoIconify(true);
+						width = -1;
+						height = -1;
+						borderless = false;
+					}
+					else {
+						width = Math.min(programConfig.width, primaryDesktopMode.width);
+						height = Math.min(programConfig.height, primaryDesktopMode.height);
+
+						borderless = (width >= primaryDesktopMode.width) && (height >= primaryDesktopMode.height);
+						/*if (borderless) {
+							--height;
+						}*/
+
+						config.setWindowedMode(400, 400);
+						config.setResizable(false);
+						config.setAutoIconify(false);
+					}
+
+					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
+
+					if (programConfig.useFastMenu) {
+						fast = true; //will be enabled by command line or this
+					}
+
+				}
+				catch (Exception e)
+				{
+					logger.error("Failed while attempting to load graphical config file.");
+					e.printStackTrace();
+
+					success = graphicsConfig(config, primaryDesktopMode, configFile);
+				}
+			}
+			else {
+				success = graphicsConfig(config, primaryDesktopMode, configFile);
+			}
+
+			if (success)
+				return config;
+			else
+				logger.error("Initialization failed; launch cancelled.");
+		}
+		catch (Exception e)
+		{
+			logger.error(e);
+			e.printStackTrace();
+
+			try {
+				File f = new File("error.txt");
+				PrintWriter pWriter = null;
+
+				try {
+					pWriter = new PrintWriter(f);
+					pWriter.println("Version: " + TaikoEditor.VERSION);
+					pWriter.println("Error occurred on main thread:");
+					e.printStackTrace(pWriter);
+
+					if (EditorLayer.activeEditor != null) {
+						pWriter.println();
+						pWriter.println("Active editor detected. Attempting to save data.");
+						try {
+							if (EditorLayer.activeEditor.saveAll()) {
+								pWriter.println("Successfully saved data.");
+							}
+						}
+						catch (Exception ignored) { }
+						EditorLayer.activeEditor = null;
+					}
+				}
+				catch (Exception ex) {
+					logger.error("Failed to write error file.");
+					Thread.sleep(3000);
+				}
+				finally {
+					StreamUtils.closeQuietly(pWriter);
+				}
+			}
+			catch (Exception ignored) {
+
+			}
+		}
+		return null;
+	}
+
+	private static boolean graphicsConfig(Lwjgl3ApplicationConfiguration config, Graphics.DisplayMode displayMode, FileHandle configFile) {
+		return graphicsConfig(new ProgramConfig(displayMode), config, displayMode, configFile);
+	}
+	private static boolean graphicsConfig(ProgramConfig programConfig, Lwjgl3ApplicationConfiguration config, Graphics.DisplayMode displayMode, FileHandle configFile)
+	{
 		Object lock = new Object();
 
 		ConfigMenu configMenu = new ConfigMenu(programConfig, configFile, displayMode, lock);
-
 
 		//noinspection SynchronizationOnLocalVariableOrMethodParameter
 		synchronized(lock) {

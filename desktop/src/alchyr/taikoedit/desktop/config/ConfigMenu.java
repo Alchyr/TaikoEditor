@@ -27,6 +27,7 @@ public class ConfigMenu implements ActionListener, WindowListener {
     private JCheckBox fullscreenToggle;
     //private JCheckBox vsync;
     //private JCheckBox unlimited;
+    private JCheckBox fastMenuToggle;
 
     private JTextField widthField;
     private JTextField heightField;
@@ -119,7 +120,10 @@ public class ConfigMenu implements ActionListener, WindowListener {
         heightField.setEnabled(!programConfig.fullscreen);
 
         JLabel osuLocation = new JLabel("osu! Folder");
-        songsField = new JTextField(getSongFolder(), 60);
+        songsField = new JTextField(programConfig.osuFolder, 60);
+
+        fastMenuToggle = new JCheckBox("Fast Menu", programConfig.useFastMenu);
+        fastMenuToggle.setSelected(programConfig.useFastMenu);
 
         fullscreenToggle.setActionCommand("FULLSCREEN");
         accept.setActionCommand("ACCEPT");
@@ -135,6 +139,7 @@ public class ConfigMenu implements ActionListener, WindowListener {
                                 .addComponent(widthLabel)
                                 .addComponent(heightLabel)
                                 .addComponent(osuLocation)
+                                .addComponent(fastMenuToggle)
                                 /*.addGroup(layout.createSequentialGroup()
                                         .addComponent(vsync)
                                         .addComponent(unlimited)
@@ -167,6 +172,7 @@ public class ConfigMenu implements ActionListener, WindowListener {
                                 .addComponent(unlimited)
                                 .addComponent(fpsLabel)
                                 .addComponent(fpsField))*/
+                        .addComponent(fastMenuToggle)
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                                 .addComponent(accept)
                                 .addComponent(cancel))
@@ -189,6 +195,7 @@ public class ConfigMenu implements ActionListener, WindowListener {
         accept.addActionListener(this);
         cancel.addActionListener(this);
         folder.addActionListener(this);
+        fastMenuToggle.addActionListener(this);
 
         songsField.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
@@ -221,6 +228,7 @@ public class ConfigMenu implements ActionListener, WindowListener {
             case "ACCEPT":
                 //validate
                 programConfig.fullscreen = fullscreenToggle.isSelected();
+                programConfig.useFastMenu = fastMenuToggle.isSelected();
                 programConfig.osuFolder = songsField.getText();
                 //programConfig.fpsMode = vsync.isSelected() ? 0 : (unlimited.isSelected() ? 2 : 1);
 
@@ -407,43 +415,6 @@ public class ConfigMenu implements ActionListener, WindowListener {
         }
     }
 
-
-    private String getSongFolder()
-    {
-        String location;
-
-        String OS = (System.getProperty("os.name")).toUpperCase();
-
-        if (OS.contains("WIN"))
-        {
-            location = System.getenv("LOCALAPPDATA");
-            if (location != null && testSongFolder(location = location + File.separatorChar + "osu!"))
-            {
-                return location;
-            }
-            location = System.getenv("APPDATA");
-            if (location != null && testSongFolder(location = location + File.separatorChar + "osu!"))
-            {
-                return location;
-            }
-            location = System.getenv("ProgramFiles(x86)");
-            if (location != null && testSongFolder(location = location + File.separatorChar + "osu!"))
-            {
-                return location;
-            }
-            location = System.getenv("ProgramFiles");
-            if (location != null && testSongFolder(location = location + File.separatorChar + "osu!"))
-            {
-                return location;
-            }
-        }
-        else
-        {
-            //Eh I'm too lazy to deal with other operating systems. Locate it yourself.
-        }
-        return "";
-    }
-
     private boolean testSongFolder(String location)
     {
         File f = Paths.get(location).toFile();
@@ -461,20 +432,9 @@ public class ConfigMenu implements ActionListener, WindowListener {
         accept.setEnabled(false);
         return false;
     }
-    private boolean songsExists(File directory)
+    private static boolean songsExists(File directory)
     {
-        File[] files = directory.listFiles(File::isDirectory);
-        if (files != null)
-        {
-            for (File f : files)
-            {
-                if (f.getName().equals("Songs"))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return new File(directory, "Songs").exists();
     }
 }
 

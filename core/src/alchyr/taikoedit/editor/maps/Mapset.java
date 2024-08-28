@@ -5,10 +5,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
+import java.nio.file.Path;
+import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
@@ -31,12 +29,22 @@ public class Mapset {
     public Mapset(File directory) // loading new
     {
         this.directory = directory;
-        this.key = directory.getAbsolutePath();
+        this.key = directory.toPath().toAbsolutePath().toString();
 
         this.maps = new ArrayList<>();
         sameSong = true;
 
         loadMaps();
+    }
+    public Mapset(File directory, Collection<Path> mapPaths)
+    {
+        this.directory = directory;
+        this.key = directory.toPath().toAbsolutePath().toString();
+
+        this.maps = new ArrayList<>();
+        sameSong = true;
+
+        loadMaps(mapPaths);
     }
     public Mapset(File directory, List<MapInfo> maps, boolean sameSong, String songFile, String creator, String title, String artist, String background) //from data
     {
@@ -246,9 +254,32 @@ public class Mapset {
         if (mapFiles == null)
             return;
 
+        maps.clear();
         for (File map : mapFiles)
         {
             MapInfo info = new MapInfo(map, this);
+            if (info.getMode() == 1)
+            {
+                maps.add(info);
+
+                if (songFile.isEmpty())
+                    songFile = info.getSongFile();
+                else if (!songFile.equals(info.getSongFile()))
+                    sameSong = false; //i don't handle this very well right now xd
+            }
+        }
+
+        sortMaps();
+    }
+    public void loadMaps(Collection<Path> mapPaths)
+    {
+        if (mapPaths == null)
+            return;
+
+        maps.clear();
+        for (Path map : mapPaths)
+        {
+            MapInfo info = new MapInfo(map.toFile(), this);
             if (info.getMode() == 1)
             {
                 maps.add(info);

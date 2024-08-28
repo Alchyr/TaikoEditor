@@ -97,7 +97,7 @@ public class FakeSliderTool extends EditorTool {
         //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && renderPreview && previewView.equals(view))
         {
-            view.map.addObject(placementObject, view.replaceTest);
+            view.map.registerAndPerformAddObject("Add Fake Slider", placementObject, view.replaceTest);
 
             placementObject = new Slider(0, -.01);
             renderPreview = false;
@@ -122,7 +122,7 @@ public class FakeSliderTool extends EditorTool {
             s.setIsFinish(true);
         }
 
-        view.map.addObject(s, view.replaceTest);
+        view.map.registerAndPerformAddObject("Add Fake Slider", s, view.replaceTest);
         return true;
     }
 

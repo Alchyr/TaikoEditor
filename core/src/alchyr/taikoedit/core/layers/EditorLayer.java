@@ -1,19 +1,19 @@
 package alchyr.taikoedit.core.layers;
 
+import alchyr.networking.standard.ConnectionClient;
+import alchyr.networking.standard.ConnectionServer;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.TextInputProcessor;
-import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
-import alchyr.taikoedit.core.layers.sub.DifficultyMenuLayer;
-import alchyr.taikoedit.core.layers.sub.LinePositioningLayer;
-import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
+import alchyr.taikoedit.core.layers.sub.*;
 import alchyr.taikoedit.core.ui.Dropdown;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
-import alchyr.taikoedit.editor.changes.ObjectMovement;
+import alchyr.taikoedit.editor.changes.MapChange;
+import alchyr.taikoedit.editor.changes.ValueModificationChange;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.ObjectView;
@@ -35,8 +35,9 @@ import alchyr.taikoedit.core.input.KeyHoldObject;
 import alchyr.taikoedit.util.FileDropHandler;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.BooleanWrapper;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
@@ -48,12 +49,12 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
-import com.google.common.io.Files;
 
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
@@ -98,17 +99,15 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private int topBarY;
     private int timelineY;
 
-    private ImageButton moreOptionsButton;
-    private ImageButton selectionOptionsButton;
     private Dropdown<String> topBarDropdown;
 
-    private final List<Dropdown.DropdownElement<String>> moreOptionsList = new ArrayList<>();
+    private final List<Dropdown.DropdownElement<String>> fileOptionsList = new ArrayList<>();
     private final List<Dropdown.DropdownElement<String>> baseSelectionList = new ArrayList<>();
+    private final List<Dropdown.DropdownElement<String>> svDropdownList = new ArrayList<>();
     //TODO: More lists based on selection (primary view type)
 
-    private ImageButton exitButton;
-    private ImageButton settingsButton;
-    private ImageButton openButton;
+    private List<ImageButton> buttons = new ArrayList<>();
+    private ImageButton networkingButton;
 
     private Timeline timeline; //Timeline
 
@@ -123,6 +122,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     //Tools
     public Tools tools;
 
+    //Networking
+    private ConnectionServer server = null;
+    private ConnectionClient client = null;
+    private EditorMessageHandler editorMessageHandler = null;
+
     //Data
     private LocalizedText keyNames;
 
@@ -130,7 +134,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private final ArrayList<EditorBeatmap> activeMaps;
 
     private final Mapset set;
-    private final MapInfo initial;
+    private final List<MapInfo> initial = new ArrayList<>();
     private final ArrayList<MapView> addLater;
 
     private final DivisorOptions divisorOptions; //Always shared
@@ -139,7 +143,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
 
     //Copy and Paste
-    private static PositionalObjectTreeMap<PositionalObject> copyObjects = null;
+    private static MapObjectTreeMap<MapObject> copyObjects = null;
     private static MapView.ViewType copyType;
 
 
@@ -148,11 +152,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private boolean verticalScrollEnabled = false;
     private int scrollPos = 0, maxScrollPosition = 0;
 
-    public EditorLayer(ProgramLayer src, Mapset set, MapInfo initial)
+    public EditorLayer(ProgramLayer src, Mapset set, MapInfo... initial)
     {
         this.src = src;
         this.set = set;
-        this.initial = initial;
+        Collections.addAll(this.initial, initial);
 
         processor = new EditorProcessor(this);
         backgroundImg = set.getBackground();
@@ -165,6 +169,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         divisorOptions.reset();
 
         this.type = backgroundImg == null || backgroundImg.isEmpty() ? LAYER_TYPE.UPDATE_STOP : LAYER_TYPE.FULL_STOP;
+    }
+
+    public void setClient(ConnectionClient client) {
+        this.client = client;
     }
 
     @Override
@@ -240,12 +248,36 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         textOverlay = new TextOverlay(aller, SettingsMaster.getHeight() / 2, 100);
 
         //Top bar
-        moreOptionsButton = new ImageButton(0, topBarY, assetMaster.get("editor:dropdown"), (Texture) assetMaster.get("editor:dropdownh")).setClick(this::moreOptions);
-        selectionOptionsButton = new ImageButton(40, topBarY, assetMaster.get("editor:edit"), (Texture) assetMaster.get("editor:edith")).setClick(this::selectionOptions);
+        //NEEDS LOCALIZATION
+        buttons.add(new ImageButton(0, topBarY, assetMaster.get("editor:dropdown"), (Texture) assetMaster.get("editor:dropdownh"))
+                .setClick(this::moreOptions).setHovered(()->{ hoverText.setText("Files"); }));
+        buttons.add(new ImageButton(40, topBarY, assetMaster.get("editor:edit"), (Texture) assetMaster.get("editor:edith"))
+                .setClick(this::selectionOptions).setHovered(()->{ hoverText.setText("Edit"); }));
 
-        exitButton = new ImageButton(SettingsMaster.getWidth() - 40, topBarY, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::returnToMenu);
-        settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, topBarY, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
-        openButton = new ImageButton(SettingsMaster.getWidth() - 120, topBarY, assetMaster.get("editor:open"), (Texture) assetMaster.get("editor:openh")).setClick(this::openDifficultyMenu);
+        int buttonX = SettingsMaster.getWidth();
+        buttons.add(new ImageButton(buttonX -= 40, topBarY, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"))
+                .setClick(this::returnToMenu).setHovered(()->{ hoverText.setText("Exit"); }));
+        buttons.add(new ImageButton(buttonX -= 40, topBarY, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh"))
+                .setClick(this::settings).setHovered(()->{ hoverText.setText("Settings"); }));
+        buttons.add(new ImageButton(buttonX -= 40, topBarY, assetMaster.get("editor:open"), (Texture) assetMaster.get("editor:openh"))
+                .setClick(this::openDifficultyMenu)
+                .setHovered(()->{
+                    String input = processor.getBindingInput(keyNames.get(""), "OpenView");
+                    hoverText.setText(input == null ? "Open New View" : "Open New View (" + input + ")");
+                }));
+
+        if (client == null) {
+            networkingButton = new ImageButton(buttonX -= 40, topBarY, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth"))
+                    .setHovered(()->{ hoverText.setText("Start Hosting"); }).setClick(this::openConnect);
+            buttons.add(networkingButton);
+        }
+        else {
+            networkingButton = new ImageButton(buttonX -= 40, topBarY, assetMaster.get("ui:connecth"), (Texture) assetMaster.get("ui:connecth"))
+                    .setHovered(()->{ hoverText.setText("Connected as Client"); });
+            buttons.add(networkingButton);
+        }
+
+
 
         topBarDropdown = new Dropdown<>(Math.min(SettingsMaster.getWidth() / 2, 240));
 
@@ -255,8 +287,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             LocalizedText keyNames = LocalizationMaster.getLocalizedText("keys", "names");
             String[] keyNameArray = keyNames == null ? new String[] { } : keyNames.get("");
 
-            moreOptionsList.clear();
-            moreOptionsList.add(new Dropdown.ItemElement<>("Save", aller)
+            fileOptionsList.clear();
+            fileOptionsList.add(new Dropdown.ItemElement<>("Save", aller)
                     .setCondition((e) -> {
                         e.setHoverText(editorBindings.getBindingInputString("Save", keyNameArray));
                         return primaryView != null;
@@ -265,7 +297,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         return true;
                     })
             );
-            moreOptionsList.add(new Dropdown.ItemElement<>("Save All", aller)
+            fileOptionsList.add(new Dropdown.ItemElement<>("Save All", aller)
                     .setCondition((e) -> {
                         e.setHoverText(editorBindings.getBindingInputString("SaveAll", keyNameArray));
                         return !activeMaps.isEmpty();
@@ -274,11 +306,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         return true;
                     })
             );
-            moreOptionsList.add(new Dropdown.SeparatorElement<>());
-            moreOptionsList.add(new Dropdown.ItemElement<>("Open All", aller)
-                    .setCondition((e) -> activeMaps.size() < set.getMaps().size())
+            fileOptionsList.add(new Dropdown.SeparatorElement<>());
+            fileOptionsList.add(new Dropdown.ItemElement<>("Open All", aller)
+                    .setCondition((e) -> mapViews.size() < set.getMaps().size())
                     .setOnClick((e) -> {
-                        openAll();
+                        openAll(true);
                         return true;
                     })
             );
@@ -374,6 +406,37 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         return true;
                     })
             );
+
+            svDropdownList.clear();
+            svDropdownList.add(new Dropdown.SeparatorElement<>());
+            svDropdownList.add(new Dropdown.ItemElement<>("Scale SV", aller)
+                    .setCondition((e) -> primaryView instanceof EffectView && primaryView.hasSelection())
+                    .setOnClick((e) -> {
+                        if (primaryView instanceof EffectView && primaryView.hasSelection()) {
+                            TaikoEditor.addLayer(new SvScalingLayer(0, 100, (properties)->{
+                                if (primaryView != null && primaryView.hasSelection()) {
+                                    MapObjectTreeMap<MapObject> greenLines = new MapObjectTreeMap<>();
+                                    Map<MapObject, Double> newValueMap = new HashMap<>();
+
+                                    primaryView.getSelection().forEachObject(
+                                        (o)->{
+                                            if (o instanceof TimingPoint && !((TimingPoint) o).uninherited) {
+                                                greenLines.add(o);
+                                                newValueMap.put(o,
+                                                        ((o.getValue() - properties.scalingPoint) * properties.scalingMult / 100) + properties.scalingPoint
+                                                    );
+                                            }
+                                        }
+                                    );
+
+                                    primaryView.map.registerAndPerformValueChange(greenLines, newValueMap);
+                                }
+                            }));
+                            EditorLayer.processor.releaseInput(true);
+                        }
+                        return true;
+                    })
+            );
         }
 
         setViewScale(1.0f);
@@ -384,7 +447,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         //Editor stuff
         timeline = new Timeline(timelineY, music.getSecondLength());
         tools = new Tools(this);
-        if (activeMaps.isEmpty())
+
+        if (client != null) {
+            openAll(false);
+        }
+
+        if (mapViews.isEmpty())
         {
             openDifficultyMenu();
         }
@@ -395,8 +463,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
             }
         }
-        processor.bind();
+
         FileDropHandler.set(this);
+        MapChange.registerEditorForChanges(this);
+        processor.bind();
+
+        if (client != null) {
+            editorMessageHandler = new EditorMessageHandler(this, client);
+        }
     }
 
     @Override
@@ -434,30 +508,48 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         textOverlay.update(elapsed);
         tools.update(timelineY, minimumVisibleY, activeMaps, mapViews, elapsed);
 
-        moreOptionsButton.update(elapsed);
-        selectionOptionsButton.update(elapsed);
+        for (ImageButton button : buttons) {
+            button.update(elapsed);
+        }
 
-        exitButton.update(elapsed);
-        openButton.update(elapsed);
-        settingsButton.update(elapsed);
+        if (server != null) {
+            server.update();
 
-        if (SettingsMaster.gameY() > topBarY) {
-            //NEEDS LOCALIZATION
-            if (moreOptionsButton.hovered) {
-                hoverText.setText("More Options");
+            if (!server.isAlive()) {
+                try {
+                    server.close();
+                }
+                catch (Exception ignored) { }
+                server = null;
+                for (EditorBeatmap map : activeMaps) {
+                    map.setServer(null);
+                }
+                networkingButton.setTextures(assetMaster.get("ui:connect"), assetMaster.get("ui:connecth"));
+                networkingButton.setHovered(()->hoverText.setText("Start Hosting"));
             }
-            else if (selectionOptionsButton.hovered) {
-                hoverText.setText("Edit");
+        }
+        if (client != null) {
+            if (!client.isAlive()) {
+                try {
+                    client.close();
+                } catch (Exception ignored) { }
+                String cause = client.failure;
+                client = null;
+                for (EditorBeatmap map : activeMaps) {
+                    map.setClient(null);
+                }
+                if (cause == null) {
+                    textOverlay.setText("Lost connection.", 2.0f);
+                }
+                else {
+                    textOverlay.setText(cause, 2.0f);
+                }
+
+                networkingButton.setTextures(assetMaster.get("ui:connect"), assetMaster.get("ui:connecth"));
+                networkingButton.setHovered(()->hoverText.setText("Start Hosting")).setClick(this::openConnect);
             }
-            else if (openButton.hovered) {
-                String input = processor.getBindingInput(keyNames.get(""), "OpenView");
-                hoverText.setText(input == null ? "Open New View" : "Open New View (" + input + ")");
-            }
-            else if (settingsButton.hovered) {
-                hoverText.setText("Settings");
-            }
-            else if (exitButton.hovered) {
-                hoverText.setText("Exit");
+            else if (editorMessageHandler != null) {
+                editorMessageHandler.update(elapsed);
             }
         }
     }
@@ -483,12 +575,12 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             ViewSet set = mapViews.get(map);
             if (set != null)
                 set.render(sb, sr);
-            else {
+            /*else {
                 editorLogger.error("MAP IN ACTIVE MAPS WITH NO VIEWS: " + map.getName());
                 editorLogger.error("Dirty: " + map.dirty);
                 editorLogger.info("Removing from active maps.");
                 mapIterator.remove();
-            }
+            }*/
         }
 
         tools.renderCurrentTool(sb, sr);
@@ -512,12 +604,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         sb.setColor(Color.BLACK);
         sb.draw(pixel, 0, topBarY, SettingsMaster.getWidth(), topBarHeight);
 
-        moreOptionsButton.render(sb, sr);
-        selectionOptionsButton.render(sb, sr);
-
-        exitButton.render(sb, sr);
-        settingsButton.render(sb, sr);
-        openButton.render(sb, sr);
+        for (ImageButton button : buttons) {
+            button.render(sb, sr);
+        }
 
         timeline.render(sb, sr);
 
@@ -546,7 +635,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (!topBarDropdown.isOpen() || !topBarDropdown.id.equals("Opt")) {
             topBarDropdown.id = "Opt";
             topBarDropdown.setPos(0, topBarY);
-            topBarDropdown.setElements(moreOptionsList).open();
+            topBarDropdown.setElements(fileOptionsList).open();
         }
         else {
             topBarDropdown.close();
@@ -556,7 +645,19 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (!topBarDropdown.isOpen() || !topBarDropdown.id.equals("Sel")) {
             topBarDropdown.id = "Sel";
             topBarDropdown.setPos(40, topBarY);
-            topBarDropdown.setElements(baseSelectionList).open();
+            topBarDropdown.setElements(baseSelectionList);
+
+            if (primaryView != null) {
+                switch (primaryView.type) {
+                    case EFFECT_VIEW:
+                        if (primaryView instanceof EffectView && ((EffectView) primaryView).mode) {
+                            topBarDropdown.addElements(svDropdownList);
+                        }
+                        break;
+                }
+            }
+
+            topBarDropdown.open();
         }
         else {
             topBarDropdown.close();
@@ -654,6 +755,22 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         primaryView = null;
 
         processor.dispose();
+
+        if (server != null) {
+            try {
+                server.close();
+            } catch (Exception e) {
+                editorLogger.error("Exception occurred while closing server", e);
+            }
+        }
+        if (client != null) {
+            try {
+                client.close();
+            }
+            catch (Exception e) {
+                editorLogger.error("Exception occurred while closing client", e);
+            }
+        }
     }
 
     @Override
@@ -670,6 +787,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     }
 
     public void loadViewsetInfo(String val) {
+        if (client != null) return; //Do not open from settings if client exist
+
         String[] maps = val.split("-");
         for (String map : maps) {
             String[] mapInfo = map.split("\\+");
@@ -695,7 +814,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         StringBuilder data = new StringBuilder();
         for (EditorBeatmap map : activeMaps) {
             ViewSet viewset = mapViews.get(map);
-            if (!viewset.isEmpty()) {
+            if (viewset != null && !viewset.isEmpty()) {
                 if (data.length() != 0)
                     data.append('-');
                 data.append(safeify(map.getName()));
@@ -718,14 +837,17 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
     private void loadBeatmap()
     {
-        if (initial != null) {
-            if (activeMaps.stream().noneMatch(map -> map.is(initial))) {
-                prepSingleDiff(initial);
+        if (!initial.isEmpty()) {
+            for (EditorBeatmap map : activeMaps) {
+                initial.removeIf(map::is);
+            }
+            for (MapInfo toOpen : initial) {
+                prepSingleDiff(toOpen, initial.size() == 1);
             }
         }
         else if (activeMaps.isEmpty() && set.getMaps().size() == 1) {
             //No saved editor info, didn't choose an initial map, only one difficulty in set
-            prepSingleDiff(set.getMaps().get(0));
+            prepSingleDiff(set.getMaps().get(0), true);
         }
 
         //Test code: Load all diffs automatically
@@ -747,14 +869,22 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         editorLogger.info("Loaded beatmap successfully.");
     }
 
-    private void prepSingleDiff(MapInfo info) {
+    private void prepSingleDiff(MapInfo info, boolean toTop) {
         EditorBeatmap newMap = new EditorBeatmap(set, info);
-        addMap(newMap, 0);
+        if (toTop) {
+            addMap(newMap, 0);
+        }
+        else {
+            addMap(newMap);
+        }
 
         addObjectView(newMap, false);
         addEffectView(newMap, false);
     }
 
+    public List<EditorBeatmap> getActiveMaps() {
+        return activeMaps;
+    }
     public EditorBeatmap getEditorBeatmap(MapInfo info)
     {
         for (EditorBeatmap map : activeMaps)
@@ -801,6 +931,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
         if (!newMap.autoBreaks && textOverlay != null) {
             textOverlay.setText("Map contains invalid breaks; automatic break control disabled.", 2.5f);
+        }
+
+        if (server != null && server.isAlive()) {
+            newMap.setServer(server);
+        }
+        else if (client != null && client.isAlive()) {
+            newMap.setClient(client);
         }
     }
 
@@ -1002,7 +1139,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         }
         return failures == 0;
     }
-    private void openAll() {
+    private void openAll(boolean withView) {
         List<MapInfo> toOpen = new ArrayList<>(set.getMaps());
         toOpen.removeIf(info -> {
             for (EditorBeatmap map : activeMaps) {
@@ -1016,7 +1153,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             EditorBeatmap newMap = new EditorBeatmap(set, info);
             addMap(newMap);
 
-            addObjectView(newMap, true);
+            if (withView)
+                addObjectView(newMap, true);
         }
     }
     private void cutPrimary() {
@@ -1249,9 +1387,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
     private void nudgeSelection(int ms) {
         if (primaryView != null && primaryView.hasSelection()) {
-            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
             movementCopy.addAll(primaryView.getSelection());
-            primaryView.map.registerChange(new ObjectMovement(primaryView.map, movementCopy, ms).perform());
+            primaryView.map.registerAndPerformObjectMovement(movementCopy, ms);
         }
     }
 
@@ -1260,8 +1398,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             boolean toFinisher = false;
             List<HitObject> finisher = new ArrayList<>();
             List<HitObject> nonFinisher = new ArrayList<>();
-            for (ArrayList<PositionalObject> stack : primaryView.getSelection().values()) {
-                for (PositionalObject o : stack) {
+            for (ArrayList<MapObject> stack : primaryView.getSelection().values()) {
+                for (MapObject o : stack) {
                     if (o instanceof HitObject) {
                         if (((HitObject) o).isFinish()) {
                             finisher.add((HitObject) o);
@@ -1275,7 +1413,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 }
             }
 
-            primaryView.map.registerChange(new FinisherChange(primaryView.map, toFinisher ? nonFinisher : finisher, toFinisher).perform());
+            primaryView.map.registerChange(new FinisherChange(primaryView.map, toFinisher ? nonFinisher : finisher, toFinisher).preDo());
         }
         else {
             finisherLock = !finisherLock;
@@ -1342,7 +1480,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
             File destination = new File(set.getDirectory(), f.getName());
             try {
-                Files.copy(f, destination);
+                Files.copy(f.toPath(), destination.toPath());
             } catch (IOException e) {
                 showText("Failed to copy image to map folder.");
                 GeneralUtils.logStackTrace(editorLogger, e);
@@ -1416,6 +1554,151 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 }
             }
         });
+    }
+
+
+    //Networking Stuff
+    private void openConnect() {
+        if (server != null && server.isAlive()) {
+            return;
+        }
+
+        clean();
+
+        //Open text prompt for port, then open server on that port
+        TaikoEditor.addLayer(new ServerSetupLayer(30000, (port)->{
+            try {
+                server = new ConnectionServer(port, 4);
+
+                networkingButton.setTextures(assetMaster.get("ui:connecth"), assetMaster.get("ui:connecth"));
+                networkingButton.setHovered(()->{ hoverText.setText("Server Open"); });
+
+                Toolkit.getDefaultToolkit()
+                        .getSystemClipboard()
+                        .setContents(new StringSelection(server.getConnectionText()), null);
+                textOverlay.setText("Copied pass to clipboard.", 2.0f);
+
+
+                openAll(false);
+
+
+                for (EditorBeatmap map : activeMaps) {
+                    map.setServer(server);
+                }
+
+
+                server.registerEventTrigger(ConnectionServer.EVENT_NEW_CLIENT, (params)->{
+                    ConnectionClient client = (ConnectionClient) params[0];
+
+                    client.send("MPR" + set.getCreator());
+                    client.send("ART" + set.getArtist());
+                    client.send("TTL" + set.getTitle());
+
+                    BooleanWrapper clientConfirmed = new BooleanWrapper(false);
+
+                    server.registerEventTrigger("CLIENT_READY" + client.ID, (ignored)->{
+                        clientConfirmed.value = true;
+                        return true; //remove after triggered
+                    });
+
+                    List<ConnectionClient> otherClients = new ArrayList<>(server.getClients());
+                    otherClients.remove(client);
+
+                    for (ConnectionClient otherClient : otherClients) {
+                        otherClient.send(ConnectionServer.EVENT_SENT + "WAITJOIN" + "|" + client.ID);
+                    }
+
+                    TaikoEditor.addLayer(new WaitLayer("Sending map to client...", ()->{
+                            if (clientConfirmed.value) {
+                                for (ConnectionClient otherClient : otherClients) {
+                                    otherClient.send(ConnectionServer.EVENT_SENT + "JOIN_SUCCESS" + "|" + client.ID);
+                                }
+                                return true;
+                            }
+                            else if (!client.isAlive()) {
+                                for (ConnectionClient otherClient : otherClients) {
+                                    otherClient.send(ConnectionServer.EVENT_SENT + "JOIN_FAIL" + "|" + client.ID);
+                                }
+                                return true;
+                            }
+                            return false;
+                        }).onCancel(()->{
+                            try {
+                                client.close();
+                            } catch (Exception e) {
+                                editorLogger.error("Exception occurred while closing connection to client", e);
+                            }
+                            for (ConnectionClient otherClient : otherClients) {
+                                otherClient.send(ConnectionServer.EVENT_SENT + "READY");
+                            }
+                        })
+                    );
+                    EditorLayer.processor.releaseInput(true);
+                    return false;
+                });
+
+                server.registerEventTrigger(ConnectionServer.EVENT_FILE_REQ, (params)->{
+                    ConnectionClient client = (ConnectionClient) params[0];
+                    String pass = params[1].toString();
+                    String req = params[2].toString();
+                    switch (req) {
+                        case "AUDIO":
+                            String songFilePath = set.getSongFile();
+                            if (songFilePath.isEmpty()) {
+                                //>:(
+                                client.send("FAIL");
+                                break;
+                            }
+                            FileHandle handle = Gdx.files.absolute(songFilePath);
+                            if (!handle.exists()) {
+                                client.send("FAIL");
+                                break;
+                            }
+
+                            client.sendFile(pass, handle);
+                            break;
+                        case "MAPS":
+                            if (!saveAll()) {
+                                editorLogger.warn("Didn't save successfully, might result in desync");
+                            }
+                            for (ConnectionClient otherClient : server.getClients()) {
+                                if (!otherClient.equals(client)) {
+                                    otherClient.send(ConnectionServer.EVENT_SENT + "RESET_STATE");
+                                }
+                            }
+                            for (EditorBeatmap map : activeMaps) {
+                                map.clearState();
+                                map.keyMapObjects();
+                            }
+                            List<MapInfo> maps = set.getMaps();
+                            for (MapInfo map : maps) {
+                                client.sendFile(pass, new FileHandle(map.getMapFile()));
+                            }
+                            client.send("DONE");
+                            break;
+                    }
+                    return false;
+                });
+
+                server.registerEventTrigger("EDITORSTATE", (params)->{
+                    ConnectionClient client = (ConnectionClient) params[0];
+
+                    for (EditorBeatmap map : activeMaps) {
+                        String mapKey = GeneralUtils.generateCode(4);
+                        client.send("DIFF" + mapKey + map.getName());
+                        client.send("POSN" + Math.round(currentPos));
+
+                        //ok you know what frick syncing undo/redo queue that's too much of a pain
+                    }
+                    client.send("DONE");
+                    return false;
+                });
+            }
+            catch (Exception e) {
+                editorLogger.error("Failed to start ConnectionServer", e);
+            }
+        }));
+        EditorLayer.processor.releaseInput(true);
     }
 
     public static class EditorProcessor extends TextInputProcessor {
@@ -1612,7 +1895,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             bindings.bind("0", ()->sourceLayer.tools.selectToolIndex(9));
 
             //NOTE: DEBUG
-            bindings.bind("DEBUG", ()->{
+            /*bindings.bind("DEBUG", ()->{
                 if (sourceLayer.primaryView != null)
                 {
                     //Wavetapper.generate(sourceLayer.primaryView.map);
@@ -1628,7 +1911,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         }
                     }
                 }
-            });
+            });*/
 
             if (DIFFCALC)
                 bindings.bind("DIFFCALC", ()->{
@@ -1659,25 +1942,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                             sourceLayer.topBarDropdown.close();
                             return sourceLayer.timeline.click(p.x, p.y);
                         }
-                        else
+                        else //Top bar
                         {
-                            if (sourceLayer.moreOptionsButton.click(p.x, p.y, button))
-                                return null;
-                            else if (sourceLayer.selectionOptionsButton.click(p.x, p.y, button))
-                                return null;
-                            else if (sourceLayer.openButton.click(p.x, p.y, button)) {
-                                sourceLayer.topBarDropdown.close();
-                                return null;
-                            }
-                            else if (sourceLayer.settingsButton.click(p.x, p.y, button)) {
-                                sourceLayer.topBarDropdown.close();
-                                return null;
-                            }
-                            else if (sourceLayer.exitButton.click(p.x, p.y, button)) {
-                                sourceLayer.topBarDropdown.close();
-                                return null;
-                            }
                             sourceLayer.topBarDropdown.close();
+                            for (ImageButton btn : sourceLayer.buttons) {
+                                if (btn.click(p.x, p.y, button)) {
+                                    return null;
+                                }
+                            }
                         }
                         return null;
                     });
@@ -1710,7 +1982,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                             if (clicked == null)
                                 continue;
 
-                            PositionalObject o = clicked.getObjectAt(p.x, p.y);
+                            MapObject o = clicked.getObjectAt(p.x, p.y);
                             if (o == null)
                                 continue;
 

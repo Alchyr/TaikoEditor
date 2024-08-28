@@ -1,7 +1,7 @@
 package alchyr.taikoedit.editor.maps.components;
 
 import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -9,7 +9,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 
-public class PreviewLine extends PositionalObject {
+public class PreviewLine extends MapObject {
     public static final Color c = new Color(0.2f, 0.6f, 0.9f, 1.0f);
 
     private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
@@ -34,6 +34,8 @@ public class PreviewLine extends PositionalObject {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
+        if (testHidden()) return;
+
         if (selected)
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
@@ -48,13 +50,15 @@ public class PreviewLine extends PositionalObject {
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
+        if (testHidden()) return;
+
         sb.setColor(selection);
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
     }
 
     @Override
-    public PositionalObject shiftedCopy(long newPos) {
+    public MapObject shiftedCopy(long newPos) {
         PreviewLine copy = new PreviewLine(this.getPos());
         copy.setPos(newPos);
         return copy;

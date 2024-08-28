@@ -1,5 +1,6 @@
 package alchyr.taikoedit.editor;
 
+import alchyr.taikoedit.editor.maps.BreakInfo;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
@@ -49,8 +50,6 @@ public class Timeline {
     private int pos;
     private DecimalFormat percentFormat = new DecimalFormat("##0.#%", osuDecimalFormat);
 
-    private MouseHoldObject holdObject;
-
     private EditorBeatmap currentMap;
     private Set<Integer> bookmarks;
     private final List<Integer> bookmarkRenderPositions;
@@ -73,8 +72,6 @@ public class Timeline {
         minClickY = y + 3;
         maxClickY = y + HEIGHT - 3;
 
-        holdObject = new MouseHoldObject(this::drag, this::release);
-
         time = new EditorTime();
         currentMap = null;
         bookmarks = null;
@@ -96,7 +93,7 @@ public class Timeline {
             {
                 music.seekSecond(convertPosition(gameX));
 
-                return holdObject;
+                return new MouseHoldObject(this::drag, this::release);
             } //If it cannot be locked, something else has locked it. Timeline drag should probably not work in this situation.
         }
         //}
@@ -163,9 +160,9 @@ public class Timeline {
             kiaiIterator = null;
 
             sb.setColor(breakColor);
-            for (Pair<Long, Long> breakSection : currentMap.getBreaks()) {
-                start = convertPercent((breakSection.a / 1000.0) / length);
-                sb.draw(pix, start, bookmarkY, convertPercent((breakSection.b / 1000.0) / length) - start, SECTION_HEIGHT);
+            for (BreakInfo breakSection : currentMap.getBreaks()) {
+                start = convertPercent((breakSection.start / 1000.0) / length);
+                sb.draw(pix, start, bookmarkY, convertPercent((breakSection.end / 1000.0) / length) - start, SECTION_HEIGHT);
             }
 
             for (List<MarkInfo> info : visiblePointPositions.get(currentMap).values()) {

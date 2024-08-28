@@ -1,6 +1,7 @@
 package alchyr.taikoedit.core.layers;
 
 import alchyr.taikoedit.editor.maps.BeatmapDatabase;
+import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -23,7 +24,9 @@ public class MenuLoadingLayer extends EditorLoadingLayer {
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr) {
         super.render(sb, sr);
-        textRenderer.setFont(font)
-                .renderTextCentered(sb, "Maps: ~" + BeatmapDatabase.mapCount, SettingsMaster.getMiddleX(), textY);
+        if (!BeatmapDatabase.updating) {
+            textRenderer.setFont(font)
+                    .renderTextCentered(sb, "Maps: " + BeatmapDatabase.mapCount, SettingsMaster.getMiddleX(), textY);
+        }
     }
 }

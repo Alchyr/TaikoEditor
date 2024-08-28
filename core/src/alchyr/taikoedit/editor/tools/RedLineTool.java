@@ -2,9 +2,7 @@ package alchyr.taikoedit.editor.tools;
 
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.views.MapView;
@@ -115,7 +113,7 @@ public class RedLineTool extends EditorTool {
                 TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(placementObject.getPos())).uninherit();
                 p.kiai = BindingGroup.shift();
 
-                view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+                view.map.registerAndPerformAddObject("Add Red Line", p, view.replaceTest);
                 return null;
             }
 
@@ -124,7 +122,7 @@ public class RedLineTool extends EditorTool {
                 p.kiai = !p.kiai;
             }
 
-            view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+            view.map.registerAndPerformAddObject("Add Red Line", p, view.replaceTest);
             return null;
         }
 
@@ -150,7 +148,7 @@ public class RedLineTool extends EditorTool {
             TimingPoint p = ((TimingPoint) placementObject.shiftedCopy(time)).uninherit();
             p.kiai = BindingGroup.shift();
 
-            view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+            view.map.registerAndPerformAddObject("Add Red Line", p, view.replaceTest);
             return true;
         }
 
@@ -159,7 +157,7 @@ public class RedLineTool extends EditorTool {
             p.kiai = !p.kiai;
         }
 
-        view.map.registerChange(new SingleLineAddition(view.map, p).perform());
+        view.map.registerAndPerformAddObject("Add Red Line", p, view.replaceTest);
         return true;
     }
 

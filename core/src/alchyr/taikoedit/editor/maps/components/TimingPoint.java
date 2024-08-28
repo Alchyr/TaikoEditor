@@ -1,7 +1,7 @@
 package alchyr.taikoedit.editor.maps.components;
 
 import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -12,14 +12,14 @@ import java.text.DecimalFormat;
 import static alchyr.taikoedit.TaikoEditor.assetMaster;
 import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
-public class TimingPoint extends PositionalObject {
+public class TimingPoint extends MapObject {
     public static final Color RED = Color.RED.cpy();
     public static final Color GREEN = new Color(0.25f, 0.75f, 0.0f, 1.0f);
     public static final Color YELLOW = new Color(0.8f, 0.8f, 0.0f, 1.0f);
 
     private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
 
-    private static final double MIN_SV = 0.01;
+    public static final double MIN_SV = 0.01;
 
     //time,beatLength,meter,sampleSet,sampleIndex,volume,uninherited,effects
     /** Data from osu! wiki on File Format.
@@ -31,13 +31,11 @@ public class TimingPoint extends PositionalObject {
      * sampleSet (Integer): Default sample set for hit objects (0 = beatmap default, 1 = normal, 2 = soft, 3 = drum).
      * sampleIndex (Integer): Custom sample index for hit objects. 0 indicates osu!'s default hitsounds.
      * volume (Integer): Volume percentage for hit objects.
-     * uninherited (0 or 1): Whether or not the timing point is uninherited.
+     * uninherited (0 or 1): Whether the timing point is uninherited (red line).
      * effects (Integer): Bit flags that give the timing point extra effects. See the effects section.
      */
 
     public double value = 500; //For red lines, bpm. For green lines, sv multiplier. (Converted to usable value. For bpm, kept as is. For multiplier, converted.)
-    public double lastRegisteredValue; //doesn't change until the new value is tracked in undo/redo stuff
-    public int lastRegisteredVolume;
     public int meter = 4, sampleSet = 1, sampleIndex = 0, volume = 100;
     public boolean uninherited = true, kiai = false, omitted = false; //kiai and omitted are flags in effects
 
@@ -51,8 +49,7 @@ public class TimingPoint extends PositionalObject {
         setPos(pos);
 
         this.uninherited = false;
-        this.lastRegisteredValue = this.value = 1;
-        this.lastRegisteredVolume = this.volume;
+        this.value = 1;
         this.omitted = false;
     }
 
@@ -97,27 +94,20 @@ public class TimingPoint extends PositionalObject {
                     break;
             }
         }
-        lastRegisteredValue = value;
-        this.lastRegisteredVolume = this.volume;
     }
 
     public TimingPoint(TimingPoint base)
     {
         setPos(base.getPrecisePos());
         this.uninherited = base.uninherited;
-        this.lastRegisteredValue = this.value = base.value;
+        this.value = base.value;
+        this.volume = base.volume;
         this.meter = base.meter;
         this.sampleSet = base.sampleSet;
         this.sampleIndex = base.sampleIndex;
-        this.lastRegisteredVolume = this.volume = base.volume;
         this.kiai = base.kiai;
         this.omitted = base.omitted;
     }
-
-    /*public static void loadTexture()
-    {
-        //pix;
-    }*/
 
     public double getBPM()
     {
@@ -144,6 +134,8 @@ public class TimingPoint extends PositionalObject {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
+        if (testHidden()) return;
+
         if (selected)
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
@@ -158,6 +150,8 @@ public class TimingPoint extends PositionalObject {
     }
 
     public void renderColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c, float alpha) {
+        if (testHidden()) return;
+
         if (selected)
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
@@ -172,12 +166,14 @@ public class TimingPoint extends PositionalObject {
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
+        if (testHidden()) return;
+
         sb.setColor(selection);
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
     }
 
-    @Override
+    /*@Override
     public void tempModification(double change) {
         if (!this.uninherited) {
             this.value = Math.max(MIN_SV, this.lastRegisteredValue - (change / 20.0));
@@ -187,9 +183,9 @@ public class TimingPoint extends PositionalObject {
         if (!this.uninherited) {
             this.value = newVal;
         }
-    }
+    }*/
 
-    @Override
+    /*@Override
     public double registerChange() {
         if (!this.uninherited) {
             double returnVal = lastRegisteredValue;
@@ -197,10 +193,10 @@ public class TimingPoint extends PositionalObject {
             return returnVal;
         }
         return 0;
-    }
+    }*/
     @Override
     public void setValue(double value) {
-        this.lastRegisteredValue = this.value = value;
+        this.value = value;
     }
     @Override
     public double getValue() {
@@ -211,20 +207,8 @@ public class TimingPoint extends PositionalObject {
     }
 
     @Override
-    public void volumeModification(double change) {
-        if (!this.uninherited) {
-            this.volume = Math.max(1, Math.min(100, (int) (this.lastRegisteredVolume - (change / 2))));
-        }
-    }
-    @Override
-    public int registerVolumeChange() {
-        int returnVal = lastRegisteredVolume;
-        lastRegisteredVolume = volume;
-        return returnVal;
-    }
-    @Override
     public void setVolume(int volume) {
-        this.lastRegisteredVolume = this.volume = volume;
+        this.volume = volume;
     }
     @Override
     public int getVolume() {
@@ -232,7 +216,7 @@ public class TimingPoint extends PositionalObject {
     }
 
     @Override
-    public PositionalObject shiftedCopy(long newPos) {
+    public MapObject shiftedCopy(long newPos) {
         TimingPoint copy = new TimingPoint(this);
         copy.setPos(newPos);
         return copy;
@@ -242,7 +226,7 @@ public class TimingPoint extends PositionalObject {
     {
         if (uninherited) {
             this.uninherited = false;
-            this.lastRegisteredValue = this.value = 1;
+            this.value = 1;
             this.omitted = false;
         }
         return this;

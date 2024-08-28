@@ -1,20 +1,20 @@
 package alchyr.taikoedit.core.layers;
 
-import alchyr.networking.p2p.ConnectionHost;
-import alchyr.networking.p2p.ConnectionSub;
+import alchyr.networking.standard.ConnectionClient;
+import alchyr.networking.standard.ConnectionServer;
+import alchyr.networking.standard.Message;
+import alchyr.networking.standard.MessageHandler;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.input.BoundInputProcessor;
-import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.input.sub.TextInput;
 import alchyr.taikoedit.core.layers.sub.ConfirmationLayer;
 import alchyr.taikoedit.core.layers.sub.UpdatingLayer;
-import alchyr.taikoedit.core.layers.tests.BindingTestLayer;
-import alchyr.taikoedit.core.ui.ImageButton;
-import alchyr.taikoedit.core.ui.MapSelect;
-import alchyr.taikoedit.core.ui.Scrollable;
-import alchyr.taikoedit.core.ui.TextOverlay;
+import alchyr.taikoedit.core.layers.sub.WaitLayer;
+import alchyr.taikoedit.core.ui.*;
+import alchyr.taikoedit.editor.maps.MapInfo;
+import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -22,6 +22,7 @@ import alchyr.taikoedit.management.assets.FileHelper;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
 import alchyr.taikoedit.util.FileDropHandler;
+import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -29,14 +30,19 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector2;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
+import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.io.*;
+import java.net.Socket;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
@@ -54,6 +60,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     private final MenuProcessor processor;
 
     private MapSelect mapSelect;
+    private final boolean delayMapload;
     private boolean updateMaps = false;
 
     private boolean useOsuBackground = false;
@@ -67,10 +74,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     private TextInput searchInput;
 
-    private ImageButton exitButton;
-    private ImageButton settingsButton;
-    //private ImageButton connectButton;
-    private ImageButton updateButton;
+    private List<ImageButton> buttons = new ArrayList<>();
+
+    private final ConcurrentLinkedQueue<Function<Float, Boolean>> updaters = new ConcurrentLinkedQueue<>();
 
     private TextOverlay textOverlay;
 
@@ -78,10 +84,12 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     private String updateID = null;
 
-    public MenuLayer()
+    public MenuLayer(boolean delayMapload)
     {
         processor = new MenuProcessor(this);
         this.type = LAYER_TYPE.FULL_STOP;
+
+        this.delayMapload = delayMapload;
 
         //buttons = new ArrayList<>();
         //mapOptions = new ArrayList<>();
@@ -130,62 +138,84 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
             searchInput = new TextInput(128, font, true);
 
-            exitButton = new ImageButton(SettingsMaster.getWidth() - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith")).setClick(this::quit);
-            settingsButton = new ImageButton(SettingsMaster.getWidth() - 80, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh")).setClick(this::settings);
-            //connectButton = new ImageButton(SettingsMaster.getWidth() - 120, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth")).setClick(this::openConnect);
+            int buttonX = SettingsMaster.getWidth() - 40;
+            buttons.add(new ImageButton(buttonX, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"))
+                    .setClick(this::quit).setHovered(()->{ hoverText.setText("Exit"); }));
+            buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh"))
+                    .setClick(this::settings).setHovered(()->{ hoverText.setText("Settings"); }));
+            /*buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth"))
+                    .setClick(this::openConnect).setHovered(()->{ hoverText.setText("Start Hosting"); }));*/
+
+            buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth"))
+                    .setClick(this::joinSession).setHovered(()->{ hoverText.setText("Join Session"); }));
 
             textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
 
+            updaters.add((e)->{
+                textOverlay.update(e);
+                mapSelect.update(e);
+                for (ImageButton button : buttons) {
+                    button.update(e);
+                }
+                return false;
+            });
+
             initialized = true;
 
-            Thread updateCheck = new Thread(() -> {
-                try {
-                    URL url = new URL("https://docs.google.com/document/d/e/2PACX-1vRgkoP65WMrsJGqaiKlO6cGnqeZbBlmhEXhMqjRr4QH-IIArQR1QaLbe_ffSQXHXAl-hOf9Yye7nMei/pub");
-                    //HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                    //connection.setRequestProperty("mimeType", "text/plain");
-
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-
-                    while ((line = reader.readLine()) != null) {
-                        sb.append(line).append('\n');
-                    }
-
-                    reader.close();
-
-                    int dataIndex = sb.indexOf("|DATA_START|") + 12;
-                    int dataEnd = sb.indexOf("|DATA_END|", dataIndex);
-                    if (dataIndex < 0 || dataEnd < 0) {
-                        editorLogger.error("Failed to find update data.");
-                        return;
-                    }
-                    String[] result = sb.substring(dataIndex, dataEnd).split(":");
-
-                    int latestID = Integer.parseInt(result[0]);
-
-                    if (latestID > VERSION) {
-                        editorLogger.info("Newer version detected.");
-                        updateID = result[1];
-                        updateButton = new ImageButton(SettingsMaster.getWidth() - 160, SettingsMaster.getHeight() - 40, assetMaster.get("ui:update"), (Texture) assetMaster.get("ui:updateh")).setClick(this::versionUpdate);
-                    }
-                    else {
-                        editorLogger.info("Up to date.");
-                    }
-                }
-                catch (Exception e) {
-                    editorLogger.error("Failed to process update data.");
-                    e.printStackTrace();
-                }
-            });
-            updateCheck.setName("Update Check");
-            updateCheck.setDaemon(true);
+            Thread updateCheck = updateCheckThread(buttonX);
             updateCheck.start();
         }
         processor.bind();
         FileDropHandler.set(this);
+    }
+
+    private Thread updateCheckThread(int buttonX) {
+        Thread updateCheck = new Thread(() -> {
+            try {
+                URL url = new URL("https://docs.google.com/document/d/e/2PACX-1vRgkoP65WMrsJGqaiKlO6cGnqeZbBlmhEXhMqjRr4QH-IIArQR1QaLbe_ffSQXHXAl-hOf9Yye7nMei/pub");
+                //HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                //connection.setRequestProperty("mimeType", "text/plain");
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
+
+                StringBuilder sb = new StringBuilder();
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+
+                reader.close();
+
+                int dataIndex = sb.indexOf("|DATA_START|") + 12;
+                int dataEnd = sb.indexOf("|DATA_END|", dataIndex);
+                if (dataIndex < 0 || dataEnd < 0) {
+                    editorLogger.error("Failed to find update data.");
+                    return;
+                }
+                String[] result = sb.substring(dataIndex, dataEnd).split(":");
+
+                int latestID = Integer.parseInt(result[0]);
+
+                if (latestID > VERSION) {
+                    editorLogger.info("Newer version detected.");
+                    updateID = result[1];
+                    buttons.add(new ImageButton(buttonX - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:update"), (Texture) assetMaster.get("ui:updateh"))
+                            .setClick(this::versionUpdate).setHovered(()->hoverText.setText("Update Available")));
+                }
+                else {
+                    editorLogger.info("Up to date.");
+                }
+            }
+            catch (Exception e) {
+                editorLogger.error("Failed to process update data.");
+                e.printStackTrace();
+            }
+        });
+        updateCheck.setName("Update Check");
+        updateCheck.setDaemon(true);
+        return updateCheck;
     }
 
     @Override
@@ -205,25 +235,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             }
         }
 
-        textOverlay.update(elapsed);
-
-        mapSelect.update(elapsed);
-
-        exitButton.update(elapsed);
-        settingsButton.update(elapsed);
-        //connectButton.update(elapsed);
-        if (updateButton != null) {
-            updateButton.update(elapsed);
-            if (updateButton.hovered) {
-                hoverText.setText("Update Available");
-            }
-        }
-        if (settingsButton.hovered) {
-            hoverText.setText("Settings");
-        }
-        else if (exitButton.hovered) {
-            hoverText.setText("Exit");
-        }
+        updaters.removeIf((func)->func.apply(elapsed));
     }
 
     @Override
@@ -250,12 +262,9 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             searchInput.render(sb, searchTextOffsetX, searchY + searchTextOffsetY);
         }
 
-        settingsButton.render(sb, sr);
-        exitButton.render(sb, sr);
-        //connectButton.render(sb, sr);
-
-        if (updateButton != null)
-            updateButton.render(sb, sr);
+        for (ImageButton button : buttons) {
+            button.render(sb, sr);
+        }
 
         sb.draw(pixel, 0, searchY - 1, SettingsMaster.getWidth(), 2);
 
@@ -268,23 +277,22 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     }
 
     private boolean canOpen = true;
-    private void chooseMap(MapSelect.MapOpenInfo info)
+    private LoadingLayer chooseMap(MapSelect.MapOpenInfo info, ConnectionClient client)
     {
         if (canOpen) {
-            EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulty());
+            EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulties().toArray(new MapInfo[0]));
+            if (client != null) {
+                edit.setClient(client);
+            }
 
             canOpen = false;
             FileDropHandler.remove(this);
             TaikoEditor.removeLayer(this);
-            TaikoEditor.addLayer(edit.getLoader());
+            LoadingLayer loader = edit.getLoader();
+            TaikoEditor.addLayer(loader);
+            return loader;
         }
-    }
-
-    private void test()
-    {
-        TaikoEditor.removeLayer(this);
-        FileDropHandler.remove(this);
-        TaikoEditor.addLayer(new BindingTestLayer().getLoader());
+        return null;
     }
 
     private void settings(int button)
@@ -292,8 +300,417 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         TaikoEditor.addLayer(new SettingsLayer(useOsuBackground ? osuBackground : currentSkin.background));
     }
 
-    private void openConnect() {
+    private ConnectionClient client = null;
 
+    private Thread joinThread = null;
+    private void joinSession() {
+        if (joinThread != null && joinThread.isAlive()) {
+            return;
+        }
+
+        WaitLayer waiter = new WaitLayer("Attempting to join...", ()->false);
+        //First, attempt to connect.
+        //If connection is successful:
+        //Host will be "paused" (can push escape to cancel and close server).
+        //Current state of map will be sent (Send entire osu file as text? Don't send audio file?)
+        //Perform confirmation that map was received correctly
+        //pass ConnectionClient to a new EditorLayer editing That Map
+
+        String[] params;
+        try {
+            Transferable data = Toolkit.getDefaultToolkit()
+                    .getSystemClipboard()
+                    .getContents(this);
+            if (data == null || !data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                textOverlay.setText("Valid information not found in clipboard", 2.0f);
+                return;
+            }
+
+            String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
+            params = clipboardData.split("\\|");
+
+            if (params.length != 3) {
+                textOverlay.setText("Valid information not found in clipboard", 2.0f);
+                return;
+            }
+        }
+        catch (Exception e) {
+            textOverlay.setText("Valid information not found in clipboard", 2.0f);
+            editorLogger.error("Exception occurred getting join info", e);
+            return;
+        }
+
+        //First step is threaded to avoid halting on connection establishment
+        joinThread = new Thread(()->{
+            try {
+                ConnectionClient test = new ConnectionClient(new Socket(params[0], Integer.parseInt(params[1])));
+
+                waiter.onCancel(()-> {
+                    try {
+                        test.close();
+                    } catch (Exception ignored) { }
+                });
+
+                if (!test.isConnected()) {
+                    textOverlay.setText("Failed to connect.", 2.0f);
+                    waiter.setComplete();
+                    return;
+                }
+
+                test.send(params[2]);
+
+                if (!test.waitValidation()) {
+                    textOverlay.setText("Failed to join; was not validated.", 2.0f);
+                    waiter.setComplete();
+                    return;
+                }
+
+                waiter.text = "Waiting for map data...";
+
+                test.startStandardReceiver();
+
+                MessageHandler joinHandler = joinHandler(test, waiter);
+
+                updaters.add((e)->{
+                    joinHandler.update(e);
+                    return !joinHandler.alive;
+                });
+
+                //Next, receive difficulties. This will receive ALL difficulties, and any existing difficulties of the same name will be overwritten.
+                //Files will be added locally, with the "current state" of the map on host side (even if host's *saved* version is different.
+                //Next, send all contents of undo/redo queue. With that, should be synced enough for editing.
+                //If working as a client, cannot open not-open difficulties. They should be greyed out in new view dialog.
+            } catch (Exception e) {
+                textOverlay.setText("Failed to join, server was probably closed.", 2.0f);
+                editorLogger.error("Exception occurred attempting to join session", e);
+            }
+        });
+        joinThread.setName("Join Session Thread");
+        joinThread.setDaemon(true);
+        joinThread.start();
+        //Make a WaitLayer, that has a "cancel" method that will be called if escape key is pressed/cancel button
+        //And accepts a string to display (and this string can be changed?)
+        TaikoEditor.addLayer(waiter);
+    }
+
+    private MessageHandler joinHandler(ConnectionClient client, WaitLayer waiter) {
+        return new MessageHandler(client) {
+            String mapper = null, artist = null, title = null;
+
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.identifier == Message.UTF) {
+                    String text = msg.contents[0].toString();
+                    switch (text.substring(0, 3)) {
+                        case "MPR":
+                            mapper = text.substring(3);
+                            break;
+                        case "ART":
+                            artist = text.substring(3);
+                            break;
+                        case "TTL":
+                            title = text.substring(3);
+                            break;
+                    }
+
+                    if (mapper != null && artist != null && title != null) {
+                        timeout = -1;
+                        alive = false;
+
+                        List<Mapset> maps = MapMaster.search(mapper + " " + artist + " " + title);
+
+                        Mapset set = null;
+                        if (!maps.isEmpty()) {
+                            Mapset probable = maps.get(0);
+                            if (probable.getCreator().equals(mapper)) {
+                                set = probable;
+                                editorLogger.info("Very probably have this map; using local set.");
+                            }
+                        }
+
+                        //if set is known -> get diffs -> load set
+                        //new set -> get diffs -> make set -> load set
+                        //Add to database after if New
+                        if (set == null) {
+                            editorLogger.info("Could not find set locally, requesting audio file");
+                            requestAudio(client, waiter, artist, title);
+                        }
+                        else {
+                            editorLogger.info("Found set, requesting difficulties");
+                            requestDifficulties(client, waiter, set.getDirectory(), set);
+                        }
+                    }
+                }
+            }
+        }.setTimeout(10f, messageHandler -> {
+            editorLogger.info("Timed out waiting for map info.");
+            waiter.setComplete();
+            try {
+                messageHandler.client.close();
+            }
+            catch (Exception ignored) { }
+            return false;
+        });
+    }
+
+    private void requestAudio(ConnectionClient client, WaitLayer waiter, String artist, String title) {
+        String audioFileKey = GeneralUtils.generateCode(4);
+        client.send(ConnectionServer.EVENT_FILE_REQ + audioFileKey + "AUDIO");
+        waiter.text = "Waiting for map audio file...";
+
+        MessageHandler audioReceiver = new MessageHandler(client)
+        {
+            @Override
+            public void handleMessage(Message msg) {
+                outer:
+                switch (msg.identifier) {
+                    case Message.UTF:
+                        if ("FAIL".equals(msg.contents[0])) {
+                            editorLogger.info("Failed to receive audio, closing connection.");
+                            break;
+                        }
+                        return;
+                    case Message.FILE:
+                        if (!audioFileKey.equals(msg.contents[0].toString())) {
+                            editorLogger.warn("Received file with incorrect pass: " + msg.contents[0]);
+                            return;
+                        }
+
+                        String filename = msg.contents[1].toString();
+                        List<byte[]> filedata = (List<byte[]>) msg.contents[2];
+
+                        if (filedata == null) {
+                            editorLogger.info("No file received");
+                            textOverlay.setText(filename, 2.0f);
+                            break;
+                        }
+
+                        String folderName = FileHelper.removeInvalidChars(artist + " - " + title);
+                        String path = FileHelper.concat(SettingsMaster.osuFolder, "Songs", folderName);
+
+                        //Find folder that is Not Existing
+                        File setDirectory = new File(path);
+                        int extra = 1;
+                        while (setDirectory.exists()) {
+                            if (extra > 100) {
+                                //what the heck
+                                editorLogger.info("way too many numbered folders of same artist");
+                                textOverlay.setText("Failed to make empty folder for audio", 2.0f);
+                                break outer;
+                            }
+                            path = FileHelper.concat(SettingsMaster.osuFolder, "Songs", folderName + "(" + extra + ")");
+                            setDirectory = new File(path);
+                        }
+
+                        if (!setDirectory.mkdirs()) {
+                            textOverlay.setText("Failed to make empty folder for audio", 2.0f);
+                            break;
+                        }
+
+                        File audioFile = new File(setDirectory, filename);
+
+                        try (FileOutputStream fileOut = new FileOutputStream(audioFile)) {
+                            for (byte[] chunk : filedata) {
+                                fileOut.write(chunk);
+                            }
+                        } catch (IOException e) {
+                            textOverlay.setText("Failed to write audio file.", 2.0f);
+                            editorLogger.error("Failed to write audio file.", e);
+                            break;
+                        }
+
+                        editorLogger.info("Received audio file successfully: " + filename);
+                        timeout = -1;
+                        alive = false;
+
+                        requestDifficulties(client, waiter, setDirectory, null);
+                        return;
+                }
+
+                alive = false;
+                onTimeout.apply(this);
+            }
+        }.setTimeout(120f, messageHandler -> {
+            editorLogger.info("Timed out waiting for audio file.");
+            waiter.setComplete();
+            try {
+                messageHandler.client.close();
+            }
+            catch (Exception ignored) { }
+            return false;
+        });
+        updaters.add((e)->{
+            audioReceiver.update(e);
+            return !audioReceiver.alive;
+        });
+    }
+
+    private void requestDifficulties(ConnectionClient client, WaitLayer waiter, File setDirectory, Mapset existing) {
+        String mapFilesKey = GeneralUtils.generateCode(4);
+        client.send(ConnectionServer.EVENT_FILE_REQ + mapFilesKey + "MAPS");
+        waiter.text = "Waiting for map difficulties...";
+
+        MessageHandler mapReceiver = new MessageHandler(client)
+        {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.identifier) {
+                    case Message.UTF:
+                        switch (msg.contents[0].toString()) {
+                            case "FAIL":
+                                editorLogger.info("Failed to receive maps, closing connection.");
+                                break;
+                            case "DONE":
+                                editorLogger.info("Received all maps, moving to next step.");
+
+                                timeout = -1;
+                                alive = false;
+
+                                Mapset set;
+                                if (existing != null) {
+                                    set = existing;
+                                    set.loadMaps();
+                                }
+                                else {
+                                    set = new Mapset(setDirectory);
+                                    MapMaster.mapDatabase.mapsets.put(set.key, set);
+                                    MapMaster.mapDatabase.index(set);
+                                    updateMaps = true;
+                                }
+
+                                mapSelect.setSelected(set); //Also starts audio load process
+
+                                //last thing
+                                requestEditorState(client, waiter, set);
+                                return;
+                        }
+                        return;
+                    case Message.FILE:
+                        if (!mapFilesKey.equals(msg.contents[0].toString())) {
+                            editorLogger.warn("Received file with incorrect pass: " + msg.contents[0]);
+                            return;
+                        }
+
+                        String filename = msg.contents[1].toString();
+                        List<byte[]> filedata = (List<byte[]>) msg.contents[2];
+
+                        if (filedata == null) {
+                            editorLogger.info("No file received");
+                            textOverlay.setText(filename, 2.0f);
+                            break;
+                        }
+
+                        File mapFile = new File(setDirectory, filename);
+
+                        try (FileOutputStream fileOut = new FileOutputStream(mapFile)) {
+                            for (byte[] chunk : filedata) {
+                                fileOut.write(chunk);
+                            }
+                        } catch (IOException e) {
+                            textOverlay.setText("Failed to write map file.", 2.0f);
+                            editorLogger.error("Failed to write map file.", e);
+                            break;
+                        }
+
+                        editorLogger.info("Received map file successfully: " + filename);
+                        return;
+                }
+
+                alive = false;
+                onTimeout.apply(this);
+            }
+        }.setTimeout(45f, messageHandler -> {
+            editorLogger.info("Timed out waiting for maps.");
+            waiter.setComplete();
+            try {
+                messageHandler.client.close();
+            }
+            catch (Exception ignored) { }
+            return false;
+        });
+        updaters.add((e)->{
+            mapReceiver.update(e);
+            return !mapReceiver.alive;
+        });
+    }
+
+    private void requestEditorState(ConnectionClient client, WaitLayer waiter, Mapset set) {
+        client.send(ConnectionServer.EVENT_SENT + "EDITORSTATE");
+        waiter.text = "Waiting for editor state...";
+
+        MessageHandler editorStateReceiver = new MessageHandler(client)
+        {
+            //editor state variable holder thing
+            final Set<String> openDifficulties = new HashSet<>();
+            //Map<String, asdf> openDifficultyProperties; probably won't do this
+            long initialMusicPos = 0;
+
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.identifier) {
+                    case Message.UTF:
+                        String text = msg.contents[0].toString();
+                        switch (text.substring(0, 4)) {
+                            case "FAIL":
+                                editorLogger.info("Failed to receive editor state, closing connection.");
+                                break;
+                            case "DIFF":
+                                String mapKey = text.substring(4, 8);
+                                String diffname = text.substring(8);
+                                openDifficulties.add(diffname);
+                                editorLogger.info("Open difficulty: " + diffname);
+                                break;
+                            case "POSN":
+                                initialMusicPos = Long.parseLong(text.substring(4));
+                                editorLogger.info("Music position: " + initialMusicPos);
+                                break;
+                            case "DONE":
+                                editorLogger.info("Received editor state, opening editor.");
+
+                                MapSelect.MapOpenInfo openInfo = new MapSelect.MapOpenInfo(set);
+
+                                for (MapInfo difficulty : set.getMaps()) {
+                                    if (openDifficulties.contains(difficulty.getDifficultyName())) {
+                                        openInfo.addInitialMap(difficulty);
+                                    }
+                                }
+
+                                LoadingLayer loader = chooseMap(new MapSelect.MapOpenInfo(set), client);
+
+                                if (loader == null) {
+                                    editorLogger.info("Failed to open set, already opening a map?");
+                                    return;
+                                }
+
+                                timeout = -1;
+                                alive = false;
+                                waiter.setComplete();
+
+                                loader.addTask(true, ()->music.seekSecond(initialMusicPos));
+                                loader.addCallback(()->{
+                                    client.send(ConnectionServer.EVENT_SENT + "CLIENT_READY" + client.ID);
+                                });
+                                return;
+                        }
+                        return;
+                }
+
+                alive = false;
+                onTimeout.apply(this);
+            }
+        }.setTimeout(60f, messageHandler -> {
+            editorLogger.info("Timed out waiting for editor state.");
+            waiter.setComplete();
+            try {
+                messageHandler.client.close();
+            }
+            catch (Exception ignored) { }
+            return false;
+        });
+        updaters.add((e)->{
+            editorStateReceiver.update(e);
+            return !editorStateReceiver.alive;
+        });
     }
 
 
@@ -319,13 +736,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         }
     }
 
-    private boolean checkUpdate(int x, int y, int b) {
-        return updateButton != null && updateButton.contains(x, y);
-    }
-    private MouseHoldObject doUpdate(Vector2 pos, int button) {
-        updateButton.effect(button);
-        return null;
-    }
     private void versionUpdate() {
         if (updateID != null) {
             TaikoEditor.addLayer(new ConfirmationLayer("Exit and update?", "Yes", "No", false).onConfirm(
@@ -343,39 +753,53 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     @Override
     public LoadingLayer getLoader() {
+        LoadingLayer menuLoad;
+
+        if (delayMapload) {
+            menuLoad = new EditorLoadingLayer()
+                    .loadLists("ui", "font", "menu", "editor", "hitsound")
+                    .addTask(() ->
+                        MapMaster.loadDelayed(()->{
+                            updateMaps = true;
+                        })
+                    ).addTracker(MapMaster::getProgress).addTask(Skins::load);
+        }
+        else {
+            menuLoad = new MenuLoadingLayer()
+                    .loadLists("ui", "font", "menu", "editor", "hitsound")
+                    .addTask(MapMaster::load).addTracker(MapMaster::getProgress).addTask(Skins::load);
+        }
+
+        menuLoad.addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)
+                .addLayers(true,
+                        ()->{
+                            if (currentSkin == null) {
+                                return new ProgramLayer[] {
+                                        this,
+                                        new LoadingLayer().loadLists("background")
+                                };
+                            }
+                            else {
+                                LoadingLayer loader = currentSkin.getLoader(this);
+                                if (loader != null) {
+                                    return new ProgramLayer[] {
+                                            loader,
+                                            new LoadingLayer().loadLists("background")
+                                    };
+                                }
+                                else {
+                                    return new ProgramLayer[] {
+                                            this,
+                                            new LoadingLayer().loadLists("background")
+                                    };
+                                }
+                            }
+                        }
+                );
+
         return new LoadingLayer()
                 .loadLists("base")
-                .addLayers(true,
-                        new MenuLoadingLayer()
-                            .loadLists("ui", "font", "menu", "editor", "hitsound")
-                            .addTask(MapMaster::load).addTracker(MapMaster::getProgress).addTask(Skins::load)
-                            .addCallback(TaikoEditor::initialize).addCallback(()->canOpen = true)
-                            .addLayers(true,
-                                    ()->{
-                                        if (currentSkin == null) {
-                                            return new ProgramLayer[] {
-                                                    this,
-                                                    new LoadingLayer().loadLists("background")
-                                            };
-                                        }
-                                        else {
-                                            LoadingLayer loader = currentSkin.getLoader(this);
-                                            if (loader != null) {
-                                                return new ProgramLayer[] {
-                                                        loader,
-                                                        new LoadingLayer().loadLists("background")
-                                                };
-                                            }
-                                            else {
-                                                return new ProgramLayer[] {
-                                                        this,
-                                                        new LoadingLayer().loadLists("background")
-                                                };
-                                            }
-                                        }
-                                    }
-                            )
-                );
+                .addLayers(true, menuLoad);
     }
 
     @Override
@@ -388,14 +812,18 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     @Override
     public void dispose() {
         super.dispose();
-        if (test != null)
-            test.dispose();
-        if (sub != null)
-            sub.dispose();
+
+        if (client != null) {
+            try {
+                client.close();
+            }
+            catch (Exception e) {
+                editorLogger.error("Exception occurred while closing client", e);
+            }
+        }
     }
 
-    private ConnectionHost test = null;
-    private ConnectionSub sub = null;
+
     private static class MenuProcessor extends BoundInputProcessor {
         private final MenuLayer sourceLayer;
 
@@ -417,11 +845,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             });
 
             /*bindings.bind("1", ()->{
-                sourceLayer.test = new ConnectionHost();
-                sourceLayer.test.prepConnection();
-            });
-
-            bindings.bind("2", ()->{
                 try {
                     Transferable data = Toolkit.getDefaultToolkit()
                             .getSystemClipboard()
@@ -429,7 +852,11 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                     if (data != null) {
                         if (data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
                             String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
-                            sourceLayer.sub = new ConnectionSub(clipboardData);
+                            String[] params = clipboardData.split("\\|");
+
+                            sourceLayer.test = new ConnectionClient(new Socket(params[0], Integer.parseInt(params[1])));
+
+                            sourceLayer.test.send(params[2]);
                         }
                     }
                 } catch (Exception e) {
@@ -437,21 +864,11 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                 }
             });
 
-            bindings.bind("3", ()->{
-                try {
-                    if (sourceLayer.test != null) {
-                        Transferable data = Toolkit.getDefaultToolkit()
-                                .getSystemClipboard()
-                                .getContents(this);
-                        if (data != null) {
-                            if (data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                                String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
-                                sourceLayer.test.finishConnection(clipboardData);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+            bindings.bind("2", ()->{
+                if (sourceLayer.test != null) {
+                    sourceLayer.test.send(".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____" +
+                            ".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____" +
+                            ".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____"); //300 chars
                 }
             });*/
 
@@ -464,15 +881,25 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
             bindings.bind("Refresh", ()->sourceLayer.mapSelect.reloadDatabase());
 
-            bindings.addMouseBind(sourceLayer.settingsButton::contains, sourceLayer.settingsButton::effect);
-            bindings.addMouseBind(sourceLayer.exitButton::contains, sourceLayer.exitButton::effect);
-            //bindings.addMouseBind(sourceLayer.connectButton::contains, sourceLayer.connectButton::effect);
-            bindings.addMouseBind(sourceLayer::checkUpdate, sourceLayer::doUpdate);
+            bindings.addMouseBind(
+                (x, y, b)->{
+                    for (ImageButton button : sourceLayer.buttons) {
+                        if (button.contains(x, y))
+                            return button;
+                    }
+                    return null;
+                },
+                (button, xy, b) -> {
+                    if (button != null) {
+                        button.effect(b);
+                    }
+                    return null;
+                });
             bindings.addMouseBind((x, y, b)->true,
                     (p, b)->{
                         MapSelect.MapOpenInfo info = sourceLayer.mapSelect.click(p.x, p.y);
                         if (info != null && info.getSet() != null) {
-                            sourceLayer.chooseMap(info);
+                            sourceLayer.chooseMap(info, null);
                         }
                         return null;
                     });

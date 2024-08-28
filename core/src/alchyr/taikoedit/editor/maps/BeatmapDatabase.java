@@ -1,7 +1,9 @@
 package alchyr.taikoedit.editor.maps;
 
+import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.Sync;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import alchyr.taikoedit.util.structures.CharacterTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -13,16 +15,20 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class BeatmapDatabase {
     private static final Logger logger = LogManager.getLogger("BeatmapDatabase");
-    private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
+    public static boolean updating = false;
+    public static AtomicInteger updateCount = new AtomicInteger(0);
+
     private Thread saveThread;
 
     private static final String DATABASE_VER = "0";
@@ -31,13 +37,15 @@ public class BeatmapDatabase {
     public static float progress = 0;
     public static int mapCount = 0;
 
-    public ConcurrentMap<String, Mapset> mapsets;
+    public Map<String, Mapset> mapsets = new HashMap<>();
 
-    private CharacterTreeMap<Mapset> indexedMapsets;
+    private final CharacterTreeMap<Mapset> indexedMapsets = new CharacterTreeMap<>();
 
-    public BeatmapDatabase(File songsFolder)
+    public BeatmapDatabase(File songsFolder, VoidMethod receiveLoadCompletion)
     {
+        boolean delayed = receiveLoadCompletion != null;
         //First, try to load already generated map database
+
         try
         {
             logger.info("Loading Songs folder: " + songsFolder.getPath());
@@ -47,18 +55,47 @@ public class BeatmapDatabase {
             mapCount = 0;
 
             File database = getDatabaseFile();
-            indexedMapsets = new CharacterTreeMap<>();
+            indexedMapsets.clear();
 
             if (database.exists())
             {
                 logger.info("Existing map data found. Attempting to load.");
                 try {
-                    HashMap<String, Mapset> oldData = loadDatabase(database);
+                    HashMap<String, Mapset> oldData = loadDatabase(database, delayed);
+
                     if (oldData != null) {
+                        if (delayed) {
+                            mapsets = oldData;
+
+                            Thread mapUpdating = new Thread(() -> updateData(oldData, songsFolder, (sets)->{
+                                TaikoEditor.onMain(()->{
+                                    indexedMapsets.clear();
+                                    mapsets = sets;
+                                    for (Mapset mapset : sets.values()) {
+                                        index(mapset);
+                                    }
+                                    receiveLoadCompletion.run();
+
+                                    saveDatabase();
+                                });
+                            }));
+                            mapUpdating.setName("Maps Updating");
+                            mapUpdating.setDaemon(true);
+                            mapUpdating.setPriority(7);
+                            mapUpdating.start();
+
+                            return;
+                        }
+
                         logger.info("Updating data.");
                         long updateStart = System.nanoTime();
 
-                        updateData(oldData, songsFolder);
+                        updateData(oldData, songsFolder, (sets)->{
+                            mapsets = sets;
+                            for (Mapset mapset : sets.values()) {
+                                index(mapset);
+                            }
+                        });
                         saveDatabase();
                         updateStart = System.nanoTime() - updateStart;
                         loadStart = System.nanoTime() - loadStart;
@@ -67,6 +104,7 @@ public class BeatmapDatabase {
                         return;
                     }
                     else {
+                        indexedMapsets.clear();
                         logger.info("Failed to load database.");
                     }
                 }
@@ -150,23 +188,29 @@ public class BeatmapDatabase {
             throw new RuntimeException(e);
         }
     }
-    private void updateData(HashMap<String, Mapset> oldData, File songsFolder) {
+    private void updateData(HashMap<String, Mapset> oldData, File songsFolder, Consumer<Map<String, Mapset>> completion) {
         //Similar to loadData, but first checks old data map.
         //If old data with matching filename exists, it will be used.
         //If filename has no match, it will be loaded normally.
+        updating = true;
 
         Path songsFolderPath = songsFolder.toPath();
         Collection<Path> subFolders = new ConcurrentLinkedQueue<>();
 
-        int max = oldData.size() * 2;
-        AtomicInteger completeCount = new AtomicInteger();
+        int max = oldData.size();
+        updateCount.set(0);
+
+
+        Map<String, Mapset> updatingSets;
 
         try (DirectoryStream<Path> songFolders = Files.newDirectoryStream(songsFolderPath)) {
             Collection<Path> finalSubFolders = subFolders;
 
-            mapsets = StreamSupport.stream(songFolders.spliterator(), true)
+            //parallel is definitely faster than direct iteration (tested)
+            //However, main burden is the updateFolder method.
+            updatingSets = StreamSupport.stream(songFolders.spliterator(), true)
                     .map((folder)->{
-                        progress = completeCount.incrementAndGet() / (float) max;
+                        progress = updateCount.incrementAndGet() / (float) max;
                         return updateFolder(oldData, folder, finalSubFolders);
                     })
                     .filter(Objects::nonNull)
@@ -180,59 +224,59 @@ public class BeatmapDatabase {
                 for (Path sub : current) {
                     Mapset set = updateFolder(oldData, sub, subFolders);
                     if (set != null) {
-                        mapsets.put(set.key, set);
+                        updatingSets.put(set.key, set);
                     }
                 }
             }
 
+            logger.info("Finished collecting mapsets");
 
-            progress = 0;
-            int count = 0;
-            int total = mapsets.size();
-
-            logger.info("Finished collecting mapsets, starting indexing");
-
-            for (Mapset mapset : mapsets.values()) {
-                index(mapset);
-                ++count;
-                progress = (float) count / total;
-            }
-
+            completion.accept(updatingSets);
             logger.info("Successfully loaded Songs folder.");
             progress = 1;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+        finally {
+            updating = false;
         }
     }
 
     private Mapset readFolder(Path folder, Collection<Path> subFolders) {
         ++mapCount;
 
-        boolean hasMap = false;
-
         try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
             List<Path> folders = new ArrayList<>();
+            List<Path> maps = new ArrayList<>();
 
             for (Path file : files) {
-                if (Files.isDirectory(file)) {
-                    folders.add(file);
+                if (file.toString().endsWith(".osu")) {
+                    maps.add(file);
                 }
-                else if (Files.isRegularFile(file) && file.toString().endsWith(".osu")) {
-                    hasMap = true;
+                else {
+                    folders.add(file);
                 }
             }
 
-            if (hasMap) {
-                Mapset set = new Mapset(folder.toFile());
+            if (!maps.isEmpty()) {
+                Mapset set = new Mapset(folder.toFile(), maps);
 
                 if (!set.isEmpty()) {
                     return set;
                 }
             }
             else {
-                subFolders.addAll(folders);
+                for (Path maybeFolder : folders) {
+                    if (Files.isDirectory(maybeFolder)) {
+                        subFolders.add(maybeFolder);
+                    }
+                }
             }
-        } catch (IOException e) {
+        }
+        catch (NotDirectoryException ignored) {
+
+        }
+        catch (Exception e) {
             logger.info("Error occurred reading folder " + folder);
             logger.error(e.getStackTrace());
             e.printStackTrace();
@@ -241,30 +285,28 @@ public class BeatmapDatabase {
     }
 
     private Mapset updateFolder(HashMap<String, Mapset> oldData, Path folder, Collection<Path> subFolders) {
-        Mapset old = oldData.get(folder.toFile().getAbsolutePath());
+        Mapset old = oldData.get(folder.toString());
         if (old == null) {
             //logger.info("Set not found in database: " + folder.getAbsolutePath());
             return readFolder(folder, subFolders);
         }
 
         ++mapCount;
+
         try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
             boolean hasMap = false;
             List<Path> folders = new ArrayList<>();
 
-            List<MapInfo> confirmed = new ArrayList<>(), unconfirmed = old.getMaps();
+            List<MapInfo> confirmed = new ArrayList<>();
 
             outer:
             for (Path file : files) {
-                if (Files.isDirectory(file)) {
-                    folders.add(file);
-                }
-                else if (Files.isRegularFile(file) && file.toString().endsWith(".osu")) {
+                if (file.toString().endsWith(".osu")) {
                     hasMap = true;
 
                     File mapFile = file.toFile();
 
-                    for (MapInfo info : unconfirmed) {
+                    for (MapInfo info : old.getMaps()) {
                         if (info.getMapFile().equals(mapFile)) {
                             confirmed.add(info);
                             continue outer; //This file is all good, move on to the next one.
@@ -281,6 +323,9 @@ public class BeatmapDatabase {
                         logger.info("Found added difficulty: " + info.getDifficultyName());
                     }
                 }
+                else {
+                    folders.add(file);
+                }
             }
 
             old.setMaps(confirmed);
@@ -290,9 +335,17 @@ public class BeatmapDatabase {
             }
 
             if (!hasMap) {
-                subFolders.addAll(folders);
+                for (Path maybeFolder : folders) {
+                    if (Files.isDirectory(maybeFolder)) {
+                        subFolders.add(maybeFolder);
+                    }
+                }
             }
-        } catch (IOException e) {
+        }
+        catch (NotDirectoryException ignored) {
+
+        }
+        catch (Exception e) {
             logger.info("Error occurred reading folder " + folder);
             logger.error(e.getStackTrace());
             e.printStackTrace();
@@ -327,7 +380,9 @@ public class BeatmapDatabase {
                 for (MapInfo map : m.getMaps()) {
                     json.writeObjectStart();
                     json.writeValue("mapFile", map.getMapFile().getName());
-                    json.writeValue("songFile", map.getSongFile());
+                    if (!m.sameSong) {
+                        json.writeValue("songFile", map.getSongFile());
+                    }
                     json.writeValue("background", map.getBackground());
                     //no need to write mode, it can be assumed to be 1
                     json.writeValue("name", map.getDifficultyName());
@@ -347,7 +402,7 @@ public class BeatmapDatabase {
             StreamUtils.closeQuietly(writer);
         }
     }
-    private HashMap<String, Mapset> loadDatabase(File f) throws Exception {
+    private HashMap<String, Mapset> loadDatabase(File f, boolean immediatelyIndex) throws Exception {
         if (f.isFile() && f.canRead())
         {
             FileInputStream in = new FileInputStream(f);
@@ -372,6 +427,7 @@ public class BeatmapDatabase {
             HashMap<String, Mapset> processed = new HashMap<>();
 
             String folder, songFile;
+            boolean sameSong;
             File setDirectory, mapFile;
             ArrayList<MapInfo> maps;
             Mapset set;
@@ -380,6 +436,7 @@ public class BeatmapDatabase {
                 try {
                     folder = data.getString("key");
                     songFile = data.getString("songFile");
+                    sameSong = data.getBoolean("sameSong");
                     FileHandle songFileHandle = Gdx.files.absolute(songFile);
                     if (!songFileHandle.exists()) {
                         logger.info("Song file \"" + songFile + "\" does not exist. Map will be reloaded.");
@@ -397,7 +454,7 @@ public class BeatmapDatabase {
                         while (map != null) {
                             mapFile = new File(setDirectory, map.getString("mapFile"));
                             if (mapFile.exists()) {
-                                maps.add(new MapInfo(mapFile, map.getString("songFile"), map.getString("background"), map.getString("name")));
+                                maps.add(new MapInfo(mapFile, sameSong ? songFile : map.getString("songFile"), map.getString("background"), map.getString("name")));
                             }
                             map = map.next();
                         }
@@ -406,8 +463,9 @@ public class BeatmapDatabase {
                             logger.info("Folder \"" + folder + "\" contains no maps.");
                         }
                         else {
-                            set = new Mapset(setDirectory, maps, data.getBoolean("sameSong"), data.getString("songFile"), data.getString("creator"), data.getString("title"), data.getString("artist"), data.getString("background"));
+                            set = new Mapset(setDirectory, maps, sameSong, songFile, data.getString("creator"), data.getString("title"), data.getString("artist"), data.getString("background"));
                             processed.put(set.key, set);
+                            index(set);
                         }
                     }
                     else {
@@ -431,10 +489,10 @@ public class BeatmapDatabase {
         return new File("mapdata.json");
     }
 
-    private void index(Mapset set) {
-        indexedMapsets.put(set.getCreator().toLowerCase(Locale.ROOT).split(" "), set, 1.5f); //mappers get bonus weight in the search.
-        indexedMapsets.put(set.getArtist().toLowerCase(Locale.ROOT).split(" "), set, 1.0f);
-        indexedMapsets.put(set.getTitle().toLowerCase(Locale.ROOT).split(" "), set, 1.0f);
+    public void index(Mapset set) {
+        indexedMapsets.put(set.getCreator().toLowerCase().split(" "), set, 1.5f); //mappers get bonus weight in the search.
+        indexedMapsets.put(set.getArtist().toLowerCase().split(" "), set, 1.0f);
+        indexedMapsets.put(set.getTitle().toLowerCase().split(" "), set, 1.0f);
     }
     public List<Mapset> search(String[] terms) {
         return indexedMapsets.search(terms, 0.3f);

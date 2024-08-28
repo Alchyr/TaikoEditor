@@ -4,8 +4,6 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.MultiLineAddition;
-import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
@@ -15,8 +13,8 @@ import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.PreviewLine;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -410,7 +408,7 @@ public class SVFunctionTool extends EditorTool {
             //Generate sv
             dsv = fsv - isv; //delta (change) in SV
 
-            PositionalObjectTreeMap<PositionalObject> sv = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> sv = new MapObjectTreeMap<>();
 
             ArrayList<Long> sortedPositions = new ArrayList<>(positions);
             sortedPositions.sort(Long::compare);
@@ -418,6 +416,8 @@ public class SVFunctionTool extends EditorTool {
             if (!info.generateLines && info.basedOnFollowingObject) {
                 //This is purely adjusting all existing lines to do sv based on their following object.
                 //Positions are the positions of lines to adjust.
+
+                Map<MapObject, Double> newValueMap = new HashMap<>();
 
                 for (long pos : sortedPositions)
                 {
@@ -447,12 +447,11 @@ public class SVFunctionTool extends EditorTool {
 
                     basePos = MathUtils.clamp(basePos, start, end);
 
-                    adjust.tempSet((isv + (dsv * info.function.apply((basePos - start) / dist))) * ratio);
                     sv.add(adjust);
+                    newValueMap.put(adjust, (isv + (dsv * info.function.apply((basePos - start) / dist))) * ratio);
                 }
 
-                map.registerValueChange(sv);
-                map.updateSv();
+                map.registerAndPerformValueChange(sv, newValueMap);
             }
             else {
                 //Normal generation.
@@ -513,7 +512,7 @@ public class SVFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerChange(new MultiLineAddition(map, sv).perform());
+                map.registerAndPerformAddObjects("SV Function", sv, previewView.replaceTest);
             }
         }
     }

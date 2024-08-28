@@ -9,7 +9,7 @@ import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -165,7 +165,7 @@ public class KiaiTool extends EditorTool {
                 }
             }
 
-            previewView.map.registerChange(new KiaiChange(previewView.map, swapping, !kiai).perform());
+            previewView.map.registerChange(new KiaiChange(previewView.map, swapping, !kiai).preDo());
             return MouseHoldObject.nothing;
         }
 
@@ -178,8 +178,8 @@ public class KiaiTool extends EditorTool {
             boolean toKiai = false;
             List<TimingPoint> swapping = new ArrayList<>();
 
-            for (Map.Entry<Long, ArrayList<PositionalObject>> stack : view.getSelection().entrySet()) {
-                for (PositionalObject p : stack.getValue()) {
+            for (Map.Entry<Long, ArrayList<MapObject>> stack : view.getSelection().entrySet()) {
+                for (MapObject p : stack.getValue()) {
                     if (!((TimingPoint) p).kiai)
                         toKiai = true;
                     swapping.add((TimingPoint) p);
@@ -187,7 +187,7 @@ public class KiaiTool extends EditorTool {
             }
 
             if (!swapping.isEmpty()) {
-                view.map.registerChange(new KiaiChange(view.map, swapping, toKiai).perform());
+                view.map.registerChange(new KiaiChange(view.map, swapping, toKiai).preDo());
             }
         }
         else {
@@ -195,7 +195,7 @@ public class KiaiTool extends EditorTool {
             Map.Entry<Long, ArrayList<TimingPoint>> stack = view.map.allPoints.floorEntry((long) time);
 
             if (stack != null) {
-                view.map.registerChange(new KiaiChange(view.map, new ArrayList<>(stack.getValue()), !GeneralUtils.listLast(stack.getValue()).kiai).perform());
+                view.map.registerChange(new KiaiChange(view.map, new ArrayList<>(stack.getValue()), !GeneralUtils.listLast(stack.getValue()).kiai).preDo());
             }
         }
         return true;

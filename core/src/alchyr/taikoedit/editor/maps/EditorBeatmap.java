@@ -1,7 +1,8 @@
 package alchyr.taikoedit.editor.maps;
 
+import alchyr.networking.standard.ConnectionClient;
+import alchyr.networking.standard.ConnectionServer;
 import alchyr.taikoedit.TaikoEditor;
-import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.BeatDivisors;
 import alchyr.taikoedit.editor.DivisorOptions;
 import alchyr.taikoedit.editor.Snap;
@@ -17,10 +18,10 @@ import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
+import alchyr.taikoedit.util.structures.BranchingStateQueue;
 import alchyr.taikoedit.util.structures.Pair;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
-import com.badlogic.gdx.utils.Queue;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.utils.StreamUtils;
 
 import java.io.*;
@@ -38,10 +39,13 @@ public class EditorBeatmap {
     public boolean dirty = false; //Are there unsaved changes
 
     //For hitobjects/timing points use a structure that allows for fast find/insertion at the desired position but also fast iteration?
-    public final PositionalObjectTreeMap<TimingPoint> timingPoints; //red lines
-    public final PositionalObjectTreeMap<TimingPoint> effectPoints; //green lines
-    public final PositionalObjectTreeMap<TimingPoint> allPoints; //should not be modified directly? Accessibility is intended for iteration? Should probably make a readonly accessor but meh
-    public final PositionalObjectTreeMap<HitObject> objects;
+    public final MapObjectTreeMap<TimingPoint> timingPoints; //red lines
+    public final MapObjectTreeMap<TimingPoint> effectPoints; //green lines
+    public final MapObjectTreeMap<TimingPoint> allPoints;
+    public final MapObjectTreeMap<HitObject> objects;
+
+    public final HashMap<Integer, MapObject> mapObjectMap;
+    private int objectKey = Integer.MIN_VALUE + 1;
 
     private final TreeMap<Long, Integer> volumeMap;
     private final TreeMap<Long, Boolean> kiaiMap; //each boolean is a spot where kiai is turned on or off.
@@ -83,23 +87,27 @@ public class EditorBeatmap {
     //Loading map from file
     public EditorBeatmap(Mapset set, MapInfo map)
     {
-        timingPoints = new PositionalObjectTreeMap<>();
-        effectPoints = new PositionalObjectTreeMap<>();
-        allPoints = new PositionalObjectTreeMap<>();
-        objects = new PositionalObjectTreeMap<>();
+        timingPoints = new MapObjectTreeMap<>();
+        effectPoints = new MapObjectTreeMap<>();
+        allPoints = new MapObjectTreeMap<>();
+        objects = new MapObjectTreeMap<>();
+        mapObjectMap = new HashMap<>();
 
         volumeMap = new TreeMap<>();
         kiaiMap = new TreeMap<>();
 
         parse(set, map);
+
+        keyMapObjects();
     }
     //Creating new map
     public EditorBeatmap(EditorBeatmap base, FullMapInfo map, boolean keepObjects, boolean keepSv, boolean keepVolume)
     {
-        timingPoints = new PositionalObjectTreeMap<>();
-        effectPoints = new PositionalObjectTreeMap<>();
-        allPoints = new PositionalObjectTreeMap<>();
-        objects = new PositionalObjectTreeMap<>();
+        timingPoints = new MapObjectTreeMap<>();
+        effectPoints = new MapObjectTreeMap<>();
+        allPoints = new MapObjectTreeMap<>();
+        objects = new MapObjectTreeMap<>();
+        mapObjectMap = new HashMap<>();
 
         volumeMap = new TreeMap<>();
         kiaiMap = new TreeMap<>();
@@ -231,129 +239,290 @@ public class EditorBeatmap {
             volumeMap.put(Long.MAX_VALUE, 60);
         }
         updateVolume(objects);
+
+        keyMapObjects();
     }
 
     public FullMapInfo getFullMapInfo() {
         return fullMapInfo;
     }
 
+    public void keyMapObjects() {
+        this.mapObjectMap.clear();
+        this.objectKey = Integer.MIN_VALUE + 1;
+
+        objects.forEachObject((obj)->{
+            obj.key = this.objectKey++;
+            this.mapObjectMap.put(obj.key, obj);
+        });
+        allPoints.forEachObject((obj)->{
+            obj.key = this.objectKey++;
+            this.mapObjectMap.put(obj.key, obj);
+        });
+    }
+
 
     /* EDITING METHODS */
-    private final Queue<MapChange> undoQueue = new Queue<>();
-    private final Queue<MapChange> redoQueue = new Queue<>();
+    private final BranchingStateQueue<MapChange> changes = new BranchingStateQueue<>();
 
-    // These should be used if the map is changed using ANYTHING other than undo and redo
-    //Redo queue is added to when undo is used, and cleared when any change is made.
-    //Undo queue fills up... Forever? Changes are added to END of undo queue, and removed from end as well.
+
+    //Networorking
+    private ConnectionServer server = null;
+    private ConnectionClient client = null;
+
+    public void setServer(ConnectionServer server) {
+        this.server = server;
+    }
+    public void setClient(ConnectionClient client) {
+        this.client = client;
+    }
+
+    public void clearState() {
+        changes.clear();
+    }
+
+
+    //sending redo/undo: "setstate" giving branch and depth
     public boolean canUndo() {
-        return !undoQueue.isEmpty();
+        return changes.canUndo();
     }
     public boolean undo()
     {
-        if (!undoQueue.isEmpty())
-        {
+        MapChange undone = changes.undo();
+        if (undone != null) {
             dirty = true;
-            redoQueue.addLast(undoQueue.removeLast().undo());
-            return redoQueue.last().invalidateSelection;
+            return undone.invalidateSelection;
         }
         return false;
     }
     public boolean canRedo() {
-        return !redoQueue.isEmpty();
+        return changes.canRedo();
     }
     public boolean redo()
     {
-        if (!redoQueue.isEmpty())
-        {
+        MapChange redone = changes.redo();
+        if (redone != null) {
             dirty = true;
-            undoQueue.addLast(redoQueue.removeLast().perform());
-            return undoQueue.last().invalidateSelection;
+            return redone.invalidateSelection;
         }
         return false;
     }
 
-    public void addObject(HitObject o, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace)
-    {
-        dirty = true;
-        undoQueue.addLast(new ObjectAddition(this, o, shouldReplace).perform());
-        redoQueue.clear();
-    }
-    public void delete(NavigableMap<Long, ArrayList<PositionalObject>> deletion)
-    {
-        dirty = true;
-        undoQueue.addLast(new MultiDeletion(this, deletion).perform());
-        redoQueue.clear();
-    }
-    public void delete(PositionalObject o)
-    {
-        dirty = true;
-        undoQueue.addLast(new SingleDeletion(this, o).perform());
-        redoQueue.clear();
-    }
-    public void paste(PositionalObjectTreeMap<PositionalObject> pasteObjects, BiFunction<PositionalObject, PositionalObject, Boolean> shouldReplace) {
-        dirty = true;
-        undoQueue.addLast(new ObjectAddition(this, pasteObjects, shouldReplace).perform());
-        redoQueue.clear();
-    }
-    public void pasteLines(PositionalObjectTreeMap<PositionalObject> pasteLines) {
-        dirty = true;
-        undoQueue.addLast(new MultiLineAddition(this, pasteLines).perform());
-        redoQueue.clear();
-    }
-    /*public void pasteLines(PositionalObjectTreeMap<PositionalObject> pasteLines) {
-        dirty = true;
-        undoQueue.addLast(new ObjectAddition(this, pasteLines).perform());
-        redoQueue.clear();
-    }*/
-    /*public void replace(MapChange.ChangeType type, PositionalObjectTreeMap<PositionalObject> deleted, PositionalObjectTreeMap<PositionalObject> added) {
-        dirty = true;
-        undoQueue.addLast(new Replacement(this, type, deleted, added).perform());
-        redoQueue.clear();
-    }*/
-    public void reverse(MapChange.ChangeType type, boolean resnap, PositionalObjectTreeMap<PositionalObject> reversed) {
-        dirty = true;
-        undoQueue.addLast(new Reverse(this, type, resnap, reversed).perform());
-        redoQueue.clear();
-    }
-    public void registerObjectMovement(PositionalObjectTreeMap<PositionalObject> movementObjects, long offset)
-    {
-        dirty = true;
-        undoQueue.addLast(new ObjectMovement(this, movementObjects, offset).redo());
-        redoQueue.clear();
-    }
-    public void registerLineMovement(PositionalObjectTreeMap<PositionalObject> movementObjects, long offset)
-    {
-        dirty = true;
-        undoQueue.addLast(new LineMovement(this, movementObjects, offset).redo());
-        redoQueue.clear();
-    }
-
-    public void registerDurationChange(ILongObject obj, long change)
-    {
-        dirty = true;
-        undoQueue.addLast(new DurationChange(this, obj, change));
-        adjustedEnd(obj, change);
-        redoQueue.clear();
-    }
-    public void registerValueChange(PositionalObjectTreeMap<PositionalObject> modifiedObjects)
-    {
-        dirty = true;
-        undoQueue.addLast(new ValueModificationChange(this, modifiedObjects));
-        redoQueue.clear();
-        gameplayChanged();
-    }
-    public void registerVolumeChange(PositionalObjectTreeMap<PositionalObject> modifiedObjects, PositionalObjectTreeMap<PositionalObject> allChangeObjects) {
-        dirty = true;
-        undoQueue.addLast(new VolumeModificationChange(this, modifiedObjects, allChangeObjects));
-        redoQueue.clear();
+    public MapChange lastChange() {
+        return changes.current();
     }
 
     public void registerChange(MapChange change) {
+        registerChange(change, true);
+    }
+    public void registerChange(MapChange change, boolean send) {
         dirty = true;
-        undoQueue.addLast(change);
-        redoQueue.clear();
+        int stateKey = changes.addChange(change);
+
+        if (!send) return;
+
+        if (server != null) { //Server is authoritative, it's up to clients to match the server.
+            for (ConnectionClient client : server.getClients()) {
+                MapChange.sendMapChange(client, stateKey, change);
+            }
+        }
+        else if (client != null) {
+            MapChange.sendMapChange(client, stateKey, change);
+        }
     }
 
+    //Changes sent by clients happen on server When Received, and are then sent back to client with a changeIndex saying what their change index *should* be.
+    //Changes sent by clients can be rejected.
+    //If a change is rejected, it can be re-attempted by client with an updated changeIndex if it remains valid.
+    public void receiveNetworkChange(MapChange.ChangeBuilder changeBuilder) { //Note: undo/redo should be handled separately
+        dirty = true;
+
+        if (server != null) { //Working as server
+            /*if (change.changeIndex == changeCount) { //normal
+                change.perform();
+                dirty = true;
+                undoQueue.addLast(change);
+                redoQueue.clear();
+                ++changeCount;
+            }
+            else if (change.changeIndex < changeCount) { //local change was made, client made a change while behind
+                change.changeIndex = changeCount;
+
+                if (change.isValid()) {
+                    ++changeCount;
+                }
+                else {
+
+                }
+                //Send
+            }
+            else { //client change has a greater index, that means local did an undo (probably)
+
+            }*/
+        }
+        else if (client != null) { //Received change from server
+            //First, move to expected state
+            int currentState = changes.currentKey();
+            editorLogger.info("Received change from server. Current state: " + currentState + " Expected state: " + changeBuilder.stateKey);
+            List<MapChange> undone = null;
+
+            if (currentState != changeBuilder.stateKey) {
+                undone = changes.changeState(changeBuilder.stateKey, true, true);
+
+                if (undone == null) {
+                    //Failure
+                    client.fail("DESYNC");
+                    return;
+                }
+                else {
+                    for (MapChange change : undone) {
+                        //null first entry will only matter for whether these changes are redone at the end
+                        if (change != null) change.cancel();
+                    }
+                }
+                editorLogger.info("Changed state: " + changes.currentKey());
+            }
+
+            //Construct change. Verify that it's valid. It should be. If it isn't, send desync message (for now, just disconnect?)
+            MapChange change = changeBuilder.build();
+            if (change == null || !change.isValid()) {
+                client.fail("DESYNC");
+                return;
+            }
+            registerChange(change.preDo(), false);
+
+            //Redo following changes, if they remain valid. (if moved to different branch all changes are automatically considered invalid)
+            if (undone != null && !undone.isEmpty() && undone.get(0) != null) {
+                editorLogger.info("Redoing changes.");
+                for (MapChange toRedo : undone) {
+                    if (!toRedo.isValid()) {
+                        return;
+                    }
+                    registerChange(toRedo.preDo(), false); //This change was already sent; server will handle it.
+                }
+            }
+        }
+    }
+
+    public void cancelChange(int changeIndex, int changeBranch) {
+        //TODO
+    }
+
+    public void registerAndPerformAddObject(String nameKey, MapObject o, BiFunction<MapObject, MapObject, Boolean> shouldReplace)
+    {
+        registerChange(new MapObjectChange(this, nameKey, o, shouldReplace).preDo());
+    }
+    public void registerAndPerformAddObjects(String nameKey, MapObjectTreeMap<MapObject> addObjects, BiFunction<MapObject, MapObject, Boolean> shouldReplace) {
+        registerChange(new MapObjectChange(this, nameKey, addObjects, shouldReplace).preDo());
+    }
+
+    /**
+     * Deletes objects/lines and adds to undo queue.
+     * @param deletion Things to delete. This list should not be modified elsewhere.
+     */
+    public void registerAndPerformDelete(MapObjectTreeMap<MapObject> deletion)
+    {
+        registerChange(new MapObjectChange(this, deletion.count() == 1 ? "Delete Object" : "Delete Objects", deletion).preDo());
+    }
+
+    /**
+     * Deletes an object/line.
+     * @param o Thing to delete.
+     */
+    public void registerAndPerformDelete(MapObject o)
+    {
+        registerChange(new MapObjectChange(this, "Delete Object", o).preDo());
+    }
+
+    public void registerReverse(boolean resnap, MapObjectTreeMap<MapObject> toReverse) {
+        MapObjectTreeMap<MapObject> reversed = new MapObjectTreeMap<>();
+
+        Snap closest;
+        TreeMap<Long, Snap> snaps = getAllSnaps();
+        long start = toReverse.firstKey(), end = toReverse.lastKey(), newPos;
+
+        for (Map.Entry<Long, ArrayList<MapObject>> entry : toReverse.entrySet())
+        {
+            for (MapObject o : entry.getValue())
+            {
+                newPos = end - (entry.getValue().get(0).getPos() - start);
+                if (o instanceof ILongObject)
+                {
+                    newPos = newPos - ((ILongObject) o).getDuration();
+                }
+
+                if (resnap)
+                {
+                    closest = snaps.get(newPos);
+                    if (closest == null)
+                        closest = snaps.get(newPos + 1);
+                    if (closest == null)
+                        closest = snaps.get(newPos - 1);
+                    if (closest != null)
+                        newPos = closest.pos;
+                }
+
+                reversed.addKey(newPos, o);
+            }
+        }
+
+        registerChange(new MapObjectChange(this, "Reverse Objects", toReverse, reversed).preDo());
+    }
+    public void registerAndPerformObjectMovement(MapObjectTreeMap<MapObject> movementObjects, long offset)
+    {
+        if (movementObjects.isEmpty()) return;
+
+        boolean isLines = movementObjects.firstEntry().getValue().get(0) instanceof TimingPoint;
+        MapObjectTreeMap<MapObject> newPositions = new MapObjectTreeMap<>();
+
+        //store original positions in moved
+        for (Map.Entry<Long, ArrayList<MapObject>> e : movementObjects.entrySet())
+        {
+            newPositions.put(e.getKey() + offset, e.getValue());
+        }
+
+        registerChange(new MapObjectChange(this, isLines ? "Move Lines" : "Move Objects", movementObjects, newPositions).preDo());
+    }
+    public void registerObjectMovement(MapObjectTreeMap<MapObject> movementObjects, long offset)
+    {
+        if (movementObjects.isEmpty()) return;
+
+        boolean isLines = movementObjects.firstEntry().getValue().get(0) instanceof TimingPoint;
+        MapObjectTreeMap<MapObject> oldPositions = new MapObjectTreeMap<>();
+
+        //store original positions in moved
+        for (Map.Entry<Long, ArrayList<MapObject>> e : movementObjects.entrySet())
+        {
+            oldPositions.put(e.getKey() - offset, e.getValue());
+        }
+
+        registerChange(new MapObjectChange(this, isLines ? "Move Lines" : "Move Objects", oldPositions, movementObjects).confirm());
+    }
+    public void registerAndPerformDurationChange(ILongObject obj, long change)
+    {
+        registerChange(new DurationChange(this, obj, change).preDo());
+    }
+    public void registerAndPerformValueChange(MapObjectTreeMap<MapObject> modifiedObjects, Map<MapObject, Double> newValueMap)
+    {
+        registerChange(new ValueModificationChange(this, modifiedObjects, newValueMap).preDo());
+        gameplayChanged();
+    }
+    public void registerAndPerformVolumeChange(MapObjectTreeMap<MapObject> modifiedObjects, Map<Long, Integer> newVolumeMap) {
+        registerChange(new VolumeModificationChange(this, modifiedObjects, newVolumeMap).preDo());
+    }
+
+
+    public MapObjectTreeMap<MapObject> getStackedObjects(MapObjectTreeMap<? extends MapObject> base, MapObjectTreeMap<? extends MapObject> source) {
+        MapObjectTreeMap<MapObject> allStacked = new MapObjectTreeMap<>();
+        ArrayList<? extends MapObject> stack;
+        for (Long k : base.keySet()) {
+            stack = source.get(k);
+            if (stack != null)
+                allStacked.put(k, new ArrayList<>(stack));
+        }
+
+        return allStacked;
+    }
 
     //General Data
     public NavigableSet<Integer> getBookmarks()
@@ -393,6 +562,14 @@ public class EditorBeatmap {
         }
     }
 
+    //BREAK INFO
+    //Minimum space for a break to fit is 850 + end delay.
+    //The start of a break is (at least) 200 ms after an object's end.
+    //Minimum duration of a break is 650.
+    //Minimum distance from end of break to next object is end delay based on approach rate.
+    public long getMinBreakDuration() {
+        return 850 + getBreakEndDelay();
+    }
     public long getBreakEndDelay() {
         if (fullMapInfo.ar == 5f) {
             return 1200;
@@ -412,7 +589,7 @@ public class EditorBeatmap {
             return (long) Math.floor(1200 - 750 * (fullMapInfo.ar - 5.0) / 5.0);
         }
     }
-    public List<Pair<Long, Long>> getBreaks() { return fullMapInfo.breakPeriods; }
+    public List<BreakInfo> getBreaks() { return fullMapInfo.breakPeriods; }
 
 
 
@@ -485,7 +662,39 @@ public class EditorBeatmap {
         return objects.descendingSubMap(startPos, true, endPos, true);
     }
 
-    public void updateVolume(NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> objects)
+
+
+    //Actually making changes to the map
+    public void addObjects(MapObjectTreeMap<MapObject> addObjects) {
+        if (autoBreaks) {
+            for (Map.Entry<Long, ArrayList<MapObject>> toAdd : addObjects.entrySet()) {
+                preAddObjectAdjustBreaks(toAdd.getKey(), toAdd.getValue());
+                objects.addAll(toAdd.getValue());
+            }
+            updateVolume(addObjects);
+        }
+        else {
+            objects.addAll(addObjects);
+            updateVolume(addObjects);
+        }
+    }
+    public void removeObjects(NavigableMap<Long, ArrayList<MapObject>> remove) {
+        if (autoBreaks) {
+            for (Map.Entry<Long, ArrayList<MapObject>> toRemove : remove.entrySet()) {
+                preRemoveObjectAdjustBreaks(toRemove.getKey(), toRemove.getValue());
+                objects.removeStack(toRemove.getKey(), toRemove.getValue());
+            }
+        }
+        else {
+            objects.removeAll(remove);
+        }
+    }
+
+    /**
+     * Updates the volume for multiple HitObjects
+     * @param objects The objects to update. (PositionalObjectTreeMap is the expected collection, though others will work.)
+     */
+    public void updateVolume(NavigableMap<Long, ? extends ArrayList<? extends MapObject>> objects)
     {
         if (objects.isEmpty())
             return;
@@ -496,7 +705,7 @@ public class EditorBeatmap {
         if (next != null)
             nextPos = next.getKey();
 
-        for (Map.Entry<Long, ? extends ArrayList<? extends PositionalObject>> entry : objects.entrySet())
+        for (Map.Entry<Long, ? extends ArrayList<? extends MapObject>> entry : objects.entrySet())
         {
             while (next != null && nextPos <= entry.getKey())
             {
@@ -509,39 +718,15 @@ public class EditorBeatmap {
 
             float volume = volumeEntry != null ? volumeEntry.getValue() / 100.0f : (next != null ? next.getValue() / 100.0f : 1.0f);
 
-            for (PositionalObject h : entry.getValue())
+            for (MapObject h : entry.getValue())
                 ((HitObject)h).volume = volume;
         }
     }
-    public void updateVolume(List<Pair<Long, ArrayList<HitObject>>> objects)
-    {
-        if (objects.isEmpty())
-            return;
 
-        Map.Entry<Long, Integer> volumeEntry = volumeMap.floorEntry(objects.get(0).a);
-        long nextPos = Integer.MIN_VALUE;
-        Map.Entry<Long, Integer> next = volumeMap.higherEntry(objects.get(0).a);
-        if (next != null)
-            nextPos = next.getKey();
-
-        for (Pair<Long, ArrayList<HitObject>> entry : objects)
-        {
-            while (next != null && nextPos <= entry.a)
-            {
-                volumeEntry = next;
-
-                next = volumeMap.higherEntry(nextPos);
-                if (next != null)
-                    nextPos = next.getKey();
-            }
-
-            float volume = volumeEntry != null ? volumeEntry.getValue() / 100.0f : (next != null ? next.getValue() / 100.0f : 1.0f);
-
-            for (HitObject h : entry.b)
-                h.volume = volume;
-        }
-    }
-
+    /**
+     * Updates the volume for a single HitObject.
+     * @param h The HitObject to update.
+     */
     public void updateVolume(HitObject h)
     {
         Map.Entry<Long, Integer> volumeEntry = volumeMap.floorEntry(h.getPos());
@@ -550,7 +735,10 @@ public class EditorBeatmap {
         h.volume = volumeEntry != null ? volumeEntry.getValue() / 100.0f : 1.0f;
     }
 
-    //Updates volume of all objects from a given position to the next point after given position
+    /**
+     * Updates volume of all HitObjects from a given position to the next timing point after given position
+     * @param startPos The timestamp in milliseconds in the map from which to start updating objects.
+     */
     public void updateVolume(long startPos) {
         Long end = allPoints.higherKey(startPos);
         if (end == null)
@@ -568,8 +756,12 @@ public class EditorBeatmap {
 
     //Automatic break adjustments are not tracked for undo/redo.
     //Should be called before the object(s) are actually added.
-    public void preAddObject(HitObject h) {
-        if (autoBreaks && (!objects.containsKey(h.getPos()) || h instanceof ILongObject)) { //wasn't already something here
+    public void preAddObjectAdjustBreaks(long pos, ArrayList<MapObject> stack) {
+        if (autoBreaks) {
+            long endPos = getEnd(stack);
+            ArrayList<HitObject> existing = objects.get(pos);
+            if (existing != null && endPos == pos) return; //this spot already occupied, and the stack contains no long objects
+
             /*
             Things to check when an object is added:
             First - Is it in the middle of an existing break?
@@ -577,615 +769,252 @@ public class EditorBeatmap {
             Second - If it is more than 5000 ms from preceding/following objects, generate necessary breaks.
              */
 
-            Iterator<Pair<Long, Long>> breakIterator = getBreaks().iterator();
-            int addIndex = 0;
-            Pair<Long, Long> breakSection = null;
-            long breakStart, breakEnd = Long.MAX_VALUE;
+            boolean sort = false, inBreak = false;
 
-            Map.Entry<Long, ArrayList<HitObject>> tempStackA, tempStackB;
+            List<BreakInfo> breaks = getBreaks();
+            int index = 0;
+            BreakInfo breakSection;
+            long breakObjectBefore, breakObjectAfter, breakStart, breakEnd;
 
-            if (breakIterator.hasNext()) {
-                //prep break info
-                breakSection = breakIterator.next();
+            Map.Entry<Long, ArrayList<HitObject>> tempStack;
 
-                tempStackA = objects.ceilingEntry(breakSection.b);
-                if (tempStackA != null) {
-                    breakEnd = tempStackA.getKey();
+            while (index < breaks.size()) {
+                breakSection = breaks.get(index);
+                ++index; //pre-increment to avoid ever going below 0 if removing current break
+
+                breakStart = breakSection.start;
+                breakEnd = breakSection.end;
+
+                tempStack = objects.ceilingEntry(breakEnd);
+                breakObjectAfter = tempStack == null ? Long.MAX_VALUE : tempStack.getKey();
+
+                if (pos >= breakObjectAfter) continue; //Added object is past this break
+
+                tempStack = objects.floorEntry(breakStart);
+                breakObjectBefore = tempStack == null ? Long.MIN_VALUE : getEnd(tempStack.getValue());
+
+                if (endPos <= breakObjectBefore) break; //Added object ends before this break
+                //Breaks are sorted by start time, so that means there cannot be any more affected breaks
+
+                inBreak = true; //object overlaps with at least one break
+
+                //Handle the "before" chunk
+                long breakLength = pos - breakObjectBefore;
+                if (breakLength < getMinBreakDuration()) {
+                    //No room for a break here.
+                    --index;
+                    breaks.remove(index);
                 }
-            }
-
-            while (h.getPos() >= breakEnd) { //This stack is past this break, and cannot affect it.
-                if (breakIterator.hasNext()) {
-                    breakSection = breakIterator.next();
-                    ++addIndex;
-
-                    breakEnd = Long.MAX_VALUE;
-
-                    tempStackA = objects.ceilingEntry(breakSection.b);
-                    if (tempStackA != null) {
-                        breakEnd = tempStackA.getKey();
-                    }
-                }
-                else {
-                    breakSection = null; //no more breaks.
-                    break;
-                }
-            }
-            if (breakSection != null) {
-                breakStart = Long.MIN_VALUE;
-
-                tempStackA = objects.floorEntry(breakSection.a);
-                if (tempStackA != null) {
-                    breakStart = getEnd(tempStackA.getValue());
-                }
-
-                if (h.getEndPos() > breakStart) {
-                    //overlaps with current break.
-                    long firstBreakStart = breakStart;
-
-                    //Handle the section after the object's start.
-                    //A very long object could require adjusting multiple breaks.
-                    while (h.getEndPos() > breakStart) { //assumes non-overlapping break times.
-                        if (h.getEndPos() > breakEnd - (850 + getBreakEndDelay())) {
-                            //Totally covers this break.
-                            breakIterator.remove(); //Remove it, move on.
-                            if (breakIterator.hasNext()) {
-                                //prep break info
-                                breakSection = breakIterator.next();
-
-                                tempStackA = objects.floorEntry(breakSection.a);
-                                if (tempStackA != null) {
-                                    breakStart = getEnd(tempStackA.getValue());
-                                }
-                                tempStackA = objects.ceilingEntry(breakSection.b);
-                                if (tempStackA != null) {
-                                    breakEnd = tempStackA.getKey();
-                                }
-                            }
-                            else {
-                                break;
-                            }
-                        }
-                        else { //Only partially covers this break with valid break room remaining.
-                            breakSection.a = Math.max(breakSection.a, h.getEndPos() + 200);
-                            breakStart = h.getEndPos();
-                            if (breakSection.b < breakSection.a + 650)
-                                breakSection.b = breakSection.a + 650;
-                        }
-                    }
-
-                    //Handle the section before the new object's position. This is done last so that the iterator can be used.
-                    if (h.getPos() >= firstBreakStart + (850 + getBreakEndDelay())) {
-                        //There's room to leave a break here.
-                        getBreaks().add(addIndex, new Pair<>(firstBreakStart + 200, h.getPos() - getBreakEndDelay()));
-                        sortBreaks();
-                    }
-
-                    return;
-                }
-            }
-            //doesn't overlap a break.
-
-            tempStackA = objects.lowerEntry(h.getPos());
-            tempStackB = objects.higherEntry(h.getEndPos());
-
-            if (tempStackB != null) {
-                if (tempStackB.getKey() - h.getEndPos() >= 5000) {
-                    //break time
-                    getBreaks().add(addIndex, new Pair<>(h.getEndPos() + 200, tempStackB.getKey() - getBreakEndDelay()));
-                    sortBreaks();
-                }
-            }
-            else if (tempStackA != null) {
-                //Added after any existing objects.
-                //Could require a break before it.
-                long start = getEnd(tempStackA.getValue());
-                long dist = h.getPos() - start;
-
-                if (dist >= 5000) {
-                    getBreaks().add(addIndex, new Pair<>(start + 200, h.getPos() - getBreakEndDelay()));
-                    sortBreaks();
-                }
-            }
-            //If neither are null, this object was added between two existing objects in a section without a break.
-            //Assuming breaks are working as they should, that means this section is guaranteed to not require a break.
-            //That, or it was placed in a break that was already removed, which has a potential break which will be adjusted instead.
-            //If both are null, there's no gaps to even add a break to, so nothing to worry about.
-        }
-    }
-    public void preAddObjects(NavigableMap<Long, ArrayList<PositionalObject>> added) {
-        if (autoBreaks) {
-            //Things to check when an object is added:
-            //First - Is it in the middle of an existing break?
-            //If it is, remove that break.
-            //Second - If it is more than 5000 ms from preceding/following objects, generate necessary breaks.
-            if (added.isEmpty()) {
-                return;
-            }
-
-            List<Pair<Long, Long>> breaks = getBreaks();
-            ListIterator<Pair<Long, Long>> breakIterator = breaks.listIterator();
-
-            Pair<Long, Long> breakSection = null;
-            long breakStart = Long.MIN_VALUE, breakEnd = Long.MAX_VALUE;
-            boolean update = true;
-
-            Map<Long, Long> potentialBreaks = new HashMap<>(); //end time, start time
-            long endPos = Long.MIN_VALUE, lastEndPos; //Tracking of object times
-
-            Map.Entry<Long, ArrayList<HitObject>> tempStackA, tempStackB;
-
-            if (breakIterator.hasNext()) {
-                //prep break info
-                breakSection = breakIterator.next();
-
-                tempStackA = objects.ceilingEntry(breakSection.b);
-                if (tempStackA != null) {
-                    breakEnd = tempStackA.getKey();
-                }
-            }
-
-            //Check start point
-            tempStackA = objects.floorEntry(added.firstKey());
-            if (tempStackA != null) {
-                endPos = getEnd(tempStackA.getValue());
-            }
-
-            //Start processing
-            for (Map.Entry<Long, ArrayList<PositionalObject>> stack : added.entrySet()) {
-                lastEndPos = endPos; //end of last stack
-                endPos = getEnd(stack.getValue()); //end of this stack
-
-                //If position already has object and none of added objects are long objects, skip (and also get actual end pos of stack)
-                if (objects.containsKey(stack.getKey())) {
-                    if (endPos <= getEnd(objects.get(stack.getKey()))) {
-                        //No change caused by this object.
-                        continue;
-                    }
-                }
-
-                //Find the first break that can overlap
-                while (stack.getKey() >= breakEnd) { //This stack is past this break, and cannot affect it.
-                    if (breakIterator.hasNext()) {
-                        breakSection = breakIterator.next();
-                        update = true;
-                        breakEnd = Long.MAX_VALUE;
-
-                        tempStackA = objects.ceilingEntry(breakSection.b);
-                        if (tempStackA != null) {
-                            breakEnd = tempStackA.getKey();
-                        }
-                    }
-                    else {
-                        breakSection = null; //no more breaks.
-                        breakEnd = Long.MAX_VALUE;
-                        break;
-                    }
-                }
-
-                //Possibly overlaps?
-                if (breakSection != null) {
-                    if (update) {
-                        update = false;
-                        breakStart = Long.MIN_VALUE;
-                        tempStackA = objects.floorEntry(breakSection.a);
-                        if (tempStackA != null) {
-                            breakStart = getEnd(tempStackA.getValue());
-                        }
-                    }
-
-                    //overlaps with current break.
-                    if (endPos > breakStart) {
-                        //First, handle the section before the new object's position.
-                        if (stack.getKey() >= breakStart + (850 + getBreakEndDelay())) {
-                            //There's room to leave a break here.
-                            //breakSection is currently the "previous" of breakIterator
-                            breakIterator.previous(); //shift back
-
-                            breakIterator.add(new Pair<>(Math.min(breakSection.a, Math.min(breakStart + 5000, stack.getKey() - (650 + getBreakEndDelay()))), stack.getKey() - getBreakEndDelay()));
-
-                            breakIterator.next(); //return to current position
-                        }
-
-                        //Handle the section after the object's start.
-                        //A very long object could require adjusting multiple breaks.
-                        while (breakSection != null && endPos > breakStart) { //assumes non-overlapping break times.
-                            if (endPos > breakEnd - (850 + getBreakEndDelay())) {
-                                //Totally covers this break.
-                                breakIterator.remove(); //Remove it and move to next break.
-                                if (breakIterator.hasNext()) {
-                                    //prep break info
-                                    breakSection = breakIterator.next();
-
-                                    breakStart = Long.MIN_VALUE;
-                                    breakEnd = Long.MAX_VALUE;
-                                    tempStackA = objects.floorEntry(breakSection.a);
-                                    if (tempStackA != null) {
-                                        breakStart = getEnd(tempStackA.getValue());
-                                    }
-                                    tempStackA = objects.ceilingEntry(breakSection.b);
-                                    if (tempStackA != null) {
-                                        breakEnd = tempStackA.getKey();
-                                    }
-                                }
-                                else {
-                                    breakSection = null;
-                                    breakEnd = Long.MAX_VALUE;
-                                }
-                            }
-                            else { //Only partially covers this break with valid break room remaining.
-                                breakSection.a = Math.max(breakSection.a, endPos + 200);
-                                breakStart = endPos;
-                                if (breakSection.b < breakSection.a + 650)
-                                    breakSection.b = breakSection.a + 650;
-                            }
-                        }
-
-                        continue;
-                    }
-                }
-
-                //Doesn't overlap a break. Check if breaks need to be added/potential breaks need to be adjusted.
-                tempStackA = objects.lowerEntry(stack.getKey());
-                tempStackB = objects.higherEntry(endPos);
-
-                //Future objects will handle gaps behind them themselves, as well as adjusting potential gaps that they cover.
-                //You can tell if lastEndPos is valid because objects can only be placed at times >= 0.
-                long lastObjPos = lastEndPos;
-                if (tempStackA != null) {
-                    lastObjPos = Math.max(lastObjPos, getEnd(tempStackA.getValue()));
-                }
-                if (lastObjPos > Long.MIN_VALUE) {
-                    long dist = stack.getKey() - lastObjPos;
-                    if (dist >= 5000) {
-                        potentialBreaks.put(stack.getKey(), lastObjPos);
-                    }
-                }
-
-                if (tempStackB != null) { //room after for a break. Following added objects are taken into account by just adjusting the potential break.
-                    long dist = tempStackB.getKey() - endPos;
-
-                    if (potentialBreaks.containsKey(tempStackB.getKey())) {
-                        //This object is directly after another object inside a potential break.
-                        //This potential break thus needs adjusting.
-                        if (dist < 5000) { //This gap has shrunk and no longer requires a break.
-                            potentialBreaks.remove(tempStackB.getKey());
-                        }
-                        else { //still requires a break, but starting point has changed.
-                            potentialBreaks.put(tempStackB.getKey(), endPos);
-                        }
-                    }
-                    else if (dist >= 5000) {
-                        //break time - but not right away.
-                        potentialBreaks.put(tempStackB.getKey(), endPos);
-                    }
-                }
-            }
-            
-            //now into reality they go
-            if (!potentialBreaks.isEmpty()) {
-                for (Map.Entry<Long, Long> newBreak : potentialBreaks.entrySet()) {
-                    //data is in the form end (key), start (value)
-                    breaks.add(new Pair<>(newBreak.getValue() + 200, newBreak.getKey() - getBreakEndDelay()));
-                }
-                sortBreaks();
-            }
-        }
-    }
-    public void removeObject(PositionalObject o) {
-        if (o instanceof HitObject) {
-            HitObject h = (HitObject) o;
-
-            if (objects.removeObject(h) != null && autoBreaks) {
-                if (!objects.containsKey(h.getPos()) || h instanceof ILongObject) {
-                    //First, log all unique gaps generated by this.
-                    //Then check each of them.
-                    boolean sort = false;
-                    Set<Long> added = new HashSet<>();
-                    List<Long> startPoints = new ArrayList<>();
-                    Map.Entry<Long, ArrayList<HitObject>> stack;
-                    Long endTime;
-
-                    stack = objects.floorEntry(h.getPos());
-                    if (stack != null) {
-                        added.add(getEnd(stack.getValue()));
-                        startPoints.add(getEnd(stack.getValue()));
-                    }
-                    else {
-                        startPoints.add(Long.MIN_VALUE + 1);
-                    }
-
-                    if (h.getEndPos() > h.getPos()) {
-                        for (Map.Entry<Long, ArrayList<HitObject>> stackA : objects.subMap(h.getPos(), false, h.getEndPos(), false).entrySet()) {
-                            endTime = getEnd(stackA.getValue());
-                            if (!added.contains(endTime)) {
-                                added.add(endTime);
-                                startPoints.add(endTime);
-                            }
-                        }
-                    }
-                    startPoints.sort(Long::compareTo);
-
-                    //For each gap, check if a break exists within this gap. If more than 1, delete all but 1, then > If 1, adjust it appropriately. If none, add a new one (if gap is > 5000)
-                    boolean breakLegal;
-                    Pair<Long, Long> adjust, breakSection;
-                    Iterator<Pair<Long, Long>> breakIterator;
-
-                    for (Long start : startPoints) {
-                        adjust = null;
-                        breakLegal = start != Long.MIN_VALUE + 1;
-
-                        endTime = objects.higherKey(start);
-                        if (endTime == null) {
-                            breakLegal = false;
-                            endTime = Long.MAX_VALUE;
-                        }
-
-                        breakIterator = getBreaks().iterator();
-                        while (breakIterator.hasNext()) {
-                            breakSection = breakIterator.next();
-
-                            if (breakSection.a >= start && breakSection.b <= endTime) {
-                                if (adjust == null && breakLegal) {
-                                    adjust = breakSection;
-                                }
-                                else {
-                                    breakIterator.remove();
-                                }
-                            }
-                            else if (breakSection.a >= endTime) {
-                                break;
-                            }
-                        }
-
-                        if (adjust == null) { //no existing break
-                            if (breakLegal && endTime - start >= 5000) { //break required
-                                getBreaks().add(new Pair<>(start + 200, endTime - getBreakEndDelay()));
-                                sort = true;
-                            }
-                        }
-                        else {
-                            //Break exists.
-                            //Adjust start and end times ONLY if they are invalid (too close/too far)
-                            long dist = endTime - start;
-
-                            if (dist < 850 + getBreakEndDelay()) {
-                                //Gap is too short.
-                                getBreaks().remove(adjust);
-                                continue;
-                            }
-
-                            //Adjust the break.
-                            long origDist;
-                            if (h.getPos() >= adjust.b && h.getPos() < endTime) {
-                                origDist = h.getPos() - adjust.b;
-                            }
-                            else {
-                                origDist = endTime - adjust.b;
-                            }
-                            dist = endTime - adjust.b;
-
-                            if (origDist == getBreakEndDelay() || dist < getBreakEndDelay()) {
-                                adjust.b = endTime - getBreakEndDelay();
-                            }
-                            else if (dist > 5000) {
-                                adjust.b = endTime - 5000;
-                            }
-
-                            if (h.getEndPos() <= adjust.a && h.getEndPos() > start) {
-                                origDist = adjust.a - h.getEndPos();
-                            }
-                            else {
-                                origDist = adjust.a - start;
-                            }
-                            dist = adjust.a - start;
-
-                            if (origDist == 200 || dist < 200) {
-                                adjust.a = start + 200;
-                            }
-                            else if (dist > 5000) {
-                                adjust.a = start + 5000;
-                            }
-                        }
-                    }
-
-                    if (sort)
-                        sortBreaks();
-                }
-            }
-        }
-    }
-    public void removeObjects(NavigableMap<Long, ArrayList<PositionalObject>> remove) {
-        if (objects.removeAll(remove) && autoBreaks) {
-            if (objects.size() <= 1) {
-                getBreaks().clear();
-                return;
-            }
-            //First, log all unique gaps generated by this.
-            //Then check each of them.
-            boolean sort = false;
-            Set<Long> added = new HashSet<>();
-            List<Long> startPoints = new ArrayList<>();
-            Map.Entry<Long, ArrayList<HitObject>> stack;
-            Long endTime;
-
-            for (Map.Entry<Long, ArrayList<PositionalObject>> stackA : remove.entrySet()) {
-                stack = objects.floorEntry(stackA.getKey());
-                if (stack != null) {
-                    long end = getEnd(stack.getValue());
-                    if (!added.contains(end)) {
-                        added.add(end);
-                        startPoints.add(end);
-                    }
+                else if (breakLength < 5000 && breakSection.isTentative) {
+                    //This was added during the same change; just remove it if not required.
+                    --index;
+                    breaks.remove(index);
+                    continue; //And there should definitely not be anything added after.
                 }
                 else {
-                    if (!added.contains(Long.MIN_VALUE + 1)) {
-                        added.add(Long.MIN_VALUE + 1);
-                        startPoints.add(Long.MIN_VALUE + 1);
+                    //Shrink existing break.
+
+                    //There SHOULD be enough space for this.
+                    //Push the end of the break back only as much as necessary,
+                    //and adjust the start of the break again only if necessary.
+                    breakSection.end = Math.min(breakEnd, pos - getBreakEndDelay());
+                    if (breakSection.end - breakSection.start < 650) {
+                        breakSection.start = breakSection.end - 650;
                     }
                 }
 
-                endTime = getEnd(stackA.getValue());
-                if (endTime > stackA.getKey()) {
-                    for (Map.Entry<Long, ArrayList<HitObject>> stackB : objects.subMap(stackA.getKey(), false, endTime, false).entrySet()) {
-                        endTime = getEnd(stackB.getValue());
-                        if (!added.contains(endTime)) {
-                            added.add(endTime);
-                            startPoints.add(endTime);
-                        }
+                //Handle the "after" chunk
+                if (endPos <= breakObjectAfter - getMinBreakDuration()) {
+                    //There is room to keep a break here. Since this is a "split" of an existing break, mark as tentative if existing break was.
+                    //If tentative, that means the before section was at least 5000 ms.
+                    long start = Math.max(breakStart, endPos + 200), end = Math.min(Math.max(endPos + 850, breakEnd), breakObjectAfter - getBreakEndDelay());
+                    breakLength = breakObjectAfter - endPos;
+
+                    if (breakLength >= 5000 || !breakSection.isTentative) {
+                        BreakInfo newBreak = new BreakInfo(start, end, breakSection.isTentative); //at least 850 ms away, but use current break ending pos if it's valid
+                        breaks.add(index, newBreak);
+                        ++index;
+                        sort = true;
                     }
+
                 }
             }
-            startPoints.sort(Long::compareTo);
 
-            //For each gap, check if a break exists within this gap. If more than 1, delete all but 1, then > If 1, adjust it appropriately. If none, add a new one (if gap is > 5000)
-            boolean breakLegal;
-            Pair<Long, Long> adjust, breakSection;
-            Iterator<Pair<Long, Long>> breakIterator;
+            if (!inBreak) {
+                //If no break overlap - see if adding a break is necessary
+                tempStack = objects.lowerEntry(pos);
+                if (tempStack != null) {
+                    long start = getEnd(tempStack.getValue());
 
-            for (Long start : startPoints) {
-                adjust = null;
-                breakLegal = start != Long.MIN_VALUE + 1;
-
-                endTime = objects.higherKey(start);
-                if (endTime == null) {
-                    breakLegal = false;
-                    endTime = Long.MAX_VALUE;
-                }
-
-                breakIterator = getBreaks().iterator();
-                while (breakIterator.hasNext()) {
-                    breakSection = breakIterator.next();
-
-                    if (breakSection.a >= start && breakSection.b <= endTime) {
-                        if (adjust == null && breakLegal) {
-                            adjust = breakSection;
-                        }
-                        else {
-                            breakIterator.remove();
-                        }
-                    }
-                    else if (breakSection.a >= endTime) {
-                        break;
-                    }
-                }
-
-                if (adjust == null) { //no existing break
-                    if (breakLegal && endTime - start >= 5000) { //break required
-                        getBreaks().add(new Pair<>(start + 200, endTime - getBreakEndDelay()));
+                    if (pos - start >= 5000) {
+                        breaks.add(new BreakInfo(start + 200, pos - getBreakEndDelay(), true));
                         sort = true;
                     }
                 }
-                else {
-                    //Break exists.
-                    //Adjust start and end times ONLY if they are invalid (too close/too far)
-                    long dist = endTime - start;
 
-                    if (dist < 850 + getBreakEndDelay()) {
-                        //Gap is too short.
-                        getBreaks().remove(adjust);
-                        continue;
-                    }
+                tempStack = objects.higherEntry(endPos);
 
-                    Long original = remove.ceilingKey(adjust.b);
-                    if (original == null || original > endTime)
-                        original = endTime;
-                    long origDist = original - adjust.b;
-                    dist = endTime - adjust.b;
-
-                    if (origDist == getBreakEndDelay() || dist < getBreakEndDelay()) {
-                        adjust.b = endTime - getBreakEndDelay();
-                    }
-                    else if (dist > 5000) {
-                        adjust.b = endTime - 5000;
-                    }
-
-                    original = remove.floorKey(adjust.a);
-                    if (original == null || original < start)
-                        original = start;
-                    origDist = adjust.a - original;
-                    dist = adjust.a - start;
-
-                    if (origDist == 200 || dist < 200) {
-                        adjust.a = start + 200;
-                    }
-                    else if (dist > 5000) {
-                        adjust.a = start + 5000;
+                if (tempStack != null) {
+                    if (tempStack.getKey() - endPos >= 5000) {
+                        breaks.add(new BreakInfo(endPos + 200, tempStack.getKey() - getBreakEndDelay(), true));
+                        sort = true;
                     }
                 }
             }
 
-            if (sort)
+            if (sort) {
                 sortBreaks();
+            }
         }
     }
-    //If made longer, make sure any break directly following this object is adjusted/removed if necessary.
-    //If made shorter, add a break if necessary. Otherwise, do nothing.
-    //Should be called after the change occurs.
+
+    //Should be called before objects are actually removed.
+    /**
+     * Perform a "reasonable" check for break generation
+     * Meaning objects are assumed to not overlap, meaning deleting a long object cannot make more than one gap
+     * illegally long gaps can get updated later anyways
+
+     * First: Check for existing adjacent breaks. If one exists both before and after, combine.
+     * Otherwise, adjust the existing one If it is at its normal position (minimum distance or less from deleted object)
+     * If no existing break and the distance between before and after stack is at least 5000, generate tentative break.
+     * @param pos position of objects that will be removed
+     * @param stack list of objects that will be removed
+     */
+    public void preRemoveObjectAdjustBreaks(long pos, ArrayList<MapObject> stack) {
+        if (autoBreaks) {
+            long endPos = getEnd(stack);
+
+            Map.Entry<Long, ArrayList<HitObject>> existing = objects.floorEntry(pos);
+            if (existing == null || existing.getKey() != pos) return; //no change
+
+            boolean clearingStack = stack.containsAll(existing.getValue());
+
+            List<BreakInfo> breaks = getBreaks();
+            Map.Entry<Long, ArrayList<HitObject>> beforeStack = objects.lowerEntry(pos), afterStack = objects.higherEntry(pos);
+            BreakInfo beforeBreak = null, afterBreak = null;
+
+            if (beforeStack != null || afterStack != null) { //if no object before or after, definitely no breaks
+                for (int i = 0; i < breaks.size(); ++i) {
+                    BreakInfo breakInfo = breaks.get(i);
+
+                    if (beforeStack != null && breakInfo.end > beforeStack.getKey() && breakInfo.end < pos) {
+                        //Break exists that this is the first object after
+                        beforeBreak = breakInfo;
+                        if (afterStack != null && i + 1 < breaks.size()) {
+                            afterBreak = breaks.get(i + 1);
+                            if (afterBreak.start < pos || afterBreak.start >= afterStack.getKey()) {
+                                afterBreak = null;
+                            }
+                        }
+                        break;
+                    }
+                    if (afterStack != null && breakInfo.start > pos) {
+                        //Not using endpos above because for a "normal" case don't want to do anything about a break after the end of an overlapping long object
+                        //Only want a break that is Definitely directly after this One stack
+                        if (breakInfo.start < afterStack.getKey()) {
+                            afterBreak = breakInfo;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (clearingStack) { //Clearing the stack. Technically most removal *should* be doing this.
+                if (beforeBreak != null && afterBreak != null) { //merge
+                    beforeBreak.end = afterBreak.end;
+                    breaks.remove(afterBreak);
+                }
+                else if (beforeBreak != null) {
+                    //Adjust beforeBreak
+                    if (afterStack == null) {
+                        breaks.remove(beforeBreak);
+                    }
+                    else if (beforeBreak.end == pos - getBreakEndDelay()) {
+                        //Minimum distance
+                        beforeBreak.end = afterStack.getKey() - getBreakEndDelay();
+                    }
+                }
+                else if (afterBreak != null) {
+                    if (beforeStack == null) {
+                        breaks.remove(afterBreak);
+                    }
+                    else if (afterBreak.start == endPos + 200) {
+                        long beforeStackEnd = getEnd(beforeStack.getValue());
+                        if (beforeStackEnd > endPos) //Illegal Bad long object
+                            beforeStackEnd = endPos;
+                        afterBreak.start = beforeStackEnd + 200;
+                    }
+                }
+            }
+            else if (endPos > pos && endPos == getEnd(existing.getValue())) {
+                //deleting the longest object in the stack
+                ArrayList<MapObject> tempStack = new ArrayList<>(existing.getValue());
+                tempStack.removeAll(stack);
+                long newEndPos = getEnd(tempStack);
+                if (newEndPos < endPos) { //there Is a Change
+                    if (afterBreak != null) {
+                        if (afterBreak.start == endPos + 200) {
+                            afterBreak.start = newEndPos + 200;
+                        }
+                    }
+                    else {
+                        //adjust so that break generation will occur (if necessary)
+                        beforeBreak = null;
+                        beforeStack = existing;
+                    }
+                }
+            }
+
+            //Generate tentative break, if necessary
+            if (beforeBreak == null && afterBreak == null && beforeStack != null && afterStack != null) {
+                endPos = getEnd(beforeStack.getValue());
+                if (afterStack.getKey() - endPos >= 5000) {
+                    breaks.add(new BreakInfo(endPos + 200, afterStack.getKey() - getBreakEndDelay(), true));
+                    sortBreaks();
+                }
+            }
+        }
+    }
+
+    /**
+     * Should be called after the length of a long object is changed.
+     * @param h The object that was changed.
+     * @param changeAmount The amount by which the length was changed.
+     */
     public void adjustedEnd(ILongObject h, long changeAmount) {
         if (autoBreaks && h instanceof HitObject) {
+            //If made longer, make sure any break directly following this object is adjusted/removed if necessary.
+            //If made shorter, add a break if necessary. Otherwise, do nothing.
+            //Should be called after the change occurs.
+
             ArrayList<HitObject> stack = objects.get(((HitObject) h).getPos());
             if (stack != null) {
                 long end = getEnd(stack);
-                if (end < h.getEndPos() - changeAmount) {
-                    //Current end is less than the original end of this object. Might need to add a break.
-                    long origEnd = h.getEndPos() - changeAmount;
-                    //Move backwards from the original endpoint to the new endpoint
+                long origEnd = h.getEndPos() - changeAmount;
+                Map.Entry<Long, ArrayList<HitObject>> followingEntry = objects.ceilingEntry(origEnd);
 
-                    Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = objects.descendingSubMap(end, false, origEnd, false).entrySet().iterator();
-
-                    //In most cases, there shouldn't be any objects. This code will only do anything if there were objects stacked on the long object.
-                    //There shouldn't be any breaks, as this section was covered by the long object.
-                    Map.Entry<Long, ArrayList<HitObject>> entry, followingEntry = entry = objects.ceilingEntry(origEnd), lastEntry;
-                    if (objectIterator.hasNext()) {
-                        while (objectIterator.hasNext()) {
-                            lastEntry = entry;
-                            entry = objectIterator.next();
-                            if (lastEntry != null) {
-                                end = getEnd(entry.getValue());
-                                if (lastEntry.getKey() - end >= 5000) {
-                                    getBreaks().add(new Pair<>(end, lastEntry.getKey()));
-                                }
-                            }
-                        }
-                        sortBreaks();
-                    }
-
+                if (end < h.getEndPos() - changeAmount) { //Got shorter
                     //If a break exists after the original ending position, adjust it.
                     if (followingEntry != null) { //Entry is the stack closest to the end of the long object.
-                        if (followingEntry.getKey() - origEnd >= 850 + getBreakEndDelay()) { //possible for there to have been a break
-                            Iterator<Pair<Long, Long>> breakIterator = getBreaks().iterator();
-                            Pair<Long, Long> breakSection;
-                            while (breakIterator.hasNext()) {
-                                breakSection = breakIterator.next();
-
-                                if (breakSection.a > origEnd) { //The first break after.
-                                    if (breakSection.b < followingEntry.getKey()) {
-                                        //This Is, Indeed, A Break in the Right Place. It must be Adjusted. Maybe.
-                                        if (breakSection.a - origEnd == 200) { //Indeed, No Extra Spacing here
-                                            entry = objects.floorEntry(breakSection.a);
-                                            if (entry != null) { //And It Does, Indeed, Have a Starting Point
-                                                breakSection.a = getEnd(entry.getValue()) + 200;
-                                            }
-                                        }
+                        for (BreakInfo breakSection : getBreaks()) {
+                            if (breakSection.start > origEnd) {
+                                if (breakSection.start < followingEntry.getKey()) {
+                                    if (breakSection.start - origEnd == 200) { //No Extra Spacing
+                                        breakSection.start = end + 200;
                                     }
                                     return;
                                 }
+                                break;
                             }
                         }
                         //No following break found
-                        entry = objects.floorEntry(origEnd);
-                        if (entry != null) { //Perhaps one is necessary.
-                            end = getEnd(entry.getValue());
-                            if (followingEntry.getKey() - end >= 5000) {
-                                getBreaks().add(new Pair<>(end, followingEntry.getKey())); //It is.
-                                sortBreaks();
-                            }
+                        if (followingEntry.getKey() - end >= 5000) {
+                            getBreaks().add(new BreakInfo(end + 200, followingEntry.getKey() - getBreakEndDelay())); //It is.
+                            sortBreaks();
                         }
                     } //If entry is null, there can be no break after the object so nothing has to be done.
                 }
-                else if (changeAmount > 0 && end == h.getEndPos()) {
-                    //it got longer and Is the longest object
+                else if (changeAmount > 0 && end == h.getEndPos()) { //it got longer and Is the longest object
                     if (getBreaks().isEmpty()) {
                         return; //If it got longer, there's no need to add a break.
                     }
@@ -1198,18 +1027,18 @@ public class EditorBeatmap {
                     //In most cases, there shouldn't be any objects. This code will only do anything if objects were covered.
                     Map.Entry<Long, ArrayList<HitObject>> entry = null, lastEntry;
 
-                    Iterator<Pair<Long, Long>> breakIterator = getBreaks().iterator();
-                    Pair<Long, Long> breakSection;
+                    Iterator<BreakInfo> breakIterator = getBreaks().iterator();
+                    BreakInfo breakSection;
 
                     while (breakIterator.hasNext()) {
                         breakSection = breakIterator.next();
 
-                        if (breakSection.b < pos) {
+                        if (breakSection.end < pos) {
                             continue;
                         }
 
                         //This break is >= current pos.
-                        entry = objects.floorEntry(breakSection.a);
+                        entry = objects.floorEntry(breakSection.start);
                         if (entry == null) {
                             return; //It's Fucked
                         }
@@ -1219,7 +1048,7 @@ public class EditorBeatmap {
                             if (breakStart > end) //This break is not next to/covered by
                                 return;
 
-                            entry = objects.ceilingEntry(breakSection.b);
+                            entry = objects.ceilingEntry(breakSection.end);
                             if (entry != null) {
                                 breakEnd = entry.getKey();
                             }
@@ -1232,14 +1061,20 @@ public class EditorBeatmap {
                                 breakIterator.remove(); //Remove it, move on.
                             }
                             else { //Only partially covers this break with valid break room remaining.
-                                breakSection.a = Math.max(breakSection.a, end + 200);
-                                if (breakSection.b < breakSection.a + 650)
-                                    breakSection.b = breakSection.a + 650;
+                                breakSection.start = Math.max(breakSection.start, end + 200);
+                                if (breakSection.end < breakSection.start + 650)
+                                    breakSection.end = breakSection.start + 650;
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    public void finalizeBreaks() {
+        for (BreakInfo breakSection : getBreaks()) {
+            breakSection.isTentative = false;
         }
     }
 
@@ -1391,9 +1226,18 @@ public class EditorBeatmap {
             }
         }
     }
+
+    //Note - works with two sets of same lines with different position keys
     public void updateLines(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed) {
         updateLines(added, removed, true);
     }
+
+    /**
+     * Updates linked effectViews, to update max/min sv and also update volume of objects/timing points on timeline
+     * @param added
+     * @param removed
+     * @param updateTimeline
+     */
     public void updateLines(Iterable<? extends Map.Entry<Long, ? extends List<?>>> added, Iterable<? extends Map.Entry<Long, ? extends List<?>>> removed, boolean updateTimeline) {
         if (!effectViews.isEmpty()) {
             if (removed != null) {
@@ -1813,7 +1657,7 @@ public class EditorBeatmap {
                         }
                         if (line.startsWith("2") || line.startsWith("Break")) {
                             String[] parts = line.split(",");
-                            fullMapInfo.breakPeriods.add(new Pair<>(Long.parseLong(parts[1].trim()), Long.parseLong(parts[2].trim())));
+                            fullMapInfo.breakPeriods.add(new BreakInfo(Long.parseLong(parts[1].trim()), Long.parseLong(parts[2].trim())));
                         }
                         //The rest
                         else if (eventSection == 0) { //Background and Video events
@@ -1910,16 +1754,16 @@ public class EditorBeatmap {
     }
 
     public void sortBreaks() {
-        fullMapInfo.breakPeriods.sort(Comparator.comparingLong(a -> a.a));
+        fullMapInfo.breakPeriods.sort(Comparator.comparingLong(a -> a.start));
     }
 
     private boolean testBreaks() {
         Long test;
         Optional<HitObject> longest;
-        for (Pair<Long, Long> breakPeriod : getBreaks()) {
+        for (BreakInfo breakPeriod : getBreaks()) {
             test = null;
 
-            Map.Entry<Long, ArrayList<HitObject>> preObject = objects.floorEntry(breakPeriod.b);
+            Map.Entry<Long, ArrayList<HitObject>> preObject = objects.floorEntry(breakPeriod.end);
             if (preObject == null)
                 return false;
 
@@ -1928,11 +1772,11 @@ public class EditorBeatmap {
                 test = longest.get().getEndPos();
             }
 
-            if (test == null || breakPeriod.a - test < 200) { //break is too close to the object before it, or no preceding object or it's during the break
+            if (test == null || breakPeriod.start - test < 200) { //break is too close to the object before it, or no preceding object or it's during the break
                 return false;
             }
-            test = objects.ceilingKey(breakPeriod.a);
-            if (test == null || test < breakPeriod.b + getBreakEndDelay()) { //object during break
+            test = objects.ceilingKey(breakPeriod.start);
+            if (test == null || test < breakPeriod.end + getBreakEndDelay()) { //object during break
                 return false;
             }
         }
@@ -2058,55 +1902,14 @@ public class EditorBeatmap {
 
     private String timingPoints()
     {
-        if (timingPoints.isEmpty() && effectPoints.isEmpty())
-            return "";
+        if (allPoints.isEmpty()) return "";
 
         StringBuilder sb = new StringBuilder("\r\n[TimingPoints]\r\n");
 
-        Iterator<Map.Entry<Long, ArrayList<TimingPoint>>> timing, effect;
-        timing = timingPoints.entrySet().iterator();
-        effect = effectPoints.entrySet().iterator();
-
-        Map.Entry<Long, ArrayList<TimingPoint>> nextTiming = null, nextEffect = null;
-
-        if (timing.hasNext())
-            nextTiming = timing.next();
-
-        if (effect.hasNext())
-            nextEffect = effect.next();
-
-        while (nextTiming != null || nextEffect != null)
-        {
-            if (nextTiming == null)
-            {
-                for (TimingPoint t : nextEffect.getValue())
-                    sb.append(t.toString()).append("\r\n");
-
-                if (effect.hasNext())
-                    nextEffect = effect.next();
-                else
-                    nextEffect = null;
-            }
-            else if (nextEffect == null || (nextTiming.getKey() <= nextEffect.getKey()))
-            {
-                for (TimingPoint t : nextTiming.getValue())
-                    sb.append(t.toString()).append("\r\n");
-
-                if (timing.hasNext())
-                    nextTiming = timing.next();
-                else
-                    nextTiming = null;
-            }
-            else //next effect is not null and is before next timing
-            {
-                for (TimingPoint t : nextEffect.getValue())
-                    sb.append(t.toString()).append("\r\n");
-
-                if (effect.hasNext())
-                    nextEffect = effect.next();
-                else
-                    nextEffect = null;
-            }
+        for (Map.Entry<Long, ArrayList<TimingPoint>> stack : allPoints.entrySet()) {
+            stack.getValue().sort(Comparator.comparingInt((point)->point.uninherited ? 0 : 1));
+            for (TimingPoint t : stack.getValue())
+                sb.append(t.toString()).append("\r\n");
         }
 
         return sb.toString();
@@ -2285,8 +2088,9 @@ public class EditorBeatmap {
     /**
      * @return the endpoint of the longest object in the stack, or Long.MIN_VALUE if it is empty.
      */
-    private long getEnd(ArrayList<? extends PositionalObject> stack) {
-        Optional<? extends PositionalObject> longest = stack.stream().max(Comparator.comparingLong((a)->((HitObject) a).getEndPos()));
-        return longest.map((o)->((HitObject)o).getEndPos()).orElse(Long.MIN_VALUE);
+    private long getEnd(ArrayList<? extends MapObject> stack) {
+        if (stack.isEmpty()) return Long.MIN_VALUE;
+        Optional<? extends MapObject> longest = stack.stream().filter((obj)->obj instanceof ILongObject).max(Comparator.comparingLong((a)->((ILongObject) a).getEndPos()));
+        return longest.map((o)->((ILongObject)o).getEndPos()).orElse(stack.get(0).getPos());
     }
 }

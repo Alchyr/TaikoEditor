@@ -6,8 +6,6 @@ import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.VolumeFunctionLayer;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.MultiLineAddition;
-import alchyr.taikoedit.editor.changes.SingleLineAddition;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.PreviewLine;
@@ -15,8 +13,8 @@ import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -334,7 +332,7 @@ public class VolumeFunctionTool extends EditorTool {
                     }
                 }
                 else {
-                    PositionalObjectTreeMap<PositionalObject> vol = new PositionalObjectTreeMap<>();
+                    MapObjectTreeMap<MapObject> vol = new MapObjectTreeMap<>();
 
                     //Generate lines.
                     int steps = Math.abs(dvol) * 4 + 1;
@@ -347,14 +345,12 @@ public class VolumeFunctionTool extends EditorTool {
                             p.inherit();
                             int v = (int) Math.round(ivol + (dvol * info.function.apply((basePoint.getKey() - start) / dist)));
                             p.setVolume(v);
-                            p.registerVolumeChange();
                             vol.add(p);
 
                             //Modify volume of red lines. Not undoable.
                             for (TimingPoint point : basePoint.getValue()) {
                                 if (point.uninherited) {
                                     point.setVolume(v);
-                                    point.registerVolumeChange();
                                 }
                             }
                         }
@@ -380,19 +376,18 @@ public class VolumeFunctionTool extends EditorTool {
                             TimingPoint p = ((TimingPoint) closest.shiftedCopy(pos)).inherit();
 
                             p.setVolume(v);
-                            p.registerVolumeChange();
                             vol.add(p);
 
                             lastV = v;
                         }
                     }
 
-                    map.registerChange(new MultiLineAddition(map, vol).perform());
+                    map.registerAndPerformAddObjects("Volume Function", vol, previewView.replaceTest);
                     return;
                 }
             }
 
-            PositionalObjectTreeMap<PositionalObject> vol = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> vol = new MapObjectTreeMap<>();
 
             //SV on existing lines and it has to be based on their own position
             if ((info.adjustExisting && !info.basedOnFollowingObject) || (info.adjustExisting && !info.generateLines)) {
@@ -408,8 +403,10 @@ public class VolumeFunctionTool extends EditorTool {
             sortedPositions.sort(Long::compare);
 
             if (!info.generateLines && info.basedOnFollowingObject) {
-                //This is purely adjusting all existing lines to do sv based on their following object.
+                //This is purely adjusting all existing lines to do volume based on their following object.
                 //Positions are the positions of lines to adjust.
+
+                Map<Long, Integer> newVolumeMap = new HashMap<>();
 
                 for (int i = 0; i < sortedPositions.size(); ++i) {
                     long pos = sortedPositions.get(i);
@@ -424,14 +421,13 @@ public class VolumeFunctionTool extends EditorTool {
                     }
                     basePos = MathUtils.clamp(basePos, start, end);
 
+                    newVolumeMap.put(stack.getKey(), (int) Math.round(ivol + (dvol * info.function.apply((basePos - start) / dist))));
                     for (TimingPoint p : stack.getValue()) {
-                        p.setVolume((int) Math.round(ivol + (dvol * info.function.apply((basePos - start) / dist))));
                         vol.add(p);
                     }
                 }
 
-                map.registerVolumeChange(vol, new PositionalObjectTreeMap<>());
-                map.updateLines(vol.entrySet(), null);
+                map.registerAndPerformVolumeChange(vol, newVolumeMap);
             }
             else {
                 //Normal generation.
@@ -458,7 +454,6 @@ public class VolumeFunctionTool extends EditorTool {
                             p.inherit();
                             int v = (int) Math.round(ivol + (dvol * info.function.apply((pos - start) / dist)));
                             p.setVolume(v);
-                            p.registerVolumeChange();
                             vol.add(p);
                             lastV = v;
 
@@ -468,7 +463,6 @@ public class VolumeFunctionTool extends EditorTool {
                             for (TimingPoint point : basePoint.getValue())  {
                                 if (point.uninherited) {
                                     point.setVolume(v);
-                                    p.registerVolumeChange();
                                 }
                             }
                             continue;
@@ -489,7 +483,6 @@ public class VolumeFunctionTool extends EditorTool {
                         TimingPoint p = ((TimingPoint) closest.shiftedCopy(genPos)).inherit();
 
                         p.setVolume(v);
-                        p.registerVolumeChange();
                         vol.add(p);
                         lastV = v;
                     }
@@ -497,7 +490,7 @@ public class VolumeFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerChange(new MultiLineAddition(map, vol).perform());
+                map.registerAndPerformAddObjects("Volume Function", vol, previewView.replaceTest);
             }
         }
     }

@@ -4,12 +4,18 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
-public abstract class PositionalObject implements Comparable<PositionalObject> {
+public abstract class MapObject implements Comparable<MapObject> {
     protected static final DecimalFormat limitedDecimals = new DecimalFormat("##0.###########", osuDecimalFormat);
 
+    private final List<Supplier<Boolean>> hideTests = new ArrayList<>();
+
+    public int key = Integer.MIN_VALUE;
     private double pos = 0;
 
     public long getPos() {
@@ -38,32 +44,31 @@ public abstract class PositionalObject implements Comparable<PositionalObject> {
     public abstract void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y); //render selection effect.
 
     @Override
-    public int compareTo(PositionalObject o) {
+    public int compareTo(MapObject o) {
         return Double.compare(pos, o.pos);
     }
 
-    public abstract PositionalObject shiftedCopy(long newPos);
+    public abstract MapObject shiftedCopy(long newPos);
 
     //Should work linearly.
-    public void tempModification(double verticalChange) {
-    }
-    public double registerChange() {
-        return 0;
-    }
     public void setValue(double value) {
     }
     public double getValue() {
         return 0;
     }
 
-    public void volumeModification(double verticalChange) {
-    }
-    public int registerVolumeChange() {
-        return 0;
-    }
     public void setVolume(int vol) {
     }
     public int getVolume() {
         return 0;
+    }
+
+    public boolean testHidden() {
+        hideTests.removeIf(Supplier::get);
+        return !hideTests.isEmpty();
+    }
+
+    public void hide(Supplier<Boolean> stayHidden) {
+        hideTests.add(stayHidden);
     }
 }

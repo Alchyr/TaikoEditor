@@ -8,8 +8,8 @@ import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.util.EditorTime;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -103,7 +103,7 @@ public class DifficultyView extends MapView {
     private final DecimalFormat df = new DecimalFormat("#0.##", osuDecimalFormat);
 
     @Override
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
+    public void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
         textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BASE_COLOR_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 250, Color.WHITE);
         textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).SWAP_BONUS_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 200);
         textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).RHYTHM_BONUS_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY + 150);
@@ -112,12 +112,12 @@ public class DifficultyView extends MapView {
         textRenderer.renderText(sb, df.format(difficultyInfo.getOrDefault(o, TaikoDifficultyHitObject.defaultInfo).BURST_DEBUG), SettingsMaster.getMiddleX() + (float) (o.getPos() - preciseTime) * viewScale, textY);
     }
     @Override
-    public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
+    public void renderSelection(MapObject o, SpriteBatch sb, ShapeRenderer sr) {
         //o.renderSelection(sb, sr, time, viewScale, SettingsMaster.getMiddleX(), objectY);
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> prep() {
         return map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
     }
 
@@ -125,18 +125,18 @@ public class DifficultyView extends MapView {
     public void selectAll() {
         clearSelection();
 
-        selectedObjects = new PositionalObjectTreeMap<>();
+        selectedObjects = new MapObjectTreeMap<>();
 
         selectedObjects.addAll(map.objects);
 
-        for (ArrayList<? extends PositionalObject> stuff : selectedObjects.values())
-            for (PositionalObject o : stuff)
+        for (ArrayList<? extends MapObject> stuff : selectedObjects.values())
+            for (MapObject o : stuff)
                 o.selected = true;
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
-        NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> source = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end) {
+        NavigableMap<Long, ? extends ArrayList<? extends MapObject>> source = map.getEditObjects(time - EditorLayer.viewTime, time + EditorLayer.viewTime);
 
         if (source.isEmpty())
             return null;
@@ -186,10 +186,10 @@ public class DifficultyView extends MapView {
             }
 
             Iterator<Map.Entry<Long, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
-            Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> selectionObjects = selectedObjects.entrySet().iterator();
+            Iterator<Map.Entry<Long, ArrayList<MapObject>>> selectionObjects = selectedObjects.entrySet().iterator();
 
             Map.Entry<Long, ArrayList<HitObject>> currentList = null;
-            Map.Entry<Long, ArrayList<PositionalObject>> selectedObjectList = null;
+            Map.Entry<Long, ArrayList<MapObject>> selectedObjectList = null;
 
             if (allObjects.hasNext())
                 currentList = allObjects.next();
@@ -252,19 +252,19 @@ public class DifficultyView extends MapView {
         if (startTime == endTime)
             return;
 
-        PositionalObjectTreeMap<PositionalObject> newSelection;
+        MapObjectTreeMap<MapObject> newSelection;
 
         if (selectedObjects == null)
         {
-            newSelection = new PositionalObjectTreeMap<>();
+            newSelection = new MapObjectTreeMap<>();
             if (startTime > endTime)
                 newSelection.addAll(map.getSubMap(endTime, startTime));
             else
                 newSelection.addAll(map.getSubMap(startTime, endTime));
 
             selectedObjects = newSelection;
-            for (ArrayList<PositionalObject> stuff : selectedObjects.values())
-                for (PositionalObject o : stuff)
+            for (ArrayList<MapObject> stuff : selectedObjects.values())
+                for (MapObject o : stuff)
                     o.selected = true;
         }
         else
@@ -278,19 +278,19 @@ public class DifficultyView extends MapView {
 
             selectedObjects.addAllUnique(newSelected);
 
-            for (ArrayList<? extends PositionalObject> stuff : newSelected.values())
-                for (PositionalObject o : stuff)
+            for (ArrayList<? extends MapObject> stuff : newSelected.values())
+                for (MapObject o : stuff)
                     o.selected = true;
         }
     }
 
     @Override
-    public PositionalObject getObjectAt(float x, float y) {
+    public MapObject getObjectAt(float x, float y) {
         return null;
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, float x) {
+    public boolean clickedEnd(MapObject o, float x) {
         return false;
     }
 
@@ -300,18 +300,20 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
-        map.objects.removeAll(moved);
-        map.objects.addAll(moved);
+    public void updateSelectionPositions() {
+        MapObjectTreeMap<MapObject> selected = getSelection();
+        map.objects.removeAll(selected);
+        map.objects.addAll(selected);
+        refreshSelection();
     }
 
     @Override
-    public void deleteObject(PositionalObject o) {
-        this.map.delete(o);
+    public void deleteObject(MapObject o) {
+        this.map.registerAndPerformDelete(o);
     }
 
     @Override
-    public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
+    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
     }
 
     @Override
@@ -322,7 +324,7 @@ public class DifficultyView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(selectedObjects);
+            this.map.registerAndPerformDelete(selectedObjects);
             clearSelection();
         }
     }
@@ -331,9 +333,9 @@ public class DifficultyView extends MapView {
     public void registerMove(long totalMovement) {
         if (selectedObjects != null && totalMovement != 0)
         {
-            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
         }
     }
 

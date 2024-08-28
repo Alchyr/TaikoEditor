@@ -4,14 +4,13 @@ import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.MapChange;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.structures.PositionalObject;
-import alchyr.taikoedit.util.structures.PositionalObjectTreeMap;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -346,7 +345,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public void renderObject(PositionalObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
+    public void renderObject(MapObject o, SpriteBatch sb, ShapeRenderer sr, float alpha) {
         if (!(o instanceof HitObject))
             return;
 
@@ -369,18 +368,18 @@ public class GameplayView extends MapView {
         calculationLock.unlock();
     }
     @Override
-    public void renderSelection(PositionalObject o, SpriteBatch sb, ShapeRenderer sr) {
+    public void renderSelection(MapObject o, SpriteBatch sb, ShapeRenderer sr) {
     }
 
-    PositionalObjectTreeMap<PositionalObject> visibleObjects = new PositionalObjectTreeMap<>();
+    MapObjectTreeMap<MapObject> visibleObjects = new MapObjectTreeMap<>();
     long lastPos = Long.MIN_VALUE;
     private final ArrayList<Snap> barlines = new ArrayList<>();
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> prep() {
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> prep() {
         calculationLock.lock();
 
-        Iterator<Map.Entry<Long, ArrayList<PositionalObject>>> objectIterator = visibleObjects.entrySet().iterator();
-        Map.Entry<Long, ArrayList<PositionalObject>> stack;
+        Iterator<Map.Entry<Long, ArrayList<MapObject>>> objectIterator = visibleObjects.entrySet().iterator();
+        Map.Entry<Long, ArrayList<MapObject>> stack;
 
         if (lastPos < time) { //moved forward. Can check just a few.
             //Remove expired objects
@@ -482,7 +481,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>> getVisibleRange(long start, long end) {
+    public NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end) {
         return null; //only used by Selection tool, which isn't supported on gameplay view.
     }
 
@@ -497,30 +496,30 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public PositionalObject getObjectAt(float x, float y) {
+    public MapObject getObjectAt(float x, float y) {
         return null;
     }
 
     @Override
-    public boolean clickedEnd(PositionalObject o, float x) {
+    public boolean clickedEnd(MapObject o, float x) {
         return false;
     }
 
     @Override
-    public void updatePositions(PositionalObjectTreeMap<PositionalObject> moved) {
-        map.objects.removeAll(getSelection());
-        getSelection().clear();
-        map.objects.addAll(moved);
-        getSelection().addAll(moved);
+    public void updateSelectionPositions() {
+        MapObjectTreeMap<MapObject> selected = getSelection();
+        map.objects.removeAll(selected);
+        map.objects.addAll(selected);
+        refreshSelection();
     }
 
     @Override //will never do anything since it's based on clickObject, which always returns null
-    public void deleteObject(PositionalObject o) {
-        this.map.delete(o);
+    public void deleteObject(MapObject o) {
+        this.map.registerAndPerformDelete(o);
     }
 
     @Override
-    public void pasteObjects(PositionalObjectTreeMap<PositionalObject> copyObjects) {
+    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
 
     }
 
@@ -529,7 +528,7 @@ public class GameplayView extends MapView {
         if (!hasSelection())
             return;
 
-        this.map.reverse(MapChange.ChangeType.OBJECTS, true, selectedObjects);
+        this.map.registerReverse(true, selectedObjects);
         refreshSelection();
     }
 
@@ -537,7 +536,7 @@ public class GameplayView extends MapView {
     public void deleteSelection() {
         if (selectedObjects != null)
         {
-            this.map.delete(selectedObjects);
+            this.map.registerAndPerformDelete(selectedObjects);
             clearSelection();
         }
     }
@@ -546,9 +545,9 @@ public class GameplayView extends MapView {
     public void registerMove(long totalMovement) {
         if (selectedObjects != null && totalMovement != 0)
         {
-            PositionalObjectTreeMap<PositionalObject> movementCopy = new PositionalObjectTreeMap<>();
+            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
             movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
         }
     }
 

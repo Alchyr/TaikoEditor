@@ -39,7 +39,7 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
 
     private final Queue<ArrayList<Runnable>> tasks = new Queue<>();
     private final Queue<ArrayList<Tracker>> trackers = new Queue<>();
-    private final Queue<ArrayList<Runnable>> callbacks = new Queue<>();
+    private final ArrayList<Runnable> callbacks = new ArrayList<>();
     private final ArrayList<Future<?>> activeTasks = new ArrayList<>();
     private final ArrayList<Tracker> activeTrackers = new ArrayList<>();
 
@@ -71,7 +71,7 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
         this.assetLists = null;
         this.extraLoads = new ArrayList<>();
         this.replacementLayers = null;
-        this.addToBottom = false;
+        this.addToBottom = true;
 
         assetsLoaded = false;
         taskProgress = 0;
@@ -94,18 +94,10 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
         this.assetLists = assetLists;
         return this;
     }
-    public LoadingLayer addCallback(boolean newSet, Runnable callback)
-    {
-        if (callbacks.isEmpty() || newSet)
-        {
-            callbacks.addFirst(new ArrayList<>());
-        }
-        callbacks.first().add(callback);
-        return this;
-    }
     public LoadingLayer addCallback(Runnable callback)
     {
-        return addCallback(false, callback);
+        callbacks.add(callback);
+        return this;
     }
     public LoadingLayer newSet() {
         tasks.addFirst(new ArrayList<>());
@@ -225,9 +217,28 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
             done = true;
         }
 
+
+
         if (addLayers()) {
-            if (replacementLayers != null)
+            if (!callbacks.isEmpty()) //Trigger callbacks
             {
+                taskCount = callbacks.size();
+                editorLogger.info("Starting callbacks. Tasks: " + taskCount);
+                for (Runnable task : callbacks)
+                    activeTasks.add(executor.submit(task));
+
+                callbacks.clear();
+                return;
+            }
+
+            for (Future<?> f : activeTasks)
+                if (!f.isDone()) {
+                    return;
+                }
+
+            if (!addedLayers && replacementLayers != null)
+            {
+
                 ProgramLayer[] layers = replacementLayers.get();
                 editorLogger.info("Loading complete. Adding replacement layers: " + layers.length);
                 for (ProgramLayer l : layers) {
@@ -245,20 +256,10 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
                 //use a fancy effect instead later instead of sharp change
                 replacementLayers = null;
                 addedLayers = true;
-                return;
-            }
-
-            if (!callbacks.isEmpty()) //Trigger callbacks
-            {
-                ArrayList<Runnable> taskSet = callbacks.removeLast();
-                taskCount = taskSet.size();
-                editorLogger.info("Starting next callback set. Tasks: " + taskCount);
-                for (Runnable task : taskSet)
-                    activeTasks.add(executor.submit(task));
-                return;
             }
         }
-        if (complete()) {
+
+        if (replacementLayers == null || addedLayers) {
             removeLayer(this);
         }
     }
@@ -307,9 +308,6 @@ public class LoadingLayer extends ProgramLayer implements InputLayer {
     }
 
     public boolean addLayers() {
-        return done;
-    }
-    public boolean complete() {
         return done;
     }
 

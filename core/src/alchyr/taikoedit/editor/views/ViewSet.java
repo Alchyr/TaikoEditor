@@ -12,8 +12,8 @@ import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.EditorTime;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
+import alchyr.taikoedit.util.structures.MultiMergeIterator;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -22,16 +22,16 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.util.*;
 import java.util.function.Predicate;
 
-import static alchyr.taikoedit.TaikoEditor.assetMaster;
-import static alchyr.taikoedit.TaikoEditor.textRenderer;
+import static alchyr.taikoedit.TaikoEditor.*;
 
 public class ViewSet {
     private final EditorLayer owner;
     private final List<MapView> views;
-    private final HashMap<MapView, NavigableMap<Long, ? extends ArrayList<? extends PositionalObject>>> viewObjects;
     private final EditorBeatmap map;
 
     private final HashMap<HitObject, TaikoDifficultyHitObject> difficultyInfo = new HashMap<>();
+
+    private final MultiMergeIterator<Long, MapObject, ArrayList<MapObject>> viewObjectIterator;
 
     private final BitmapFont difficultyFont;
     private float difficultyX;
@@ -46,7 +46,8 @@ public class ViewSet {
         difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
 
         views = new ArrayList<>();
-        viewObjects = new HashMap<>();
+
+        viewObjectIterator = new MultiMergeIterator<>(ArrayList::new, MapView.reverseLongComparator);
     }
     public void updateDiffNamePosition() {
         difficultyX = SettingsMaster.getWidth() - (TaikoEditor.textRenderer.setFont(difficultyFont).getWidth(map.getName()) + 10);
@@ -57,7 +58,6 @@ public class ViewSet {
         for (MapView view : views)
         {
             view.update(exactPos, pos, elapsed, canHover);
-            viewObjects.put(view, view.prep());
             view.primaryUpdate(isPlaying);
         }
     }
@@ -69,7 +69,13 @@ public class ViewSet {
         }
 
         for (MapView view : views) {
-            for (ArrayList<? extends PositionalObject> objects : viewObjects.getOrDefault(view, Collections.emptyNavigableMap()).values()) {
+            viewObjectIterator.clear();
+
+            viewObjectIterator.addIterator(view.prep().entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()));
+            viewObjectIterator.addIterator(view.additionalDisplayObjects().descendingMap().entrySet().iterator(), Map.Entry::getKey, (list, entry)->list.addAll(entry.getValue()), 1);
+
+            while (viewObjectIterator.hasNext()) {
+                ArrayList<? extends MapObject> objects = viewObjectIterator.next();
                 view.renderStack(objects, sb, sr);
             }
         }
@@ -242,7 +248,6 @@ public class ViewSet {
         }
         toRemove.clearSelection();
         views.remove(toRemove);
-        viewObjects.remove(toRemove);
 
         if (toRemove instanceof EffectView) {
             map.removeEffectView((EffectView) toRemove);
@@ -280,7 +285,6 @@ public class ViewSet {
             view.dispose();
         }
         views.clear();
-        viewObjects.clear();
     }
 
     public void calculateDifficulty() {

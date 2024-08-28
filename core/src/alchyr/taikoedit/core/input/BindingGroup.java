@@ -38,8 +38,8 @@ public class BindingGroup {
     private final Map<InputBinding, Pair<Integer, List<Integer>>> blockedBindings = new HashMap<>(); //bindings that are currently disabled by conflicts : blocking bindings,held key inputs
 
     private final Map<Integer, MouseHoldObject> mouseHolds = new ConcurrentHashMap<>(); //button : current active hold
-    private final List<MouseInputInfo> mouseInputs = new ArrayList<>();
-    private final List<MouseInputInfo> doubleClickInputs = new ArrayList<>();
+    private final List<MouseInputInfo<?>> mouseInputs = new ArrayList<>();
+    private final List<MouseInputInfo<?>> doubleClickInputs = new ArrayList<>();
 
     private final Queue<VoidMethod> actionQueue = new ConcurrentLinkedQueue<>();
 
@@ -181,30 +181,37 @@ public class BindingGroup {
     }
 
     //Parameters of the function are: x, y, button (0 = left click, 1 = right click), return value of boolean for whether or not this click is valid
+    public <T> void addMouseBind(TriFunction<Integer, Integer, Integer, T> isValidClick, TriFunction<T, Vector2, Integer, MouseHoldObject> onPress) {
+        mouseInputs.add(new MouseInputInfo<T>(isValidClick, onPress));
+    }
     public void addMouseBind(TriFunction<Integer, Integer, Integer, Boolean> isValidClick, BiFunction<Vector2, Integer, MouseHoldObject> onPress) {
-        mouseInputs.add(new MouseInputInfo(isValidClick, onPress));
+        mouseInputs.add(new MouseInputInfo<>(falseToNull(isValidClick), (o, xy, b) -> onPress.apply(xy, b)));
     }
     public void addMouseBind(BiFunction<Integer, Integer, Boolean> isValidClick, BiFunction<Vector2, Integer, MouseHoldObject> onPress) {
-        mouseInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), onPress));
+        mouseInputs.add(new MouseInputInfo<>((x, y, b)->isValidClick.apply(x, y) ? true : null, (o, xy, b) -> onPress.apply(xy, b)));
     }
     public void addMouseBind(TriFunction<Integer, Integer, Integer, Boolean> isValidClick, VoidMethod onPress) {
-        mouseInputs.add(new MouseInputInfo(isValidClick, (pos, button)->{onPress.run(); return null;}));
+        mouseInputs.add(new MouseInputInfo<>(falseToNull(isValidClick), (o, xy, button)->{onPress.run(); return null;}));
     }
     public void addMouseBind(BiFunction<Integer, Integer, Boolean> isValidClick, VoidMethod onPress) {
-        mouseInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), (pos, button)->{onPress.run(); return null;}));
+        mouseInputs.add(new MouseInputInfo<>((x, y, b)->isValidClick.apply(x, y) ? true : null, (o, xy, button)->{onPress.run(); return null;}));
     }
     public void addMouseBind(TriFunction<Integer, Integer, Integer, Boolean> isValidClick, Consumer<Integer> onPress) {
-        mouseInputs.add(new MouseInputInfo(isValidClick, (pos, button)->{onPress.accept(button); return null;}));
+        mouseInputs.add(new MouseInputInfo<>(falseToNull(isValidClick), (o, xy, button)->{onPress.accept(button); return null;}));
     }
     public void addMouseBind(BiFunction<Integer, Integer, Boolean> isValidClick, Consumer<Integer> onPress) {
-        mouseInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), (pos, button)->{onPress.accept(button); return null;}));
+        mouseInputs.add(new MouseInputInfo<>((x, y, b)->isValidClick.apply(x, y) ? true : null, (o, xy, button)->{onPress.accept(button); return null;}));
     }
 
     public void addDoubleClick(TriFunction<Integer, Integer, Integer, Boolean> isValidClick, BiConsumer<Vector2, Integer> onPress) {
-        doubleClickInputs.add(new MouseInputInfo(isValidClick, (pos, button)->{onPress.accept(pos, button); return null;}));
+        doubleClickInputs.add(new MouseInputInfo<>(falseToNull(isValidClick), (o, xy, button)->{onPress.accept(xy, button); return null;}));
     }
     public void addDoubleClick(BiFunction<Integer, Integer, Boolean> isValidClick, BiConsumer<Vector2, Integer> onPress) {
-        doubleClickInputs.add(new MouseInputInfo((x, y, b)->isValidClick.apply(x, y), (pos, button)->{onPress.accept(pos, button); return null;}));
+        doubleClickInputs.add(new MouseInputInfo<>((x, y, b)->isValidClick.apply(x, y) ? true : null, (o, xy, button)->{onPress.accept(xy, button); return null;}));
+    }
+
+    private static TriFunction<Integer, Integer, Integer, Boolean> falseToNull(TriFunction<Integer, Integer, Integer, Boolean> isValidClick) {
+        return (x, y, b)->isValidClick.apply(x, y, b) ? true : null;
     }
 
     public ArrayList<InputBinding.InputInfo> bindingInputs(String bindingKey)
@@ -538,23 +545,24 @@ public class BindingGroup {
             actionQueue.add(()->hold.onRelease(gameX, gameY));
         }
 
-        for (MouseInputInfo info : mouseInputs)
+        for (MouseInputInfo<?> info : mouseInputs)
         {
-            if (info.condition.apply(gameX, gameY, button)) {
-                actionQueue.add(()->finalizeTouch(info, gameX, gameY, button));
+            Supplier<MouseHoldObject> action = info.getActionIfValid(gameX, gameY, button);
+            if (action != null) {
+                actionQueue.add(()->finalizeTouch(action, gameX, gameY, button));
                 return true;
             }
         }
 
         return anyInput.onDown(actionQueue);
     }
-    private final Vector2 tempVector = new Vector2();
-    private void finalizeTouch(MouseInputInfo info, int gameX, int gameY, int button) {
-        MouseHoldObject hold = mouseHolds.remove(button);
+
+    private void finalizeTouch(Supplier<MouseHoldObject> action, int gameX, int gameY, int button) {
+         MouseHoldObject hold = mouseHolds.remove(button);
         if (hold != null) {
             hold.onRelease(gameX, gameY);
         }
-        hold = info.onPress.apply(tempVector.set(gameX, gameY), button);
+        hold = action.get();
         if (hold != null)
             mouseHolds.put(button, hold);
     }
@@ -565,10 +573,11 @@ public class BindingGroup {
             actionQueue.add(()->hold.onRelease(gameX, gameY));
         }
 
-        for (MouseInputInfo info : doubleClickInputs)
+        for (MouseInputInfo<?> info : doubleClickInputs)
         {
-            if (info.condition.apply(gameX, gameY, button)) {
-                actionQueue.add(()->finalizeTouch(info, gameX, gameY, button));
+            Supplier<MouseHoldObject> action = info.getActionIfValid(gameX, gameY, button);
+            if (action != null) {
+                actionQueue.add(()->finalizeTouch(action, gameX, gameY, button));
                 return true;
             }
         }

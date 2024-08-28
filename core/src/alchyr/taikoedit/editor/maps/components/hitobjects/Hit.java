@@ -2,7 +2,7 @@ package alchyr.taikoedit.editor.maps.components.hitobjects;
 
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.structures.PositionalObject;
+import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -130,6 +130,32 @@ public class Hit extends HitObject {
 
     @Override
     public void render(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, float alpha) {
+        if (testHidden()) return;
+
+        Color c = isRim ? kat : don;
+        c.a = alpha;
+        //sb.setColor(c);
+
+        if (finish) {
+            currentSkin.finisher.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
+        }
+        else {
+            currentSkin.hit.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.normalScale, c);
+        }
+        /*sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
+                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+
+        if (selected)
+        {
+            renderSelection(sb, sr, pos, viewScale, x, y);
+        }
+        c.a = 1;
+    }
+
+    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float viewScale, float baseX, float x, int y, float alpha) {
+        long pos = getPos();
+        x += baseX;
+
         Color c = isRim ? kat : don;
         c.a = alpha;
         //sb.setColor(c);
@@ -152,13 +178,11 @@ public class Hit extends HitObject {
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
-        //sb.setColor(Color.WHITE);
+        if (testHidden()) return;
 
         float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
         currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale);
-        /*sb.draw(currentSkin.selection, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
     }
 
     @Override
@@ -228,7 +252,7 @@ public class Hit extends HitObject {
     }
 
     @Override
-    public PositionalObject shiftedCopy(long newPos) {
+    public MapObject shiftedCopy(long newPos) {
         Hit copy = new Hit(this);
         copy.setPos(newPos);
         return copy;

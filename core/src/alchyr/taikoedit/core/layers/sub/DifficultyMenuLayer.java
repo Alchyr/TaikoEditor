@@ -7,10 +7,7 @@ import alchyr.taikoedit.core.input.BoundInputProcessor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.Button;
 import alchyr.taikoedit.editor.maps.FullMapInfo;
-import alchyr.taikoedit.editor.views.GameplayView;
-import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.editor.views.GimmickView;
-import alchyr.taikoedit.editor.views.ObjectView;
+import alchyr.taikoedit.editor.views.*;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
@@ -97,6 +94,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         viewOptions.add(new Button(viewOptionX, middleY, "Effect Editor", assetMaster.getFont("aller medium")).setAction("sv"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium")).setAction("gameplay"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gimmick Editor", assetMaster.getFont("aller medium")).setAction("gimmick"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Changelog", assetMaster.getFont("aller medium")).setAction("changelog"));
         viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
 
         openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium")).setClick(this::open);
@@ -127,6 +125,9 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
                     break;
                 case "gimmick":
                     sourceLayer.addView(new GimmickView(sourceLayer, b), true);
+                    break;
+                case "changelog":
+                    sourceLayer.addView(new ChangelogView(sourceLayer, b), true);
                     break;
                 case "NEW":
                     TaikoEditor.addLayer(new CreateDifficultyLayer(sourceLayer, set, b));
