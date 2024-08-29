@@ -46,6 +46,8 @@ public class EditorBeatmap {
 
     public final HashMap<Integer, MapObject> mapObjectMap;
     private int objectKey = Integer.MIN_VALUE + 1;
+    public int objectKeyOffset = 0;
+    private static final int OBJECT_KEY_OFFSET_SPACING = 3333333; //Enough for... 1k+ clients. I don't think the editor could handle 3 million objects being placed (very well) anyways.
 
     private final TreeMap<Long, Integer> volumeMap;
     private final TreeMap<Long, Boolean> kiaiMap; //each boolean is a spot where kiai is turned on or off.
@@ -261,6 +263,19 @@ public class EditorBeatmap {
         });
     }
 
+    public void keyMapObjects(MapObjectTreeMap<MapObject> newObjects) {
+        for (ArrayList<MapObject> stack : newObjects.values()) {
+            for (MapObject obj : stack) {
+                if (obj.key == Integer.MIN_VALUE) {
+                    obj.key = this.objectKey++ + this.objectKeyOffset;
+                }
+                MapObject old = this.mapObjectMap.put(obj.key, obj);
+                if (old != null && old != obj) {
+                    editorLogger.warn("DUPLICATE OBJECT KEY: " + obj.key);
+                }
+            }
+        }
+    }
 
     /* EDITING METHODS */
     private final BranchingStateQueue<MapChange> changes = new BranchingStateQueue<>();
@@ -272,9 +287,21 @@ public class EditorBeatmap {
 
     public void setServer(ConnectionServer server) {
         this.server = server;
+        if (server == null) {
+            objectKeyOffset = 0;
+        }
+        else {
+            objectKeyOffset = OBJECT_KEY_OFFSET_SPACING;
+        }
     }
     public void setClient(ConnectionClient client) {
         this.client = client;
+        if (client == null) {
+            objectKeyOffset = 0;
+        }
+        else {
+            objectKeyOffset = OBJECT_KEY_OFFSET_SPACING + (2 * client.ID);
+        }
     }
 
     public void clearState() {
@@ -335,8 +362,6 @@ public class EditorBeatmap {
     //Changes sent by clients can be rejected.
     //If a change is rejected, it can be re-attempted by client with an updated changeIndex if it remains valid.
     public void receiveNetworkChange(MapChange.ChangeBuilder changeBuilder) { //Note: undo/redo should be handled separately
-        dirty = true;
-
         if (server != null) { //Working as server
             /*if (change.changeIndex == changeCount) { //normal
                 change.perform();
@@ -371,22 +396,28 @@ public class EditorBeatmap {
 
                 if (undone == null) {
                     //Failure
-                    client.fail("DESYNC");
+                    client.fail("DESYNC: failed to return to expected state");
                     return;
                 }
-                else {
+                /*else {
                     for (MapChange change : undone) {
                         //null first entry will only matter for whether these changes are redone at the end
                         if (change != null) change.cancel();
                     }
-                }
+                }*/
                 editorLogger.info("Changed state: " + changes.currentKey());
             }
 
             //Construct change. Verify that it's valid. It should be. If it isn't, send desync message (for now, just disconnect?)
-            MapChange change = changeBuilder.build();
+            MapChange change = null;
+            try {
+                change = changeBuilder.build();
+            }
+            catch (Exception e) {
+                editorLogger.warn("Failed to build change from server:", e);
+            }
             if (change == null || !change.isValid()) {
-                client.fail("DESYNC");
+                client.fail("DESYNC: change could not be processed or is invalid");
                 return;
             }
             registerChange(change.preDo(), false);
@@ -412,8 +443,8 @@ public class EditorBeatmap {
     {
         registerChange(new MapObjectChange(this, nameKey, o, shouldReplace).preDo());
     }
-    public void registerAndPerformAddObjects(String nameKey, MapObjectTreeMap<MapObject> addObjects, BiFunction<MapObject, MapObject, Boolean> shouldReplace) {
-        registerChange(new MapObjectChange(this, nameKey, addObjects, shouldReplace).preDo());
+    public void registerAndPerformAddObjects(String nameKey, MapObjectTreeMap<MapObject> addObjects, Map<MapObject, MapObject> originalObjects, BiFunction<MapObject, MapObject, Boolean> shouldReplace) {
+        registerChange(new MapObjectChange(this, nameKey, addObjects, originalObjects, shouldReplace).preDo());
     }
 
     /**
@@ -482,21 +513,6 @@ public class EditorBeatmap {
         }
 
         registerChange(new MapObjectChange(this, isLines ? "Move Lines" : "Move Objects", movementObjects, newPositions).preDo());
-    }
-    public void registerObjectMovement(MapObjectTreeMap<MapObject> movementObjects, long offset)
-    {
-        if (movementObjects.isEmpty()) return;
-
-        boolean isLines = movementObjects.firstEntry().getValue().get(0) instanceof TimingPoint;
-        MapObjectTreeMap<MapObject> oldPositions = new MapObjectTreeMap<>();
-
-        //store original positions in moved
-        for (Map.Entry<Long, ArrayList<MapObject>> e : movementObjects.entrySet())
-        {
-            oldPositions.put(e.getKey() - offset, e.getValue());
-        }
-
-        registerChange(new MapObjectChange(this, isLines ? "Move Lines" : "Move Objects", oldPositions, movementObjects).confirm());
     }
     public void registerAndPerformDurationChange(ILongObject obj, long change)
     {

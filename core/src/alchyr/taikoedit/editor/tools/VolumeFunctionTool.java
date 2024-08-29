@@ -382,7 +382,7 @@ public class VolumeFunctionTool extends EditorTool {
                         }
                     }
 
-                    map.registerAndPerformAddObjects("Volume Function", vol, previewView.replaceTest);
+                    map.registerAndPerformAddObjects("Volume Function", vol, null, previewView.replaceTest);
                     return;
                 }
             }
@@ -490,7 +490,7 @@ public class VolumeFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerAndPerformAddObjects("Volume Function", vol, previewView.replaceTest);
+                map.registerAndPerformAddObjects("Volume Function", vol, null, previewView.replaceTest);
             }
         }
     }

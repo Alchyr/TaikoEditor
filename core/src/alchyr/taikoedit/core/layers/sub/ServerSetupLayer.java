@@ -16,12 +16,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.text.DecimalFormat;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
-import static alchyr.taikoedit.TaikoEditor.*;
+import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ServerSetupLayer extends ProgramLayer implements InputLayer {
+    public static final int CLIENT_LIMIT = 8;
+
     private final ServerSetupProcessor processor;
 
     //Rendering
@@ -39,15 +41,16 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
     private TextOverlay textOverlay;
 
     private final TextField serverPort;
+    private final TextField connectionLimit;
 
     private final Button confirmButton;
     private final Button cancelButton;
 
     //Other data
-    private int lastValidPort;
-    private Consumer<Integer> completion;
+    private int lastValidPort, lastValidClientLimit;
+    private BiConsumer<Integer, Integer> completion;
 
-    public ServerSetupLayer(int port, Consumer<Integer> completion)
+    public ServerSetupLayer(int port, BiConsumer<Integer, Integer> completion)
     {
         this.type = LAYER_TYPE.NORMAL;
 
@@ -60,6 +63,7 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
         textOverlay = new TextOverlay(font, SettingsMaster.getHeight() / 2, 100);
 
         lastValidPort = port;
+        lastValidClientLimit = 1;
         this.serverPort = new TextField(INPUT_POS, middleY + BUTTON_OFFSET, 250f, "Port (30000-60000):", Integer.toString(port), 5, font).setType(TextField.TextType.INTEGER).blocking();
         serverPort.setOnEndInput((text, field)->{
             try {
@@ -77,9 +81,26 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
                 textOverlay.setText("Invalid value", 3.0f);
             }
         });
+        this.connectionLimit = new TextField(INPUT_POS, middleY, 250f, "Client Limit (1-" + CLIENT_LIMIT + "):", Integer.toString(lastValidClientLimit), 2, font).setType(TextField.TextType.INTEGER).blocking();
+        connectionLimit.setOnEndInput((text, field)->{
+            try {
+                int amt = Integer.parseInt(text);
+                if (amt < 1 || amt > CLIENT_LIMIT) {
+                    field.setText(Integer.toString(lastValidClientLimit));
+                    textOverlay.setText("Invalid client limit", 2.0f);
+                }
+                else {
+                    lastValidClientLimit = amt;
+                }
+            }
+            catch (Exception e) {
+                field.setText(Integer.toString(lastValidClientLimit));
+                textOverlay.setText("Invalid client limit", 3.0f);
+            }
+        });
 
-        confirmButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_OFFSET * 0.5f, "Open", font).setClick(this::confirm);
-        cancelButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_OFFSET * 1.5f, "Cancel", font).setClick(this::cancel);
+        confirmButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_OFFSET * 1.5f, "Open", font).setClick(this::confirm);
+        cancelButton = new Button(SettingsMaster.getMiddleX(), middleY - BUTTON_OFFSET * 2.5f, "Cancel", font).setClick(this::cancel);
 
         this.completion = completion;
 
@@ -92,6 +113,7 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
 
         textOverlay.update(elapsed);
         serverPort.update(elapsed);
+        connectionLimit.update(elapsed);
 
         confirmButton.update(elapsed);
         cancelButton.update(elapsed);
@@ -106,6 +128,7 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
                 SettingsMaster.getMiddleX(), SettingsMaster.getHeight() * 0.75f);
 
         serverPort.render(sb, sr);
+        connectionLimit.render(sb, sr);
 
         cancelButton.render(sb, sr);
         confirmButton.render(sb, sr);
@@ -116,6 +139,10 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
     private void cycleInput() {
         if (serverPort.isActive()) {
             serverPort.disable();
+            connectionLimit.activate(processor);
+        }
+        else if (connectionLimit.isActive()) {
+            connectionLimit.disable();
         }
         else {
             serverPort.activate(processor);
@@ -132,6 +159,7 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
     private void confirm()
     {
         serverPort.disable();
+        connectionLimit.disable();
 
         boolean success = true;
 
@@ -144,6 +172,15 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
             else {
                 lastValidPort = testPort;
             }
+
+            int testLimit = Integer.parseInt(connectionLimit.text);
+
+            if (testLimit < 1 || testLimit > CLIENT_LIMIT) {
+                success = false;
+            }
+            else {
+                lastValidClientLimit = testLimit;
+            }
         }
         catch (NumberFormatException e) {
             success = false;
@@ -151,7 +188,7 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
         }
 
         if (success) {
-            completion.accept(lastValidPort);
+            completion.accept(lastValidPort, lastValidClientLimit);
             close();
         }
     }
@@ -184,7 +221,8 @@ public class ServerSetupLayer extends ProgramLayer implements InputLayer {
 
             bindings.addMouseBind((x, y, b)->(b == 0) || (b == 1),
                     (p, b) -> {
-                        boolean clicked = sourceLayer.serverPort.click(p.x, p.y, this);
+                        boolean clicked = sourceLayer.serverPort.click(p.x, p.y, this)
+                                || sourceLayer.connectionLimit.click(p.x, p.y, this);
 
                         if (clicked) return null;
 

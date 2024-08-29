@@ -111,9 +111,9 @@ public class AssetMaster extends AssetManager implements AssetErrorListener {
             GeneralUtils.logStackTrace(editorLogger, e);
         }
     }
-    public void longUpdate() {
+    public void longUpdate(int time) {
         try {
-            doneLoading = update(84);
+            doneLoading = update(time);
             if (doneLoading && !loadingRegions.isEmpty())
             {
                 Texture t;

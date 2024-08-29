@@ -16,7 +16,7 @@ public class Spinner extends HitObject implements ILongObject {
     private long duration;
     private long endPos;
 
-    public Spinner(int start, int duration)
+    public Spinner(long start, long duration)
     {
         this.type = HitObjectType.SPINNER;
 

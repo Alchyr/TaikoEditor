@@ -280,7 +280,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     private LoadingLayer chooseMap(MapSelect.MapOpenInfo info, ConnectionClient client)
     {
         if (canOpen) {
-            EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulties().toArray(new MapInfo[0]));
+            EditorLayer edit = new EditorLayer(this, info.getSet(), info.getInitialDifficulties());
             if (client != null) {
                 edit.setClient(client);
             }
@@ -643,7 +643,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             //editor state variable holder thing
             final Set<String> openDifficulties = new HashSet<>();
             //Map<String, asdf> openDifficultyProperties; probably won't do this
-            long initialMusicPos = 0;
+            double initialMusicPos = 0;
 
             @Override
             public void handleMessage(Message msg) {
@@ -658,10 +658,10 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                                 String mapKey = text.substring(4, 8);
                                 String diffname = text.substring(8);
                                 openDifficulties.add(diffname);
-                                editorLogger.info("Open difficulty: " + diffname);
+                                editorLogger.info("Open difficulty: \"" + diffname + "\"");
                                 break;
                             case "POSN":
-                                initialMusicPos = Long.parseLong(text.substring(4));
+                                initialMusicPos = Double.parseDouble(text.substring(4));
                                 editorLogger.info("Music position: " + initialMusicPos);
                                 break;
                             case "DONE":
@@ -670,12 +670,17 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                                 MapSelect.MapOpenInfo openInfo = new MapSelect.MapOpenInfo(set);
 
                                 for (MapInfo difficulty : set.getMaps()) {
-                                    if (openDifficulties.contains(difficulty.getDifficultyName())) {
+                                    if (openDifficulties.remove(difficulty.getDifficultyName())) {
                                         openInfo.addInitialMap(difficulty);
                                     }
                                 }
 
-                                LoadingLayer loader = chooseMap(new MapSelect.MapOpenInfo(set), client);
+                                if (!openDifficulties.isEmpty()) {
+                                    editorLogger.info("Failed to find " + openDifficulties.size() + " difficulties");
+                                    openDifficulties.forEach(editorLogger::info);
+                                }
+
+                                LoadingLayer loader = chooseMap(openInfo, client);
 
                                 if (loader == null) {
                                     editorLogger.info("Failed to open set, already opening a map?");

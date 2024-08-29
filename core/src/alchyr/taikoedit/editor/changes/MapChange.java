@@ -5,7 +5,6 @@ import alchyr.networking.standard.Message;
 import alchyr.networking.standard.MessageSender;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.interfaces.KnownAmountSupplier;
 import alchyr.taikoedit.util.structures.BranchingStateQueue;
@@ -18,7 +17,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -46,6 +44,14 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
         registerMapChange(BreakRemoval.class, BreakRemoval::build);
         registerMapChange(DurationChange.class, DurationChange::build);
         registerMapChange(FinisherChange.class, FinisherChange::build);
+        registerMapChange(KiaiChange.class, KiaiChange::build);
+        registerMapChange(MapObjectChange.class, MapObjectChange::build);
+        registerMapChange(RepositionChange.class, RepositionChange::build);
+        registerMapChange(RimChange.class, RimChange::build);
+        registerMapChange(ValueModificationChange.class, ValueModificationChange::build);
+        registerMapChange(ValueSetChange.class, ValueSetChange::build);
+        registerMapChange(VolumeModificationChange.class, VolumeModificationChange::build);
+        registerMapChange(VolumeSetChange.class, VolumeSetChange::build);
     }
 
     //change on server -> sent to client -> client can send desync report if failure
@@ -180,9 +186,9 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
     }
 
     public abstract void undo();
-    public void cancel() {
+    /*public void cancel() {
         //After being undone, this method is called if a change is completely removed from changes.
-    }
+    }*/
 
     public abstract void perform();
 

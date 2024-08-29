@@ -5,7 +5,6 @@ import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.interfaces.KnownAmountSupplier;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
-import alchyr.taikoedit.util.structures.Pair;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -25,7 +24,7 @@ public class ValueSetChange extends MapChange {
 
     @Override
     public void send(DataOutputStream out) throws IOException {
-        writeObjects(out, modifiedObjects.size(), map.objects, modifiedObjects.singleValuesIterator());
+        writeObjects(out, modifiedObjects.count(), map.allPoints, modifiedObjects.singleValuesIterator());
         out.writeDouble(newValue);
     }
 
@@ -51,7 +50,14 @@ public class ValueSetChange extends MapChange {
 
     @Override
     public boolean isValid() {
-        return false;
+        for (Map.Entry<Long, ArrayList<MapObject>> stack : modifiedObjects.entrySet()) {
+            for (MapObject o : stack.getValue()) {
+                if (!map.allPoints.containsKeyedValue(stack.getKey(), o)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public ValueSetChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, double newValue)

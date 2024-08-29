@@ -963,17 +963,20 @@ public class EffectView extends MapView implements TextInputReceiver {
         offset = time - copyObjects.firstKey();
 
         MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
+        Map<MapObject, MapObject> copyToOriginal = new HashMap<>();
 
         for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
         {
             targetPos = entry.getKey() + offset;
             for (MapObject o : entry.getValue())
             {
-                placementCopy.add(o.shiftedCopy(targetPos));
+                MapObject cpy = o.shiftedCopy(targetPos);
+                placementCopy.add(cpy);
+                copyToOriginal.put(cpy, o);
             }
         }
 
-        this.map.registerAndPerformAddObjects("Paste Lines", placementCopy, replaceTest);
+        this.map.registerAndPerformAddObjects("Paste Lines", placementCopy, copyToOriginal, replaceTest);
     }
 
     @Override

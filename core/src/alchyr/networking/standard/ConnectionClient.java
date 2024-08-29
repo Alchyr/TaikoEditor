@@ -26,7 +26,7 @@ public class ConnectionClient implements AutoCloseable {
     public String failure = null;
 
     public boolean validated = false;
-    public int ID = -1;
+    public int ID = 0;
 
     private final Thread senderThread;
     private Thread receiverThread;
@@ -330,6 +330,13 @@ public class ConnectionClient implements AutoCloseable {
     }
 
     private Consumer<ConnectionClient> onDeath = null;
+    private void onDeath() {
+        Consumer<ConnectionClient> temp = onDeath;
+        onDeath = null;
+        if (temp != null) {
+            temp.accept(this);
+        }
+    }
     public void startStandardReceiver() {
         if (receiverThread == null || !receiverThread.isAlive()) {
             receiverThread = new Thread(() -> {
@@ -350,10 +357,11 @@ public class ConnectionClient implements AutoCloseable {
                     logger.error("Exception occurred while listening for messages", e);
                 }
                 finally {
-                    if (onDeath != null) {
-                        onDeath.accept(this);
-                    }
+                    onDeath();
                 }
+                try {
+                    close();
+                } catch (Exception ignored) { }
             });
             receiverThread.setName(socket.getInetAddress().toString() + " receiver");
             receiverThread.setDaemon(true);
@@ -399,6 +407,12 @@ public class ConnectionClient implements AutoCloseable {
             in.close();
         }
         catch (Exception ignored) { }
+        try {
+            onDeath();
+        }
+        catch (Exception e) {
+            logger.info("Exception occurred in ConnectionClient onDeath:", e);
+        }
     }
 
     public boolean isConnected() {

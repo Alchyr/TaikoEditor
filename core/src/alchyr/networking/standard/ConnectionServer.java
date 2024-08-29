@@ -20,7 +20,6 @@ import static alchyr.networking.NetworkUtil.getPublicIP;
 import static alchyr.networking.standard.Message.UTF;
 
 //requires port forwarding
-//maybe eventually add message confirmation+timeout, with resending if confirmation not received
 public class ConnectionServer implements AutoCloseable {
     private static final Logger logger = LogManager.getLogger("connection server");
 
@@ -28,12 +27,21 @@ public class ConnectionServer implements AutoCloseable {
     private final int clientLimit;
 
     private final String hostAddress;
+
     private final String pass;
 
     private final ConcurrentLinkedQueue<ConnectionClient> incomingClients = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<ConnectionClient> deadClients = new ConcurrentLinkedQueue<>();
     private final List<ConnectionClient> clients;
-    private int clientID = 0;
+    private int lowestUnusedID() {
+        //clients should always be in sorted order.
+        for (int i = 0; i < clients.size(); ++i) {
+            if (clients.get(i).ID != i) {
+                return i;
+            }
+        }
+        return clients.size();
+    }
 
     private Thread clientReceiver;
 
@@ -114,9 +122,10 @@ public class ConnectionServer implements AutoCloseable {
             ConnectionClient client = incomingClients.poll();
             if (clients.size() < clientLimit) {
                 logger.info("Added client: " + client);
-                clients.add(client);
-                client.ID = clientID++;
-                client.onDeath((c)->deadClients.add(c));
+                client.ID = lowestUnusedID();
+                GeneralUtils.insertSorted(clients, client, (c)->c.ID);
+
+                client.onDeath(deadClients::add);
                 client.startStandardReceiver();
                 client.send("success" + client.ID);
                 triggerEvent(EVENT_NEW_CLIENT, client);

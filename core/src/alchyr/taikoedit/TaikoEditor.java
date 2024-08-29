@@ -38,10 +38,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -336,9 +333,6 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
             return;
         }
 
-        if (paused)
-            return;
-
         //editorLogger.info(Gdx.graphics.getFramesPerSecond());
 
         layerLock.lock();
@@ -359,7 +353,7 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
         //assetMaster must be updated on main thread.
         //Give it more time to load if none/only loadinglayers are rendered.
         if (gameRender(renderLayer)) {
-            assetMaster.longUpdate(); //has to be updated on the main thread
+            assetMaster.longUpdate(paused ? 168 : 84); //has to be updated on the main thread
         }
         else {
             assetMaster.fastUpdate(); //has to be updated on the main thread
@@ -624,7 +618,7 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
                         editorLogger.info("Selected file isn't a taiko map or isn't in set?");
                     }
                 }
-                EditorLayer edit = new EditorLayer(null, set, initial); //no source, will close on exit
+                EditorLayer edit = new EditorLayer(null, set, Collections.singleton(initial)); //no source, will close on exit
                 ProgramLayer loader = edit.getLoader();
                 addLayer(new LoadingLayer()
                         .loadLists("base")

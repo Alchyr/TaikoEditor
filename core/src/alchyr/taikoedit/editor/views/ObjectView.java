@@ -734,6 +734,7 @@ public class ObjectView extends MapView {
         offset -= copyObjects.firstKey();
 
         MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
+        Map<MapObject, MapObject> copyToOriginal = new HashMap<>();
         TreeMap<Long, Snap> snaps = map.getAllSnaps();
         boolean resnap = !BindingGroup.alt();
 
@@ -753,11 +754,13 @@ public class ObjectView extends MapView {
 
             for (MapObject o : entry.getValue())
             {
-                placementCopy.add(o.shiftedCopy(targetPos));
+                MapObject cpy = o.shiftedCopy(targetPos);
+                placementCopy.add(cpy);
+                copyToOriginal.put(cpy, o);
             }
         }
 
-        this.map.registerAndPerformAddObjects("Paste Objects", placementCopy, replaceTest);
+        this.map.registerAndPerformAddObjects("Paste Objects", placementCopy, copyToOriginal, replaceTest);
     }
 
     @Override

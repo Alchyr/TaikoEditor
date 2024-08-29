@@ -37,7 +37,7 @@ public class EditorMessageHandler extends MessageHandler {
         switch (msg.identifier) {
             case Message.UTF:
                 String text = msg.contents[0].toString();
-                logger.info("Received message: [" + client + "]: " + text);
+                //logger.info("Received message: [" + client + "]: " + text);
                 switch (text.substring(0, 5)) {
                     case ConnectionServer.EVENT_SENT:
                         triggerEvent(ConnectionServer.EVENT_SENT, text.substring(5), client);

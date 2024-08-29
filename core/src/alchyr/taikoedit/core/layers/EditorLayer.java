@@ -5,6 +5,8 @@ import alchyr.networking.standard.ConnectionServer;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.KeyHoldObject;
 import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.sub.*;
 import alchyr.taikoedit.core.ui.Dropdown;
@@ -13,25 +15,22 @@ import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
 import alchyr.taikoedit.editor.changes.MapChange;
-import alchyr.taikoedit.editor.changes.ValueModificationChange;
-import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.editor.views.ObjectView;
-import alchyr.taikoedit.editor.views.MapView;
-import alchyr.taikoedit.management.BindingMaster;
-import alchyr.taikoedit.management.LocalizationMaster;
-import alchyr.taikoedit.management.MapMaster;
-import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.management.assets.FileHelper;
-import alchyr.taikoedit.management.localization.LocalizedText;
-import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.views.EffectView;
+import alchyr.taikoedit.editor.views.MapView;
+import alchyr.taikoedit.editor.views.ObjectView;
 import alchyr.taikoedit.editor.views.ViewSet;
-import alchyr.taikoedit.core.input.KeyHoldObject;
+import alchyr.taikoedit.management.BindingMaster;
+import alchyr.taikoedit.management.LocalizationMaster;
+import alchyr.taikoedit.management.MapMaster;
+import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.management.assets.FileHelper;
+import alchyr.taikoedit.management.assets.loaders.OsuBackgroundLoader;
+import alchyr.taikoedit.management.localization.LocalizedText;
 import alchyr.taikoedit.util.FileDropHandler;
 import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
@@ -56,8 +55,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.DecimalFormat;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 
@@ -73,7 +72,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     }
 
     //Return to menu
-    private ProgramLayer src;
+    private final ProgramLayer src;
 
     //Input
     public static boolean finisherLock = false;
@@ -152,11 +151,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private boolean verticalScrollEnabled = false;
     private int scrollPos = 0, maxScrollPosition = 0;
 
-    public EditorLayer(ProgramLayer src, Mapset set, MapInfo... initial)
+    public EditorLayer(ProgramLayer src, Mapset set, Collection<MapInfo> initial)
     {
         this.src = src;
         this.set = set;
-        Collections.addAll(this.initial, initial);
+        this.initial.addAll(initial);
 
         processor = new EditorProcessor(this);
         backgroundImg = set.getBackground();
@@ -837,10 +836,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
     private void loadBeatmap()
     {
+        editorLogger.info("Loading mapset. " + initial.size() + " difficulties initially open.");
         if (!initial.isEmpty()) {
-            for (EditorBeatmap map : activeMaps) {
-                initial.removeIf(map::is);
-            }
             for (MapInfo toOpen : initial) {
                 prepSingleDiff(toOpen, initial.size() == 1);
             }
@@ -870,16 +867,30 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     }
 
     private void prepSingleDiff(MapInfo info, boolean toTop) {
-        EditorBeatmap newMap = new EditorBeatmap(set, info);
-        if (toTop) {
-            addMap(newMap, 0);
+        EditorBeatmap mapToPrep = null;
+        for (EditorBeatmap map : activeMaps) {
+            if (map.is(info)) {
+                mapToPrep = map;
+                break;
+            }
         }
-        else {
-            addMap(newMap);
+        if (mapToPrep == null) {
+            mapToPrep = new EditorBeatmap(set, info);
+
+            if (toTop) {
+                addMap(mapToPrep, 0);
+            }
+            else {
+                addMap(mapToPrep);
+            }
         }
 
-        addObjectView(newMap, false);
-        addEffectView(newMap, false);
+        ViewSet view = getViewSet(mapToPrep);
+
+        if (view == null) {
+            addObjectView(mapToPrep, false);
+            addEffectView(mapToPrep, false);
+        }
     }
 
     public List<EditorBeatmap> getActiveMaps() {
@@ -1566,9 +1577,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         clean();
 
         //Open text prompt for port, then open server on that port
-        TaikoEditor.addLayer(new ServerSetupLayer(30000, (port)->{
+        TaikoEditor.addLayer(new ServerSetupLayer(30000, (port, clientLimit)->{
             try {
-                server = new ConnectionServer(port, 4);
+                server = new ConnectionServer(port, clientLimit);
 
                 networkingButton.setTextures(assetMaster.get("ui:connecth"), assetMaster.get("ui:connecth"));
                 networkingButton.setHovered(()->{ hoverText.setText("Server Open"); });
@@ -1683,10 +1694,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 server.registerEventTrigger("EDITORSTATE", (params)->{
                     ConnectionClient client = (ConnectionClient) params[0];
 
+                    client.send(String.format(Locale.US,"POSN%.3f", currentPos));
+
                     for (EditorBeatmap map : activeMaps) {
-                        String mapKey = GeneralUtils.generateCode(4);
-                        client.send("DIFF" + mapKey + map.getName());
-                        client.send("POSN" + Math.round(currentPos));
+                        if (mapViews.get(map) != null) {
+                            String mapKey = GeneralUtils.generateCode(4);
+                            client.send("DIFF" + mapKey + map.getName());
+                        }
 
                         //ok you know what frick syncing undo/redo queue that's too much of a pain
                     }

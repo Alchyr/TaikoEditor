@@ -1,7 +1,6 @@
 package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.interfaces.KnownAmountSupplier;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
@@ -24,7 +23,7 @@ public class ValueModificationChange extends MapChange {
 
     @Override
     public void send(DataOutputStream out) throws IOException {
-        writeObjects(out, modifiedObjects.size(), map.objects, modifiedObjects.singleValuesIterator());
+        writeObjects(out, modifiedObjects.count(), map.allPoints, modifiedObjects.singleValuesIterator());
         for (Map.Entry<MapObject, Double> value : originalValues.entrySet()) {
             out.writeInt(value.getKey().key);
             out.writeDouble(value.getValue());
@@ -60,7 +59,14 @@ public class ValueModificationChange extends MapChange {
 
     @Override
     public boolean isValid() {
-        return false;
+        for (Map.Entry<Long, ArrayList<MapObject>> stack : modifiedObjects.entrySet()) {
+            for (MapObject o : stack.getValue()) {
+                if (!map.allPoints.containsKeyedValue(stack.getKey(), o)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public ValueModificationChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, Map<MapObject, Double> newValueMap)

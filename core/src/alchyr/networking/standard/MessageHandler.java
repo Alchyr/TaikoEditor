@@ -1,8 +1,12 @@
 package alchyr.networking.standard;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.function.Function;
 
 public abstract class MessageHandler {
+    private static final Logger messageHandlerLogger = LogManager.getLogger();
     public boolean alive = true;
 
     public final ConnectionClient client;
@@ -37,7 +41,12 @@ public abstract class MessageHandler {
         }
         while (!client.receivedMessages.isEmpty()) {
             Message msg = client.receivedMessages.poll();
-            handleMessage(msg);
+            try {
+                handleMessage(msg);
+            }
+            catch (Exception e) {
+                messageHandlerLogger.error("Exception occurred while receiving message:", e);
+            }
 
             if (!alive) return;
         }

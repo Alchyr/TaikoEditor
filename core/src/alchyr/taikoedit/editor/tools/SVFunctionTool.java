@@ -512,7 +512,7 @@ public class SVFunctionTool extends EditorTool {
                     lastPos = pos;
                 }
 
-                map.registerAndPerformAddObjects("SV Function", sv, previewView.replaceTest);
+                map.registerAndPerformAddObjects("SV Function", sv, null, previewView.replaceTest);
             }
         }
     }
