@@ -1,6 +1,5 @@
 package alchyr.networking.standard;
 
-import alchyr.taikoedit.util.GeneralUtils;
 import com.badlogic.gdx.files.FileHandle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -95,7 +94,6 @@ public class ConnectionClient implements AutoCloseable {
 
                     while ((bytes = fileReader.read(buffer)) != -1) {
                         out.write(buffer, 0, bytes);
-                        out.write(buffer, 0, bytes);
                         sent += bytes;
                     }
                     out.flush();
@@ -128,31 +126,23 @@ public class ConnectionClient implements AutoCloseable {
 
             int bytes;
             List<byte[]> fileData = new ArrayList<>();
-            byte[] nextBuffer = new byte[4 * 1024];
 
             while (fileLength > 0) {
-                byte[] buffer = nextBuffer;
-
+                byte[] buffer = new byte[4 * 1024];
                 bytes = in.read(buffer, 0, (int)Math.min(buffer.length, fileLength));
                 if (bytes == -1) {
                     break;
                 }
 
-                nextBuffer = new byte[4 * 1024];
-                bytes = in.read(nextBuffer, 0, (int)Math.min(nextBuffer.length, fileLength));
-                if (bytes == -1) {
-                    break;
-                }
-
-                if (!GeneralUtils.arraySectionEquals(buffer, nextBuffer, 0, bytes)) {
+                /*if (!GeneralUtils.arraySectionEquals(buffer, nextBuffer, 0, bytes)) {
                     logger.warn("Data confirmation failed, error occurred in transfer");
                     return new Message(FILE, pass, "Data lost in transfer", null);
-                }
+                }*/
 
                 if (bytes < buffer.length) {
                     byte[] temp = new byte[bytes];
                     System.arraycopy(buffer, 0, temp, 0, bytes);
-                    nextBuffer = buffer;
+                    //nextBuffer = buffer;
                     buffer = temp;
                 }
 
