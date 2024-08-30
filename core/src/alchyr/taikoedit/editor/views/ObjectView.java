@@ -228,14 +228,7 @@ public class ObjectView extends MapView {
     @Override
     public void selectAll() {
         clearSelection();
-
-        selectedObjects = new MapObjectTreeMap<>();
-
-        selectedObjects.addAll(map.objects);
-
-        for (ArrayList<? extends MapObject> stuff : selectedObjects.values())
-            for (MapObject o : stuff)
-                o.selected = true;
+        selectObjects(map.objects);
     }
 
     @Override
@@ -258,6 +251,8 @@ public class ObjectView extends MapView {
     public String getSelectionString() {
         if (hasSelection())
         {
+            MapObjectTreeMap<MapObject> selectedObjects = getSelection();
+
             StringBuilder sb = new StringBuilder(new EditorTime(selectedObjects.firstKey()).toString()).append(" (");
 
             int comboCount = 0;
@@ -356,36 +351,13 @@ public class ObjectView extends MapView {
         if (startTime == endTime)
             return;
 
-        MapObjectTreeMap<MapObject> newSelection;
-
-        if (selectedObjects == null)
-        {
-            newSelection = new MapObjectTreeMap<>();
-            if (startTime > endTime)
-                newSelection.addAll(map.getSubMap(endTime, startTime));
-            else
-                newSelection.addAll(map.getSubMap(startTime, endTime));
-
-            selectedObjects = newSelection;
-            for (ArrayList<MapObject> stuff : selectedObjects.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
+        MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
+        if (startTime > endTime)
+            newSelection.addAll(map.getSubMap(endTime, startTime));
         else
-        {
-            NavigableMap<Long, ArrayList<HitObject>> newSelected;
+            newSelection.addAll(map.getSubMap(startTime, endTime));
 
-            if (startTime > endTime)
-                newSelected = map.getSubMap(endTime, startTime);
-            else
-                newSelected =  map.getSubMap(startTime, endTime);
-
-            selectedObjects.addAllUnique(newSelected);
-
-            for (ArrayList<? extends MapObject> stuff : newSelected.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
+        selectObjects(newSelection);
     }
 
     @Override
@@ -687,7 +659,7 @@ public class ObjectView extends MapView {
 
     private void reposition() {
         if (hasSelection()) {
-            map.registerChange(new RepositionChange(map, selectedObjects).preDo());
+            map.registerChange(new RepositionChange(map, getSelection(true)).preDo());
             parent.showText("Repositioned selected objects.");
         }
         else {
@@ -705,19 +677,6 @@ public class ObjectView extends MapView {
             breaks = true;
             parent.showText("Breaks shown.");
         }
-    }
-
-    @Override
-    public void updateSelectionPositions() {
-        MapObjectTreeMap<MapObject> selected = getSelection();
-        map.objects.removeAll(selected);
-        map.objects.addAll(selected);
-        refreshSelection();
-    }
-
-    @Override
-    public void deleteObject(MapObject o) {
-        this.map.registerAndPerformDelete(o);
     }
 
     @Override
@@ -769,7 +728,6 @@ public class ObjectView extends MapView {
             return;
 
         this.map.registerReverse(true, getSelection());
-        refreshSelection();
     }
 
     @Override
@@ -783,11 +741,9 @@ public class ObjectView extends MapView {
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null && totalMovement != 0)
+        if (hasSelection() && totalMovement != 0)
         {
-            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
-            movementCopy.addAll(getSelection()); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(getSelection(true), totalMovement);
         }
     }
 

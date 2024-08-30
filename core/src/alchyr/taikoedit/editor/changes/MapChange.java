@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.changes;
 
 import alchyr.networking.standard.ConnectionClient;
+import alchyr.networking.standard.ConnectionServer;
 import alchyr.networking.standard.Message;
 import alchyr.networking.standard.MessageSender;
 import alchyr.taikoedit.core.layers.EditorLayer;
@@ -26,6 +27,7 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
     protected static final Logger logger = LogManager.getLogger("MapChange");
     public static final int MAP_CHANGE = 0x11;
     public static final int MAP_CHANGE_DENIAL = 0x12;
+    public static final int MAP_STATE_CHANGE = 0x13;
 
     private static final Map<Class<? extends MapChange>, Integer> mapChangeTypeIDs = new HashMap<>();
     private static final Map<Integer, ChangeBuilderBuilder> mapChangeBuilderBuilders = new HashMap<>();
@@ -84,7 +86,13 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
 
 
     public static void sendMapChange(ConnectionClient client, int stateKey, MapChange change) {
+        logger.info("Sending map change: " + change.name);
         client.send(MAP_CHANGE, stateKey, change);
+    }
+
+    public static void sendMapStateChange(ConnectionClient client, EditorBeatmap map, int oldStateKey, int newStateKey) {
+        logger.info("Sending map state change");
+        client.send(MAP_STATE_CHANGE, map, oldStateKey, newStateKey);
     }
 
     public static void registerEditorForChanges(EditorLayer editor) {
@@ -128,7 +136,7 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
                     if (map == null) {
                         logger.warn("Received " + nameKey + " for unknown difficulty: " + mapName);
                         //null change + change index and branch = failed change
-                        return new Message(MAP_CHANGE, null, stateKey);
+                        return new Message(Message.UTF, ConnectionServer.EVENT_SENT + "FAIL|Desync: Change made on unknown difficulty");
                     }
 
                     ChangeBuilder changeBuilder = new ChangeBuilder(builder.buildBuilder(map, in, nameKey), map, stateKey);
@@ -139,6 +147,8 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
                 registerMessageType(MAP_CHANGE_DENIAL, (params)->new MessageSender(params) {
                     @Override
                     public void send(DataOutputStream out, Object[] params) throws IOException {
+                        out.write(MAP_CHANGE_DENIAL); //message type
+
                         EditorBeatmap map = (EditorBeatmap) params[0];
 
                         out.writeUTF(map.getName());
@@ -163,14 +173,51 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
                     if (map == null) {
                         logger.warn("Received rejected change for unknown difficulty: " + mapName);
                         //null change + changeID in second index means rejected change
-                        return new Message(MAP_CHANGE_DENIAL, null, changeIndex, changeBranch);
+                        return new Message(Message.UTF, ConnectionServer.EVENT_SENT + "FAIL|Desync: Change made on unknown difficulty");
                     }
                     return new Message(MAP_CHANGE_DENIAL, map, changeIndex, changeBranch);
+                });
+
+        ConnectionClient
+                .registerMessageType(MAP_STATE_CHANGE, (params)->new MessageSender(params) {
+                    @Override
+                    public void send(DataOutputStream out, Object[] params) throws IOException {
+                        out.write(MAP_STATE_CHANGE); //message type
+
+                        EditorBeatmap map = (EditorBeatmap) params[0];
+
+                        out.writeUTF(map.getName());
+                        out.writeInt((int) params[1]); //Before stateKey
+
+                        out.writeInt((int) params[2]); //Target stateKey
+
+                        out.flush();
+                    }
+                },
+                (in)->{
+                    String mapName = in.readUTF();
+
+                    int stateKey = in.readInt();
+                    int newStateKey = in.readInt();
+
+                    EditorBeatmap map = null;
+                    for (EditorBeatmap maybeMap : editor.getActiveMaps()) {
+                        if (maybeMap.getName().equals(mapName)) {
+                            map = maybeMap;
+                            break;
+                        }
+                    }
+                    if (map == null) {
+                        logger.warn("Received state change for unknown difficulty: " + mapName);
+                        //null change + changeID in second index means rejected change
+                        return new Message(Message.UTF, ConnectionServer.EVENT_SENT + "FAIL|Desync: Change made on unknown difficulty");
+                    }
+                    return new Message(MAP_STATE_CHANGE, map, stateKey, newStateKey);
                 });
     }
 
     public final EditorBeatmap map;
-    public boolean invalidateSelection = false; //Should be true for changes that would cause the PositionalObjectMap for selected objects to have incorrect positions
+    public boolean invalidateSelection = false; //Should be true for changes that would cause the PositionalObjectMap for selected objects to have incorrect positions NO LONGER USED
 
     private final String name;
 
@@ -207,6 +254,9 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
      */
     public abstract boolean isValid();
 
+    public MapChange reconstruct() {
+        return this;
+    }
 
     public static ChangeType getChangeType(MapObject o) {
         if (o instanceof TimingPoint) {
@@ -264,9 +314,16 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
         }
         else {
             out.write(OBJ_EXCLUDE);
-            out.writeInt(count);
 
-            List<MapObject> toWrite = new ArrayList<>();
+            Set<Integer> toWrite = new HashSet<>();
+            sourceMap.forEachObject((obj)->toWrite.add(obj.key)); //get all objects from source map
+
+            while (mapObjects.hasNext()) { //remove all objects that should be affected
+                MapObject obj = mapObjects.next();
+                toWrite.remove(obj.key);
+            }
+
+            out.writeInt(toWrite.size()); //number of objects that are excluded
 
             if (!sourceMap.isEmpty() && sourceMap.firstEntry().getValue().get(0) instanceof TimingPoint) {
                 out.write(OBJ_TIMING);
@@ -275,15 +332,8 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
                 out.write(OBJ_GAME);
             }
 
-            sourceMap.forEachObject(toWrite::add);
-
-            while (mapObjects.hasNext()) {
-                MapObject obj = mapObjects.next();
-                toWrite.remove(obj);
-            }
-
-            for (MapObject obj : toWrite) {
-                out.writeInt(obj.key);
+            for (Integer key : toWrite) {
+                out.writeInt(key);
             }
         }
     }
@@ -330,11 +380,11 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
                 for (int key : keys) {
                     MapObject obj = map.mapObjectMap.get(key);
                     if (obj == null) {
-                        editorLogger.warn("Received invalid map object");
+                        editorLogger.warn("Received invalid map object key");
                         return null;
                     }
                     if (!mapObjects.remove(obj)) {
-                        editorLogger.warn("Received invalid map object");
+                        editorLogger.warn("Received invalid map object (not currently in map)");
                         return null;
                     }
                 }

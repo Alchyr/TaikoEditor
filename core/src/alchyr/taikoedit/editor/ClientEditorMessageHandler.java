@@ -3,7 +3,7 @@ package alchyr.taikoedit.editor;
 import alchyr.networking.standard.ConnectionClient;
 import alchyr.networking.standard.ConnectionServer;
 import alchyr.networking.standard.Message;
-import alchyr.networking.standard.MessageHandler;
+import alchyr.networking.standard.ClientMessageHandler;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.WaitLayer;
@@ -18,15 +18,14 @@ import java.util.Map;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
-//Used by clients exclusively
-public class EditorMessageHandler extends MessageHandler {
+public class ClientEditorMessageHandler extends ClientMessageHandler {
     private static final Logger logger = LogManager.getLogger();
 
     private final EditorLayer editor;
 
     private final Map<Integer, BooleanWrapper> waitBooleans = new HashMap<>();
 
-    public EditorMessageHandler(EditorLayer editorLayer, ConnectionClient client) {
+    public ClientEditorMessageHandler(EditorLayer editorLayer, ConnectionClient client) {
         super(client);
 
         this.editor = editorLayer;
@@ -56,30 +55,30 @@ public class EditorMessageHandler extends MessageHandler {
             case MapChange.MAP_CHANGE_DENIAL:
                 handleDenial(msg);
                 break;
+            case MapChange.MAP_STATE_CHANGE:
+                handleStateChange(msg);
+                break;
         }
     }
 
     private void handleMapChange(Message msg) {
         MapChange.ChangeBuilder changeBuilder = (MapChange.ChangeBuilder) msg.contents[0];
-        if (msg.contents.length > 1 && msg.contents[1] == null) {
-            editorLogger.warn("Received invalid map change. Sending denial.");
-            //clients should never do this? Change?
-            //tbh really need to change undo/redo thing to a tree that keeps track of "old" branches
-            //then messages can just include tree current "branch" number along with change number
-            if (msg.contents.length >= 4) {
-                client.send(MapChange.MAP_CHANGE_DENIAL, changeBuilder.map, msg.contents[2], msg.contents[3]);
-            }
-            return;
-        }
-
-        changeBuilder.map.receiveNetworkChange(changeBuilder);
+        changeBuilder.map.receiveNetworkChange(client, changeBuilder);
     }
 
     private void handleDenial(Message msg) {
-        EditorBeatmap map = (EditorBeatmap) msg.contents[0];
+        editorLogger.warn("DENIALS CURRENTLY UNHANDLED");
+        /*EditorBeatmap map = (EditorBeatmap) msg.contents[0];
         int changeIndex = (int) msg.contents[1];
         int changeBranch = (int) msg.contents[2];
-        map.cancelChange(changeIndex, changeBranch);
+        map.cancelChange(changeIndex, changeBranch);*/
+    }
+
+    private void handleStateChange(Message msg) {
+        EditorBeatmap map = (EditorBeatmap) msg.contents[0];
+        int stateKey = (int) msg.contents[1];
+        int newStateKey = (int) msg.contents[2];
+        map.networkChangeState(client, stateKey, newStateKey);
     }
 
     private void triggerEvent(String key, Object... params) {
@@ -115,6 +114,11 @@ public class EditorMessageHandler extends MessageHandler {
                             map.clearState();
                             map.keyMapObjects();
                         }
+                    case "FAIL":
+                        String cause = "DESYNC";
+                        if (splitParams.length >= 2) cause = splitParams[1];
+                        client.fail(cause);
+                        break;
                 }
                 break;
             case ConnectionServer.EVENT_FILE_REQ:

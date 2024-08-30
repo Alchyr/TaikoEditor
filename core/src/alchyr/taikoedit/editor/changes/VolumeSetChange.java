@@ -17,13 +17,13 @@ import java.util.function.Supplier;
 public class VolumeSetChange extends MapChange {
     private final MapObjectTreeMap<MapObject> modifiedObjects;
     private final HashMap<MapObject, Integer> originalValues;
-    private final int newValue;
+    private final int newVolume;
 
 
     @Override
     public void send(DataOutputStream out) throws IOException {
         writeObjects(out, modifiedObjects.count(), map.objects, modifiedObjects.singleValuesIterator());
-        out.writeInt(newValue);
+        out.writeInt(newVolume);
     }
 
     public static Supplier<MapChange> build(EditorBeatmap map, DataInputStream in, String nameKey) throws IOException {
@@ -58,14 +58,14 @@ public class VolumeSetChange extends MapChange {
         return true;
     }
 
-    public VolumeSetChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, int newValue)
+    public VolumeSetChange(EditorBeatmap map, MapObjectTreeMap<MapObject> modifiedObjects, int newVolume)
     {
         super(map, "Set Volume");
 
         this.modifiedObjects = modifiedObjects;
 
         this.originalValues = new HashMap<>();
-        this.newValue = newValue;
+        this.newVolume = newVolume;
 
         for (ArrayList<MapObject> objects : modifiedObjects.values()) {
             for (MapObject o : objects) {
@@ -89,9 +89,14 @@ public class VolumeSetChange extends MapChange {
         for (Map.Entry<Long, ArrayList<MapObject>> e : modifiedObjects.entrySet())
         {
             for (MapObject o : e.getValue()) {
-                o.setVolume(newValue);
+                o.setVolume(newVolume);
             }
         }
         map.updateLines(modifiedObjects.entrySet(), null);
+    }
+
+    @Override
+    public MapChange reconstruct() {
+        return new VolumeSetChange(map, modifiedObjects, newVolume);
     }
 }

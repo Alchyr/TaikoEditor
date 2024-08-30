@@ -3,7 +3,7 @@ package alchyr.taikoedit.core.layers;
 import alchyr.networking.standard.ConnectionClient;
 import alchyr.networking.standard.ConnectionServer;
 import alchyr.networking.standard.Message;
-import alchyr.networking.standard.MessageHandler;
+import alchyr.networking.standard.ClientMessageHandler;
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.InputLayer;
 import alchyr.taikoedit.core.ProgramLayer;
@@ -369,7 +369,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
                 test.startStandardReceiver();
 
-                MessageHandler joinHandler = joinHandler(test, waiter);
+                ClientMessageHandler joinHandler = joinHandler(test, waiter);
 
                 updaters.add((e)->{
                     joinHandler.update(e);
@@ -393,8 +393,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         TaikoEditor.addLayer(waiter);
     }
 
-    private MessageHandler joinHandler(ConnectionClient client, WaitLayer waiter) {
-        return new MessageHandler(client) {
+    private ClientMessageHandler joinHandler(ConnectionClient client, WaitLayer waiter) {
+        return new ClientMessageHandler(client) {
             String mapper = null, artist = null, title = null;
 
             @Override
@@ -458,7 +458,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         client.send(ConnectionServer.EVENT_FILE_REQ + audioFileKey + "AUDIO");
         waiter.text = "Waiting for map audio file...";
 
-        MessageHandler audioReceiver = new MessageHandler(client)
+        ClientMessageHandler audioReceiver = new ClientMessageHandler(client)
         {
             @Override
             public void handleMessage(Message msg) {
@@ -550,7 +550,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         client.send(ConnectionServer.EVENT_FILE_REQ + mapFilesKey + "MAPS");
         waiter.text = "Waiting for map difficulties...";
 
-        MessageHandler mapReceiver = new MessageHandler(client)
+        ClientMessageHandler mapReceiver = new ClientMessageHandler(client)
         {
             @Override
             public void handleMessage(Message msg) {
@@ -638,7 +638,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         client.send(ConnectionServer.EVENT_SENT + "EDITORSTATE");
         waiter.text = "Waiting for editor state...";
 
-        MessageHandler editorStateReceiver = new MessageHandler(client)
+        ClientMessageHandler editorStateReceiver = new ClientMessageHandler(client)
         {
             //editor state variable holder thing
             final Set<String> openDifficulties = new HashSet<>();

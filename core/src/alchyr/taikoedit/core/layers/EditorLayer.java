@@ -103,7 +103,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private final List<Dropdown.DropdownElement<String>> fileOptionsList = new ArrayList<>();
     private final List<Dropdown.DropdownElement<String>> baseSelectionList = new ArrayList<>();
     private final List<Dropdown.DropdownElement<String>> svDropdownList = new ArrayList<>();
-    //TODO: More lists based on selection (primary view type)
+    //TODO: More lists based on selection (primary view type)?
 
     private List<ImageButton> buttons = new ArrayList<>();
     private ImageButton networkingButton;
@@ -124,7 +124,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     //Networking
     private ConnectionServer server = null;
     private ConnectionClient client = null;
-    private EditorMessageHandler editorMessageHandler = null;
+    private ClientEditorMessageHandler clientEditorMessageHandler = null;
 
     //Data
     private LocalizedText keyNames;
@@ -322,8 +322,9 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         return primaryView != null && primaryView.map.canUndo();
                     })
                     .setOnClick((e) -> {
-                        if (primaryView != null)
+                        if (primaryView != null) {
                             primaryView.map.undo();
+                        }
                         return true;
                     })
             );
@@ -468,7 +469,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         processor.bind();
 
         if (client != null) {
-            editorMessageHandler = new EditorMessageHandler(this, client);
+            clientEditorMessageHandler = new ClientEditorMessageHandler(this, client);
         }
     }
 
@@ -479,7 +480,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (exitDelay > 0)
             exitDelay -= elapsed;
 
-        if (addLater.size() > 0)
+        if (!addLater.isEmpty())
         {
             for (MapView m : addLater)
             {
@@ -547,8 +548,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 networkingButton.setTextures(assetMaster.get("ui:connect"), assetMaster.get("ui:connecth"));
                 networkingButton.setHovered(()->hoverText.setText("Start Hosting")).setClick(this::openConnect);
             }
-            else if (editorMessageHandler != null) {
-                editorMessageHandler.update(elapsed);
+            else if (clientEditorMessageHandler != null) {
+                clientEditorMessageHandler.update(elapsed);
             }
         }
     }
@@ -668,7 +669,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         clean();
 
         List<EditorBeatmap> dirtyMaps = new ArrayList<>();
-        for (EditorBeatmap map : mapViews.keySet()) {
+        for (EditorBeatmap map : activeMaps) {
             if (map.dirty) {
                 dirtyMaps.add(map);
             }
@@ -1707,6 +1708,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                     client.send("DONE");
                     return false;
                 });
+
+                server.setMessageHandler(new ServerEditorMessageHandler());
             }
             catch (Exception e) {
                 editorLogger.error("Failed to start ConnectionServer", e);
@@ -1854,16 +1857,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 if (sourceLayer.primaryView != null)
                 {
                     releaseMouse(true);
-                    if (sourceLayer.primaryView.map.redo())
-                        sourceLayer.primaryView.refreshSelection();
+                    sourceLayer.primaryView.map.redo();
                 }
             });
             bindings.bind("Undo", ()->{
                 if (sourceLayer.primaryView != null)
                 {
                     releaseMouse(true);
-                    if (sourceLayer.primaryView.map.undo())
-                        sourceLayer.primaryView.refreshSelection();
+                    sourceLayer.primaryView.map.undo();
                 }
             });
             bindings.bind("Delete", ()->{

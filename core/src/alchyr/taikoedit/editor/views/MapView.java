@@ -1,15 +1,14 @@
 package alchyr.taikoedit.editor.views;
 
 import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.changes.MapObjectChange;
-import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -29,7 +28,6 @@ public abstract class MapView {
     public enum ViewType {
         OBJECT_VIEW,
         GIMMICK_VIEW,
-        TIMING_VIEW,
         EFFECT_VIEW,
         GAMEPLAY_VIEW,
         DIFFICULTY_VIEW,
@@ -99,7 +97,10 @@ public abstract class MapView {
     public BiFunction<MapObject, MapObject, Boolean> replaceTest = defaultReplace;
 
     //Selection
-    protected MapObjectTreeMap<MapObject> selectedObjects;
+    private MapObjectTreeMap<MapObject> selectedObjects;
+    private MapObjectTreeMap<MapObject> lastReturnedSelection;
+    private int lastSelectionMapState = Integer.MIN_VALUE;
+
 
     private final MapObjectTreeMap<MapObject> additionalDisplayObjects = new MapObjectTreeMap<>();
 
@@ -435,13 +436,12 @@ public abstract class MapView {
         return false;
     }
 
-    //specifically updates positions in the EditorBeatmap's lists.
-    //Should be called with objects in their positions in the map *before* being moved, while the positional property of the objects themselves have been adjusted.
-    public abstract void updateSelectionPositions();
     public void updateVerticalDrag(MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double totalVerticalOffset) {
 
     }
-    public abstract void deleteObject(MapObject o);
+    public void deleteObject(MapObject o) {
+        this.map.registerAndPerformDelete(o);
+    }
     public abstract void deleteSelection();
     public abstract void registerMove(long totalMovement); //Registers a movement of selected objects with underlying map for undo/redo support. May be called with 0 movement.
     public void registerValueChange(HashMap<MapObject, MapObject> copyMap) { //Registers a modification of currently selected objects with underlying map for undo/redo support
@@ -453,13 +453,49 @@ public abstract class MapView {
     //Selection logic
     public abstract NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end);
     public MapObjectTreeMap<MapObject> getSelection() {
-        return selectedObjects;
+        return getSelection(false);
     } //Selected objects should be actual objects that will be modified
+    public MapObjectTreeMap<MapObject> getSelection(boolean forceNewMap) {
+        if (selectedObjects == null) {
+            return lastReturnedSelection = null;
+        }
+        if (forceNewMap || lastReturnedSelection == null || lastSelectionMapState != map.getStateKey()) {
+            lastReturnedSelection = new MapObjectTreeMap<>();
+            lastSelectionMapState = map.getStateKey();
+
+            MapObjectTreeMap<? extends MapObject> baseMap = null;
+            switch (type) {
+                case OBJECT_VIEW:
+                case GAMEPLAY_VIEW:
+                case GIMMICK_VIEW:
+                    baseMap = map.objects;
+                    break;
+                case EFFECT_VIEW:
+                    baseMap = map.allPoints;
+                    break;
+                case CHANGELOG_VIEW:
+                case DIFFICULTY_VIEW:
+                    return lastReturnedSelection = null;
+            }
+
+            for (ArrayList<MapObject> stack : selectedObjects.values()) {
+                for (MapObject obj : stack) {
+                    if (baseMap.containsKeyedValue(obj.getPos(), obj)) {
+                        lastReturnedSelection.add(obj);
+                    }
+                }
+            }
+        }
+        lastReturnedSelection.removeIf((obj)->!obj.selected); //selection can be messed with by a different view with same object type
+        return lastReturnedSelection;
+    }
     public abstract String getSelectionString();
 
     public boolean hasSelection()
     {
-        return selectedObjects != null && !selectedObjects.isEmpty();
+        if (selectedObjects == null || selectedObjects.isEmpty()) return false;
+        MapObjectTreeMap<MapObject> selected = getSelection();
+        return selected != null && !selected.isEmpty();
     }
 
     public void clearSelection()
@@ -473,16 +509,7 @@ public abstract class MapView {
             }
             selectedObjects = null;
         }
-    }
-    public void refreshSelection()
-    {
-        if (!hasSelection())
-            return;
-
-        MapObjectTreeMap<MapObject> selectionCopy = new MapObjectTreeMap<>();
-        selectionCopy.addAll(selectedObjects);
-
-        this.selectedObjects = selectionCopy;
+        lastReturnedSelection = null;
     }
 
     public abstract void selectAll();
@@ -501,11 +528,22 @@ public abstract class MapView {
     public abstract boolean clickedEnd(MapObject o, float x); //assuming this object was returned by clickObject, y should already be confirmed to be in range.
     public void select(MapObject p) //Add a single object to selection.
     {
-        p.selected = true;
         if (selectedObjects == null)
             selectedObjects = new MapObjectTreeMap<>();
 
         selectedObjects.add(p);
+        p.selected = true;
+
+        lastReturnedSelection = null;
+    }
+    public void selectObjects(MapObjectTreeMap<? extends MapObject> toSelect) {
+        if (selectedObjects == null) {
+            selectedObjects = new MapObjectTreeMap<>();
+        }
+        selectedObjects.addAllUnique(toSelect);
+        toSelect.forEachObject((obj)->obj.selected = true);
+
+        lastReturnedSelection = null;
     }
     public void deselect(MapObject p)
     {
@@ -514,6 +552,8 @@ public abstract class MapView {
         {
             selectedObjects.removeObject(p);
         }
+
+        lastReturnedSelection = null;
     }
 
     public void resnap()
@@ -525,13 +565,14 @@ public abstract class MapView {
         TreeMap<Long, Snap> allSnaps = map.getCurrentSnaps();
         int changed = 0;
 
-        MapObjectTreeMap<MapObject> tempSelection = getSelection();
-        MapObjectTreeMap<MapObject> oldPositions = new MapObjectTreeMap<>(tempSelection);
+        MapObjectTreeMap<MapObject> originalPositions = getSelection(true);
+        MapObjectTreeMap<MapObject> newPositions = new MapObjectTreeMap<>();
 
-        for (Map.Entry<Long, ArrayList<MapObject>> objs : tempSelection.entrySet())
+        for (Map.Entry<Long, ArrayList<MapObject>> objs : originalPositions.entrySet())
         {
             if (allSnaps.containsKey(objs.getKey()))
             {
+                newPositions.put(objs.getKey(), objs.getValue());
                 continue;
             }
 
@@ -566,16 +607,15 @@ public abstract class MapView {
 
             if (newSnap != objs.getKey())
             {
-                for (MapObject h : objs.getValue())
-                {
-                    h.setPos(newSnap);
-                }
+                newPositions.put(newSnap, objs.getValue());
                 changed += objs.getValue().size();
+            }
+            else {
+                newPositions.put(objs.getKey(), objs.getValue());
             }
         }
 
-        updateSelectionPositions();
-        map.registerChange(new MapObjectChange(map, "Resnap", oldPositions, new MapObjectTreeMap<>(getSelection())));
+        map.registerChange(new MapObjectChange(map, "Resnap", originalPositions, newPositions).preDo());
 
         parent.showText("Resnapped " + changed + " objects.");
 

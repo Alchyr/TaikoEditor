@@ -152,7 +152,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         if (!hasSelection())
             return true;
 
-        for (ArrayList<MapObject> stack : selectedObjects.values()) {
+        for (ArrayList<MapObject> stack : getSelection().values()) {
             for (MapObject o : stack) {
                 if (o instanceof TimingPoint && ((TimingPoint) o).uninherited)
                     return false;
@@ -248,7 +248,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         else if (hasSelection()) {
             MapObjectTreeMap<MapObject> selection = getSelection();
             if (selection.count() == 1) {
-                ArrayList<MapObject> s = selectedObjects.firstEntry().getValue();
+                ArrayList<MapObject> s = selection.firstEntry().getValue();
 
                 if (!s.isEmpty()) {
                     MapObject o = s.get(0);
@@ -466,8 +466,6 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void renderVolumeGraph(SpriteBatch sb, ShapeRenderer sr) {
         if (map.allPoints.isEmpty())
             return;
-
-        //TODO - FIX - RENDERS VALUE OF NEXT (reverse order, previous) POINT RATHER THAN CURRENT POINT
 
         //Returns from first line before visible area, to first line after visible area
         MultiMergeIterator<Long, TimingPoint, ArrayList<TimingPoint>> pointIterator = new MultiMergeIterator<>(ArrayList::new, reverseLongComparator);
@@ -985,8 +983,7 @@ public class EffectView extends MapView implements TextInputReceiver {
             return;
 
         endAdjust();
-        this.map.registerReverse(false, selectedObjects);
-        refreshSelection();
+        this.map.registerReverse(false, getSelection());
     }
 
     @Override
@@ -1008,31 +1005,6 @@ public class EffectView extends MapView implements TextInputReceiver {
     @Override
     public String getSelectionString() {
         return "";
-    }
-
-    @Override
-    public void updateSelectionPositions() {
-        MapObjectTreeMap<MapObject> selected = getSelection();
-        //Change position in maps, but don't update anything else about the map.
-        map.timingPoints.removeAll(selected);
-        map.effectPoints.removeAll(selected);
-        map.allPoints.removeAll(selected);
-
-        for (Map.Entry<Long, ArrayList<MapObject>> entry : selected.entrySet()) {
-            for (MapObject o : entry.getValue()) {
-                if (o instanceof TimingPoint) {
-                    if (((TimingPoint) o).uninherited) {
-                        map.timingPoints.add((TimingPoint) o);
-                    }
-                    else {
-                        map.effectPoints.add((TimingPoint) o);
-                    }
-                }
-            }
-        }
-        map.allPoints.addAll(selected);
-
-        refreshSelection();
     }
 
     @Override
@@ -1060,32 +1032,31 @@ public class EffectView extends MapView implements TextInputReceiver {
     @Override
     public void deleteObject(MapObject o) {
         endAdjust();
-        this.map.registerAndPerformDelete(o);
+        super.deleteObject(o);
     }
     @Override
     public void deleteSelection() {
-        if (selectedObjects != null)
+        MapObjectTreeMap<MapObject> selection = getSelection(true);
+        if (selection != null)
         {
             endAdjust();
-            this.map.registerAndPerformDelete(selectedObjects);
+            this.map.registerAndPerformDelete(selection);
             clearSelection();
         }
     }
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null)
+        if (hasSelection())
         {
             map.regenerateDivisor();
             if (totalMovement != 0) {
-                MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
-                movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-                this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
+                this.map.registerAndPerformObjectMovement(getSelection(true), totalMovement);
             }
         }
     }
     @Override
     public void registerValueChange(HashMap<MapObject, MapObject> copyMap) {
-        if (selectedObjects != null)
+        if (hasSelection())
         {
             Map<MapObject, Double> newValueMap = new HashMap<>();
             MapObjectTreeMap<MapObject> adjustCopy = new MapObjectTreeMap<>();
@@ -1101,7 +1072,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         }
     }
     public void registerVolumeChange(HashMap<MapObject, MapObject> copyMap) {
-        if (selectedObjects != null)
+        if (hasSelection())
         {
             Map<Long, Integer> newVolumeMap = new HashMap<>();
 
@@ -1120,7 +1091,7 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     public void fuckSelection() {
-        if (selectedObjects != null)
+        if (hasSelection())
         {
             float variance = 0.01f; //1% variance
 
@@ -1142,8 +1113,9 @@ public class EffectView extends MapView implements TextInputReceiver {
     public void select(MapObject p) {
         super.select(p);
 
-        if (selectedObjects.size() != 1)
+        if (adjustMode == AdjustMode.ACTIVE && adjustPoint != null) {
             endAdjust();
+        }
     }
 
     @Override
@@ -1151,18 +1123,12 @@ public class EffectView extends MapView implements TextInputReceiver {
         endAdjust();
         clearSelection();
 
-        selectedObjects = new MapObjectTreeMap<>();
-
         if (timingEnabled && effectPointsEnabled)
-            selectedObjects.addAll(map.allPoints);
+            selectObjects(map.allPoints);
         else if (effectPointsEnabled)
-            selectedObjects.addAll(map.effectPoints);
+            selectObjects(map.effectPoints);
         else if (timingEnabled)
-            selectedObjects.addAll(map.timingPoints);
-
-        for (ArrayList<? extends MapObject> stuff : selectedObjects.values())
-            for (MapObject o : stuff)
-                o.selected = true;
+            selectObjects(map.timingPoints);
     }
 
     @Override
@@ -1179,57 +1145,22 @@ public class EffectView extends MapView implements TextInputReceiver {
         else
             src = map.effectPoints;
 
-
-        if (selectedObjects == null)
-        {
-            MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
-            if (startTime > endTime)
-                newSelection.addAll(src.descendingSubMap(endTime, true, startTime, true));
-            else
-                newSelection.addAll(src.descendingSubMap(startTime, true, endTime, true));
-
-            selectedObjects = newSelection;
-            for (ArrayList<MapObject> stuff : selectedObjects.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
+        MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
+        if (startTime > endTime)
+            newSelection.addAll(src.descendingSubMap(endTime, true, startTime, true));
         else
-        {
-            NavigableMap<Long, ArrayList<TimingPoint>> newSelected;
+            newSelection.addAll(src.descendingSubMap(startTime, true, endTime, true));
 
-            if (startTime > endTime)
-                newSelected =  src.descendingSubMap(endTime, true, startTime, true);
-            else
-                newSelected =  src.descendingSubMap(startTime, true, endTime, true);
-
-            selectedObjects.addAllUnique(newSelected);
-
-            for (ArrayList<MapObject> stuff : selectedObjects.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
+        selectObjects(newSelection);
     }
 
     @Override
     public void movingObjects() {
-        /*if (!ignoreSelected) {
-            ignoreSelected = true;
-            if (map.timingPoints.removeAll(selectedObjects)) {
-                if (!map.timingPoints.isEmpty()) //If there are timing points other than selected ones, ignore them
-                    map.regenerateDivisor(true);
-
-                //And put them back.
-                for (Map.Entry<Long, ArrayList<MapObject>> stack : selectedObjects.entrySet())
-                    for (MapObject o : stack.getValue())
-                        if (((TimingPoint) o).uninherited)
-                            map.timingPoints.add((TimingPoint) o);
-            }
-        }*/
         endAdjust();
     }
     @Override
     public void dragRelease() {
-        if (adjustMode == AdjustMode.POSSIBLE && selectedObjects != null && adjustPoint != null) {
+        if (adjustMode == AdjustMode.POSSIBLE && hasSelection() && adjustPoint != null) {
             startAdjust(adjustPoint, false);
         }
         else {

@@ -2,6 +2,8 @@ package alchyr.taikoedit.util.structures;
 
 import java.util.*;
 
+import static alchyr.taikoedit.TaikoEditor.editorLogger;
+
 //Node structure with "movement" support,
 //Undo/redo will call relevant methods on this object and send messages requesting similar.
 //temporary changes will go directly to this object.
@@ -19,6 +21,7 @@ public class BranchingStateQueue<T extends BranchingStateQueue.StateChange> {
     public int addChange(T change) {
         int stateKey = currentKey();
         current = current.addChange(change, ++changeKey);
+        changeMap.put(currentKey(), current);
         return stateKey;
     }
 
@@ -83,38 +86,45 @@ public class BranchingStateQueue<T extends BranchingStateQueue.StateChange> {
         List<StateNode<T>> doChanges = new ArrayList<>(4);
 
         StateNode<T> target = changeMap.get(targetKey), parent = target;
-        if (target == null) return null;
+        if (target == null) {
+            editorLogger.warn("Failed to change state, target state not found: " + targetKey);
+            return null;
+        }
 
         //If moving towards root of tree, eventually they should converge at same depth.
         //If they do not, redo changes and return null.
 
-        while (parent != current) {
-            if (parent.depth > currentDepth()) {
+        while (parent != current) { //looking for converged parent. "parent" is on target branch, current is current.
+            if (parent.depth > currentDepth()) {  //move "parent" upwards, no changes occur.
+                doChanges.add(0, parent); //changes that need to be done to reach target
                 parent = parent.parent;
                 if (parent == null) {
+                    editorLogger.warn("parent reached top of tree without finding converge point");
                     for (int i = 0; i < undoneChanges.size(); ++i) redo();
                     return null;
                 }
-                doChanges.add(0, parent);
             }
-            else {
+            else { //"parent" is above current, undo to move current upwards
                 T undone = undo();
                 if (undone == null) {
+                    editorLogger.warn("current position reached top of tree without finding converge point");
                     for (int i = 0; i < undoneChanges.size(); ++i) redo();
                     return null;
                 }
-                undoneChanges.add(0, undone);
+                undoneChanges.add(0, undone); //changes that Might be redone.
             }
         }
+
+        editorLogger.info("Found parent state " + parent.key + "; " + doChanges.size() + " changes to perform.");
+
+        //current and parent are now the same, now traverse back down to find target change (if necessary)
 
         if (!doChanges.isEmpty()) {
             boolean changedBranch = false;
 
-            for (int i = 0; i < doChanges.size() - 1; ++i) {
-                //doChanges.get(i) should be current
-                StateNode<T> targetState = doChanges.get(i + 1);
-
+            for (StateNode<T> targetState : doChanges) {
                 if (current.nextState() != targetState) {
+                    editorLogger.info("Next state does not match, changing branch");
                     if (!changedBranch) {
                         changedBranch = true;
                         if (!changeBranch) { //Not allowed to change branches
@@ -122,7 +132,7 @@ public class BranchingStateQueue<T extends BranchingStateQueue.StateChange> {
                             return null;
                         }
                     }
-                    current.changeBranch(doChanges.get(i + 1));
+                    current.changeBranch(targetState);
                 }
 
                 redo();

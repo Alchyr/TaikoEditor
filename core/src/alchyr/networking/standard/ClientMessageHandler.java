@@ -5,26 +5,26 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.function.Function;
 
-public abstract class MessageHandler {
-    private static final Logger messageHandlerLogger = LogManager.getLogger();
+public abstract class ClientMessageHandler {
+    private static final Logger logger = LogManager.getLogger();
     public boolean alive = true;
 
     public final ConnectionClient client;
     public float timeout;
-    public Function<MessageHandler, Boolean> onTimeout;
+    public Function<ClientMessageHandler, Boolean> onTimeout;
 
 
-    public MessageHandler(ConnectionClient client, float timeout, Function<MessageHandler, Boolean> onTimeout) {
+    public ClientMessageHandler(ConnectionClient client, float timeout, Function<ClientMessageHandler, Boolean> onTimeout) {
         this.client = client;
         this.timeout = timeout;
         this.onTimeout = onTimeout;
     }
-    public MessageHandler(ConnectionClient client) {
+    public ClientMessageHandler(ConnectionClient client) {
         this(client, -1, null);
     }
 
 
-    public MessageHandler setTimeout(float time, Function<MessageHandler, Boolean> onTimeout) {
+    public ClientMessageHandler setTimeout(float time, Function<ClientMessageHandler, Boolean> onTimeout) {
         this.timeout = time;
         this.onTimeout = onTimeout;
         return this;
@@ -45,7 +45,8 @@ public abstract class MessageHandler {
                 handleMessage(msg);
             }
             catch (Exception e) {
-                messageHandlerLogger.error("Exception occurred while receiving message:", e);
+                logger.error("Exception occurred while receiving message:", e);
+                client.fail("Disconnected: an error occurred while processing a message.");
             }
 
             if (!alive) return;

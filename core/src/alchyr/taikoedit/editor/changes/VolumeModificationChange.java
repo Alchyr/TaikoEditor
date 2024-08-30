@@ -104,4 +104,9 @@ public class VolumeModificationChange extends MapChange {
 
         map.updateLines(modifiedObjects.entrySet(), null);
     }
+
+    @Override
+    public MapChange reconstruct() {
+        return new VolumeModificationChange(map, modifiedObjects, newVolumes);
+    }
 }

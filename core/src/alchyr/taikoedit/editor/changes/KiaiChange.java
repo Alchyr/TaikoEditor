@@ -2,7 +2,6 @@ package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.util.interfaces.KnownAmountSupplier;
 import alchyr.taikoedit.util.structures.MapObject;
@@ -84,5 +83,10 @@ public class KiaiChange extends MapChange {
             p.kiai = toKiai;
         }
         map.updateKiai(modifiedLines);
+    }
+
+    @Override
+    public MapChange reconstruct() {
+        return new KiaiChange(map, modifiedLines, toKiai); //refresh the "wasKiai" map
     }
 }

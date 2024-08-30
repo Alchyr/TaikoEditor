@@ -277,6 +277,10 @@ public class EditorBeatmap {
         }
     }
 
+    public int getStateKey() {
+        return changes.currentKey();
+    }
+
     /* EDITING METHODS */
     private final BranchingStateQueue<MapChange> changes = new BranchingStateQueue<>();
 
@@ -300,7 +304,7 @@ public class EditorBeatmap {
             objectKeyOffset = 0;
         }
         else {
-            objectKeyOffset = OBJECT_KEY_OFFSET_SPACING + (2 * client.ID);
+            objectKeyOffset = OBJECT_KEY_OFFSET_SPACING * (2 + client.ID);
         }
     }
 
@@ -315,9 +319,20 @@ public class EditorBeatmap {
     }
     public boolean undo()
     {
+        int currentState = getStateKey();
         MapChange undone = changes.undo();
         if (undone != null) {
             dirty = true;
+
+            if (server != null) {
+                for (ConnectionClient client : server.getClients()) {
+                    MapChange.sendMapStateChange(client, this, currentState, getStateKey());
+                }
+            }
+            else if (client != null) {
+                MapChange.sendMapStateChange(client, this, currentState, getStateKey());
+            }
+
             return undone.invalidateSelection;
         }
         return false;
@@ -327,9 +342,20 @@ public class EditorBeatmap {
     }
     public boolean redo()
     {
+        int currentState = getStateKey();
         MapChange redone = changes.redo();
         if (redone != null) {
             dirty = true;
+
+            if (server != null) {
+                for (ConnectionClient client : server.getClients()) {
+                    MapChange.sendMapStateChange(client, this, currentState, getStateKey());
+                }
+            }
+            else if (client != null) {
+                MapChange.sendMapStateChange(client, this, currentState, getStateKey());
+            }
+
             return redone.invalidateSelection;
         }
         return false;
@@ -358,34 +384,126 @@ public class EditorBeatmap {
         }
     }
 
+    public void networkChangeState(ConnectionClient sourceClient, int stateKey, int newStateKey) {
+        if (server != null) {
+            int currentState = changes.currentKey();
+            editorLogger.info("Received state change from client.");
+
+            if (currentState != stateKey) {
+                //this means a change on server end occurred.
+                //This will be sent to client and should override the local state change of the client.
+                editorLogger.info("State does not match. This state change will be ignored.");
+                return;
+            }
+
+            editorLogger.info("Changing to state " + newStateKey);
+            List<MapChange> undone = changes.changeState(newStateKey, true, false);
+            if (undone == null) {
+                //Failure
+                this.client.fail("DESYNC: failed to return to expected state");
+                return;
+            }
+            editorLogger.info("Changed state: " + changes.currentKey());
+
+            for (ConnectionClient client : server.getClients()) {
+                if (!client.equals(sourceClient)) {
+                    MapChange.sendMapStateChange(client, this, currentState, newStateKey);
+                }
+            }
+        }
+        else if (this.client != null) {
+            //First, move to expected state.
+            dirty = true;
+
+            int currentState = changes.currentKey();
+            editorLogger.info("Received state change from server.");
+            List<MapChange> undone;
+            if (currentState != stateKey) {
+                editorLogger.info("Not in expected state, changing to state " + stateKey);
+                undone = changes.changeState(stateKey, true, true);
+                if (undone == null) {
+                    //Failure
+                    this.client.fail("DESYNC: failed to return to expected state");
+                    return;
+                }
+                //Any removed changes here are completely ignored.
+                editorLogger.info("Changed state: " + changes.currentKey());
+            }
+
+            //now do the "actual" change
+            editorLogger.info("Changing to state " + newStateKey);
+            undone = changes.changeState(newStateKey, true, false);
+            if (undone == null) {
+                //Failure
+                this.client.fail("DESYNC: failed to return to expected state");
+                return;
+            }
+            editorLogger.info("Changed state: " + changes.currentKey());
+        }
+    }
+
     //Changes sent by clients happen on server When Received, and are then sent back to client with a changeIndex saying what their change index *should* be.
     //Changes sent by clients can be rejected.
     //If a change is rejected, it can be re-attempted by client with an updated changeIndex if it remains valid.
-    public void receiveNetworkChange(MapChange.ChangeBuilder changeBuilder) { //Note: undo/redo should be handled separately
-        if (server != null) { //Working as server
-            /*if (change.changeIndex == changeCount) { //normal
-                change.perform();
-                dirty = true;
-                undoQueue.addLast(change);
-                redoQueue.clear();
-                ++changeCount;
-            }
-            else if (change.changeIndex < changeCount) { //local change was made, client made a change while behind
-                change.changeIndex = changeCount;
+    public void receiveNetworkChange(ConnectionClient sourceClient, MapChange.ChangeBuilder changeBuilder) { //Note: undo/redo should be handled separately
+        if (server != null) {
+            //Working as server
+            //First, move to expected state
+            int currentState = changes.currentKey();
+            editorLogger.info("Received change from client. Current state: " + currentState + " Expected state: " + changeBuilder.stateKey);
+            List<MapChange> undone;
 
-                if (change.isValid()) {
-                    ++changeCount;
+            if (currentState != changeBuilder.stateKey) {
+                undone = changes.changeState(changeBuilder.stateKey, true, false);
+
+                if (undone == null) {
+                    //Failure
+                    this.client.fail("DESYNC: failed to return to expected state");
+                    return;
                 }
-                else {
-
-                }
-                //Send
+                editorLogger.info("Changed state: " + changes.currentKey());
             }
-            else { //client change has a greater index, that means local did an undo (probably)
 
-            }*/
+            //Construct change. Verify that it's valid. It should be. If it isn't, send desync message (for now, just disconnect?)
+            MapChange change = null;
+            try {
+                change = changeBuilder.build();
+            }
+            catch (Exception e) {
+                editorLogger.warn("Failed to build change from server:", e);
+            }
+
+            if (currentState != changes.currentKey()) { //return to actual state
+                undone = changes.changeState(currentState, true, false);
+
+                if (undone == null) {
+                    //Failure
+                    this.client.fail("DESYNC: failed to return to expected state");
+                    return;
+                }
+                editorLogger.info("Changed state: " + changes.currentKey());
+            }
+
+            if (change == null) {
+                this.client.fail("DESYNC: change could not be processed");
+                return;
+            }
+            if (!change.isValid()) {
+                editorLogger.info("Change ignored; it is invalid");
+                return;
+            }
+            change = change.reconstruct(); //Adjust change to be based on current state
+            registerChange(change.preDo(), false);
+
+            for (ConnectionClient client : server.getClients()) {
+                if (client != sourceClient) {
+                    MapChange.sendMapChange(client, currentState, change);
+                }
+            }
+
         }
-        else if (client != null) { //Received change from server
+        else if (this.client != null) {
+            //Received change from server
             //First, move to expected state
             int currentState = changes.currentKey();
             editorLogger.info("Received change from server. Current state: " + currentState + " Expected state: " + changeBuilder.stateKey);
@@ -396,15 +514,9 @@ public class EditorBeatmap {
 
                 if (undone == null) {
                     //Failure
-                    client.fail("DESYNC: failed to return to expected state");
+                    this.client.fail("DESYNC: failed to return to expected state");
                     return;
                 }
-                /*else {
-                    for (MapChange change : undone) {
-                        //null first entry will only matter for whether these changes are redone at the end
-                        if (change != null) change.cancel();
-                    }
-                }*/
                 editorLogger.info("Changed state: " + changes.currentKey());
             }
 
@@ -417,7 +529,7 @@ public class EditorBeatmap {
                 editorLogger.warn("Failed to build change from server:", e);
             }
             if (change == null || !change.isValid()) {
-                client.fail("DESYNC: change could not be processed or is invalid");
+                this.client.fail("DESYNC: change could not be processed or is invalid");
                 return;
             }
             registerChange(change.preDo(), false);
@@ -429,14 +541,11 @@ public class EditorBeatmap {
                     if (!toRedo.isValid()) {
                         return;
                     }
+                    toRedo = toRedo.reconstruct(); //Adjust change to be based on current state
                     registerChange(toRedo.preDo(), false); //This change was already sent; server will handle it.
                 }
             }
         }
-    }
-
-    public void cancelChange(int changeIndex, int changeBranch) {
-        //TODO
     }
 
     public void registerAndPerformAddObject(String nameKey, MapObject o, BiFunction<MapObject, MapObject, Boolean> shouldReplace)
@@ -2031,6 +2140,9 @@ public class EditorBeatmap {
         If a section is a "branch":
         Have a special highlight.
         Hotkey/buttons to swap between branches/add branch.
+
+        tbh probably not going to do any of this
+        at most I'd probably just add save as tja support
      */
 
     public boolean saveTJA()

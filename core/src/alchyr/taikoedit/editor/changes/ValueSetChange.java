@@ -108,4 +108,9 @@ public class ValueSetChange extends MapChange {
 
         map.gameplayChanged();
     }
+
+    @Override
+    public MapChange reconstruct() {
+        return new ValueSetChange(map, modifiedObjects, newValue);
+    }
 }

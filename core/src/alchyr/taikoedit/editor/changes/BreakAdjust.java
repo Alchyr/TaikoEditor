@@ -2,7 +2,6 @@ package alchyr.taikoedit.editor.changes;
 
 import alchyr.taikoedit.editor.maps.BreakInfo;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.util.structures.Pair;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

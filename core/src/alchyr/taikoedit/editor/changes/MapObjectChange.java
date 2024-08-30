@@ -162,6 +162,7 @@ public class MapObjectChange extends MapChange {
                 removeObjects.get().forEach(removeObjectsMap::add);
 
                 MapObjectTreeMap<MapObject> addObjectsMap = new MapObjectTreeMap<>();
+                Map<MapObject, MapObject> copyMap = new HashMap<>();
                 long stackPos = Long.MIN_VALUE;
                 int stackIndex = -1;
 
@@ -178,9 +179,10 @@ public class MapObjectChange extends MapChange {
                     MapObject copy = original.shiftedCopy(copyStackPositions.get(stackIndex));
                     copy.key = copyKeys.get(i);
                     addObjectsMap.add(copy);
+                    copyMap.put(copy, original);
                 }
 
-                return new MapObjectChange(map, nameKey, removeObjectsMap, addObjectsMap);
+                return new MapObjectChange(map, nameKey, removeObjectsMap, addObjectsMap, copyMap);
             };
         }
         else if (type == MOVE_OBJECTS) {
@@ -305,7 +307,7 @@ public class MapObjectChange extends MapChange {
         return null;
     }
 
-    @Override
+    @Override //Valid if all objects to be removed exist at specified positions.
     public boolean isValid() {
         if (changeType == LINE_CHANGE) {
             for (Map.Entry<Long, ArrayList<MapObject>> stack : removeObjects.entrySet()) {
@@ -328,11 +330,6 @@ public class MapObjectChange extends MapChange {
 
         return true;
     }
-
-    /*@Override
-    public void cancel() {
-        //set keys of *added* objects back to default (-1)
-    }*/
 
     /**
      * Constructor removing a single object.
@@ -371,7 +368,8 @@ public class MapObjectChange extends MapChange {
     public MapObjectChange(EditorBeatmap map, String nameKey, MapObjectTreeMap<MapObject> addObjects, Map<MapObject, MapObject> originalObjects, BiFunction<MapObject, MapObject, Boolean> shouldReplace) {
         super(map, nameKey);
 
-        newObjects = true;
+        newObjects = originalObjects == null;
+        changesTiming = false;
 
         this.addObjects = addObjects; //addObjects is objects to add in their new positions
         this.copyObjects = originalObjects; //added object -> original object
@@ -379,8 +377,6 @@ public class MapObjectChange extends MapChange {
             removeObjects = empty;
             return;
         }
-
-        changesTiming = false;
 
         if (addObjects.firstEntry().getValue().get(0) instanceof TimingPoint) {
             changeType = LINE_CHANGE;
@@ -401,6 +397,42 @@ public class MapObjectChange extends MapChange {
         removeObjects = getReplacements(map, this.addObjects, shouldReplace);
 
         invalidateSelection = true;
+    }
+
+    /**
+     * Constructor exclusively for copy changes received over network, with removeobjects predetermined.
+     * @param map
+     * @param nameKey
+     * @param removeObjects
+     * @param addObjects
+     * @param originalObjects
+     */
+    public MapObjectChange(EditorBeatmap map, String nameKey, MapObjectTreeMap<MapObject> removeObjects, MapObjectTreeMap<MapObject> addObjects, Map<MapObject, MapObject> originalObjects) {
+        super(map, nameKey);
+
+        this.removeObjects = removeObjects == null ? empty : removeObjects; //removeObjects contains objects to remove with the key being the original positions
+        this.addObjects = addObjects == null ? empty : addObjects; //addObjects is objects to add in their new positions
+        this.copyObjects = originalObjects;
+        movingObjects = false;
+
+        changesTiming = false;
+
+        ArrayList<MapObject> checkList = this.addObjects.isEmpty() ? this.removeObjects.firstEntry().getValue() : this.addObjects.firstEntry().getValue();
+        if (checkList.get(0) instanceof TimingPoint) {
+            changeType = LINE_CHANGE;
+            outer:
+            for (Map.Entry<Long, ArrayList<MapObject>> obj : this.addObjects.isEmpty() ? this.removeObjects.entrySet() : this.addObjects.entrySet()) {
+                for (MapObject o : obj.getValue()) {
+                    if (((TimingPoint) o).uninherited) {
+                        changesTiming = true;
+                        break outer;
+                    }
+                }
+            }
+        }
+        else {
+            changeType = OBJECT_CHANGE;
+        }
     }
 
     public MapObjectChange(EditorBeatmap map, String nameKey, MapObjectTreeMap<MapObject> removeObjects, MapObjectTreeMap<MapObject> addObjects)
@@ -435,8 +467,6 @@ public class MapObjectChange extends MapChange {
         if (!this.addObjects.isEmpty() && this.addObjects.count() == this.removeObjects.count()) {
             movingObjects = this.addObjects.firstEntry().getValue().containsAll(this.removeObjects.firstEntry().getValue());
         }
-
-        invalidateSelection = true;
     }
 
     @Override
@@ -483,6 +513,7 @@ public class MapObjectChange extends MapChange {
         }
 
         map.gameplayChanged();
+
     }
     @Override
     public void perform() {

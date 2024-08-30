@@ -96,4 +96,9 @@ public class RepositionChange extends MapChange {
 
         return this;
     }
+
+    @Override
+    public MapChange reconstruct() {
+        return new RepositionChange(map);
+    }
 }

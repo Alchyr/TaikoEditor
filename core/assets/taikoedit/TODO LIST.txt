@@ -7,28 +7,8 @@ Would be nice if theres a timing tool that automatically adjusts the BPM of a re
 Pool arraylists?
 
 
-CO-OP EDITING
-
-Cannot select same objects.
-Issue - attempting to locate objects for a change when those objects are in the middle of being dragged
-
-REPLACE "HIDE" with "ALTERNATIVE" - gives a "placeholder" object, the properties of which will be displayed so long as condition is true
-will fix issues with graph stuff
-and then don't need to do any extra manual rendering
-make sure rendering of objects/effect points is using accessor methods
-
-*DO NOT REPLACE
-hiding is necessary for horizontal movement stuff
-alternative would only be used for vertical drag... and only for effect view.
-Come up with something better for having temporarily displayed green lines.
-Maybe a "tempRenderLine" method in EffectView. Receives "targetLine" (can be null) and "renderLine"
-if targetLine != null, store in map. When rendering lines, get from map. If not null, render that line instead.
-
-If targetLine is null, store in a list, and render them separately.
-
-The list and map are cleared each frame.
-
-
+Need to test - multiple clients
+Hard to test - synchronization code when changes are made at the same time before receiving change from other
 
 
 

@@ -45,6 +45,7 @@ public class ConnectionServer implements AutoCloseable {
 
     private Thread clientReceiver;
 
+    private ServerMessageHandler messageHandler = null;
     private final Map<String, List<Function<Object[], Boolean>>> eventTriggers = new HashMap<>();
 
     //Events
@@ -147,26 +148,38 @@ public class ConnectionServer implements AutoCloseable {
         }
 
         for (ConnectionClient client : clients) {
-            while (!client.receivedMessages.isEmpty()) {
-                Message msg = client.receivedMessages.poll();
+            try {
+                while (!client.receivedMessages.isEmpty()) {
+                    Message msg = client.receivedMessages.poll();
 
-                switch (msg.identifier) {
-                    case UTF:
-                        String text = msg.contents[0].toString();
-                        logger.info("Received message: [" + client + "]: " + text);
-                        switch (text.substring(0, 5)) {
-                            case EVENT_SENT:
-                                triggerEvent(text.substring(5), client);
-                                break;
-                            case EVENT_FILE_REQ:
-                                triggerEvent(EVENT_FILE_REQ, client, text.substring(5, 9), text.substring(9));
-                                break;
+                    if (messageHandler != null) {
+                        if (messageHandler.handleMessage(client, msg)) {
+                            continue;
                         }
-                        break;
-                    default:
-                        logger.warn("Message type unhandled: 0x" + Integer.toString(msg.identifier, 16));
-                        break;
+                    }
+
+                    switch (msg.identifier) {
+                        case UTF:
+                            String text = msg.contents[0].toString();
+                            logger.info("Received message: [" + client + "]: " + text);
+                            switch (text.substring(0, 5)) {
+                                case EVENT_SENT:
+                                    triggerEvent(text.substring(5), client);
+                                    break;
+                                case EVENT_FILE_REQ:
+                                    triggerEvent(EVENT_FILE_REQ, client, text.substring(5, 9), text.substring(9));
+                                    break;
+                            }
+                            break;
+                        default:
+                            logger.warn("Message type unhandled: 0x" + Integer.toString(msg.identifier, 16));
+                            break;
+                    }
                 }
+            }
+            catch (Exception e) {
+                logger.warn("Error occurred processing message from client " + client + ", disconnecting.");
+                client.fail("Received invalid message."); //On client end it'll just be "disconnected".
             }
         }
     }
@@ -187,6 +200,10 @@ public class ConnectionServer implements AutoCloseable {
 
     public String getConnectionText() {
         return String.format("%s|%d|%s", hostAddress, serverSocket.getLocalPort(), pass);
+    }
+
+    public void setMessageHandler(ServerMessageHandler messageHandler) {
+        this.messageHandler = messageHandler;
     }
 
     //Only rule: Events should only be triggered on "main" thread (update)

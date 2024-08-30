@@ -269,13 +269,10 @@ public class GimmickView extends MapView {
     public void selectAll() {
         clearSelection();
 
-        selectedObjects = new MapObjectTreeMap<>();
-
         for (Map.Entry<Long, ArrayList<HitObject>> entry : map.objects.entrySet()) {
             for (HitObject h : entry.getValue()) {
                 if (visible(h)) {
-                    selectedObjects.add(h);
-                    h.selected = true;
+                    select(h);
                 }
             }
         }
@@ -301,6 +298,8 @@ public class GimmickView extends MapView {
     public String getSelectionString() {
         if (hasSelection())
         {
+            MapObjectTreeMap<MapObject> selectedObjects = getSelection();
+
             StringBuilder sb = new StringBuilder(new EditorTime(selectedObjects.firstKey()).toString()).append(" (");
 
             int comboCount = 0;
@@ -399,49 +398,21 @@ public class GimmickView extends MapView {
         if (startTime == endTime)
             return;
 
-        MapObjectTreeMap<MapObject> newSelection;
-
-        if (selectedObjects == null)
-        {
-            newSelection = new MapObjectTreeMap<>();
-            if (startTime > endTime) {
-                long tmp = startTime;
-                startTime = endTime;
-                endTime = tmp;
-            }
-            for (Map.Entry<Long, ArrayList<HitObject>> entry : map.getSubMap(startTime, endTime).entrySet()) {
-                for (HitObject h : entry.getValue()) {
-                    if (visible(h)) {
-                        newSelection.add(h);
-                    }
-                }
-            }
-
-            selectedObjects = newSelection;
-            for (ArrayList<MapObject> stuff : selectedObjects.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
+        MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
+        if (startTime > endTime) {
+            long tmp = startTime;
+            startTime = endTime;
+            endTime = tmp;
         }
-        else
-        {
-            NavigableMap<Long, ArrayList<HitObject>> newSelected;
-
-            if (startTime > endTime) {
-                long tmp = startTime;
-                startTime = endTime;
-                endTime = tmp;
-            }
-            newSelected = map.getSubMap(startTime, endTime);
-
-            for (Map.Entry<Long, ArrayList<HitObject>> entry : newSelected.entrySet()) {
-                for (HitObject h : entry.getValue()) {
-                    if (visible(h)) {
-                        selectedObjects.add(h);
-                        h.selected = true;
-                    }
+        for (Map.Entry<Long, ArrayList<HitObject>> entry : map.getSubMap(startTime, endTime).entrySet()) {
+            for (HitObject h : entry.getValue()) {
+                if (visible(h)) {
+                    newSelection.add(h);
                 }
             }
         }
+
+        selectObjects(newSelection);
     }
 
     @Override
@@ -748,7 +719,7 @@ public class GimmickView extends MapView {
 
     private void reposition() {
         if (hasSelection()) {
-            map.registerChange(new RepositionChange(map, selectedObjects).preDo());
+            map.registerChange(new RepositionChange(map, getSelection()).preDo());
             parent.showText("Repositioned selected objects.");
         }
         else {
@@ -829,19 +800,6 @@ public class GimmickView extends MapView {
     }
 
     @Override
-    public void updateSelectionPositions() {
-        MapObjectTreeMap<MapObject> selected = getSelection();
-        map.objects.removeAll(selected);
-        map.objects.addAll(selected);
-        refreshSelection();
-    }
-
-    @Override
-    public void deleteObject(MapObject o) {
-        this.map.registerAndPerformDelete(o);
-    }
-
-    @Override
     public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
         //This should overwrite existing objects.
 
@@ -886,8 +844,7 @@ public class GimmickView extends MapView {
         if (!hasSelection())
             return;
 
-        this.map.registerReverse(true, selectedObjects);
-        refreshSelection();
+        this.map.registerReverse(true, getSelection(true));
     }
 
     @Override
@@ -903,20 +860,18 @@ public class GimmickView extends MapView {
 
     @Override
     public void deleteSelection() {
-        if (selectedObjects != null)
+        if (hasSelection())
         {
-            this.map.registerAndPerformDelete(selectedObjects);
+            this.map.registerAndPerformDelete(getSelection(true));
             clearSelection();
         }
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null && totalMovement != 0)
+        if (hasSelection() && totalMovement != 0)
         {
-            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
-            movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(getSelection(true), totalMovement);
         }
     }
 

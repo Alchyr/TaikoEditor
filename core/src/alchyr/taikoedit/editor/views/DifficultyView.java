@@ -3,11 +3,10 @@ package alchyr.taikoedit.editor.views;
 import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
-import alchyr.taikoedit.editor.tools.*;
-import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.util.EditorTime;
+import alchyr.taikoedit.editor.tools.Toolset;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -16,7 +15,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import static alchyr.taikoedit.TaikoEditor.*;
 import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
@@ -123,15 +124,7 @@ public class DifficultyView extends MapView {
 
     @Override
     public void selectAll() {
-        clearSelection();
 
-        selectedObjects = new MapObjectTreeMap<>();
-
-        selectedObjects.addAll(map.objects);
-
-        for (ArrayList<? extends MapObject> stuff : selectedObjects.values())
-            for (MapObject o : stuff)
-                o.selected = true;
     }
 
     @Override
@@ -152,136 +145,13 @@ public class DifficultyView extends MapView {
 
     @Override
     public String getSelectionString() {
-        if (hasSelection())
-        {
-            StringBuilder sb = new StringBuilder(new EditorTime(selectedObjects.firstKey()).toString()).append(" (");
-
-            int comboCount = 0;
-            boolean foundStart = false;
-
-            NavigableMap<Long, ArrayList<HitObject>> precedingObjects = map.objects.descendingSubMap(selectedObjects.firstKey(), true);
-
-            //Find initial combo count
-            for (Map.Entry<Long, ArrayList<HitObject>> entry : precedingObjects.entrySet())
-            {
-                for (HitObject h : entry.getValue())
-                {
-                    if (foundStart)
-                    {
-                        ++comboCount;
-                        if (h.newCombo)
-                            break;
-                    }
-                    else
-                    {
-                        if (h.equals(selectedObjects.firstEntry().getValue().get(0)))
-                        {
-                            foundStart = true;
-                            comboCount = 0;
-                            if (h.newCombo)
-                                break;
-                        }
-                    }
-                }
-            }
-
-            Iterator<Map.Entry<Long, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
-            Iterator<Map.Entry<Long, ArrayList<MapObject>>> selectionObjects = selectedObjects.entrySet().iterator();
-
-            Map.Entry<Long, ArrayList<HitObject>> currentList = null;
-            Map.Entry<Long, ArrayList<MapObject>> selectedObjectList = null;
-
-            if (allObjects.hasNext())
-                currentList = allObjects.next();
-
-            if (selectionObjects.hasNext())
-                selectedObjectList = selectionObjects.next();
-
-            while (currentList != null && selectedObjectList != null)
-            {
-                if (currentList.getKey().equals(selectedObjectList.getKey())) //Position of lists match.
-                {
-                    for (HitObject h : currentList.getValue()) //For each object in map. Have to go through all of them to track combo count.
-                    {
-                        ++comboCount;
-                        if (h.newCombo)
-                            comboCount = 1;
-
-                        if (selectedObjectList.getValue().contains(h)) //This is a selected object, so add it to text
-                        {
-                            sb.append(comboCount).append(",");
-                        }
-                    }
-                    //This part of selected objects is done, move to next list in selected objects.
-                    if (selectionObjects.hasNext())
-                        selectedObjectList = selectionObjects.next();
-                    else
-                        selectedObjectList = null;
-                }
-                else //This list has no selected objects, just track combo.
-                {
-                    for (HitObject h : currentList.getValue())
-                    {
-                        if (h.newCombo)
-                        {
-                            comboCount = 1;
-                        }
-                        ++comboCount;
-                    }
-                }
-
-                //Move to next list in map.
-                if (allObjects.hasNext())
-                    currentList = allObjects.next();
-                else
-                    currentList = null;
-            }
-
-            //All done.
-            sb.deleteCharAt(sb.length() - 1).append(") - ");
-
-            return sb.toString();
-        }
-
-        return new EditorTime(time) + " - ";
+        return "";
     }
 
     @Override
     public void addSelectionRange(long startTime, long endTime)
     {
-        if (startTime == endTime)
-            return;
 
-        MapObjectTreeMap<MapObject> newSelection;
-
-        if (selectedObjects == null)
-        {
-            newSelection = new MapObjectTreeMap<>();
-            if (startTime > endTime)
-                newSelection.addAll(map.getSubMap(endTime, startTime));
-            else
-                newSelection.addAll(map.getSubMap(startTime, endTime));
-
-            selectedObjects = newSelection;
-            for (ArrayList<MapObject> stuff : selectedObjects.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
-        else
-        {
-            NavigableMap<Long, ArrayList<HitObject>> newSelected;
-
-            if (startTime > endTime)
-                newSelected = map.getSubMap(endTime, startTime);
-            else
-                newSelected =  map.getSubMap(startTime, endTime);
-
-            selectedObjects.addAllUnique(newSelected);
-
-            for (ArrayList<? extends MapObject> stuff : newSelected.values())
-                for (MapObject o : stuff)
-                    o.selected = true;
-        }
     }
 
     @Override
@@ -300,19 +170,6 @@ public class DifficultyView extends MapView {
     }
 
     @Override
-    public void updateSelectionPositions() {
-        MapObjectTreeMap<MapObject> selected = getSelection();
-        map.objects.removeAll(selected);
-        map.objects.addAll(selected);
-        refreshSelection();
-    }
-
-    @Override
-    public void deleteObject(MapObject o) {
-        this.map.registerAndPerformDelete(o);
-    }
-
-    @Override
     public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
     }
 
@@ -322,24 +179,15 @@ public class DifficultyView extends MapView {
 
     @Override
     public void deleteSelection() {
-        if (selectedObjects != null)
-        {
-            this.map.registerAndPerformDelete(selectedObjects);
-            clearSelection();
-        }
+
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null && totalMovement != 0)
-        {
-            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
-            movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
-        }
+
     }
 
-    private static final Toolset toolset = new Toolset(SelectionTool.get());
+    private static final Toolset toolset = new Toolset();
     public Toolset getToolset()
     {
         return toolset;

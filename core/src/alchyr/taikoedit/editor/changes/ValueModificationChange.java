@@ -122,4 +122,10 @@ public class ValueModificationChange extends MapChange {
         map.updateSv();
         map.gameplayChanged();
     }
+
+    @Override
+    public MapChange reconstruct() {
+        //The keys of modifiedObjects must be ok for it to be valid, so no need to reconstruct that. This just refreshes the "original" values.
+        return new ValueModificationChange(map, modifiedObjects, newValues);
+    }
 }

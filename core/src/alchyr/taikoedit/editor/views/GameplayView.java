@@ -506,19 +506,6 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public void updateSelectionPositions() {
-        MapObjectTreeMap<MapObject> selected = getSelection();
-        map.objects.removeAll(selected);
-        map.objects.addAll(selected);
-        refreshSelection();
-    }
-
-    @Override //will never do anything since it's based on clickObject, which always returns null
-    public void deleteObject(MapObject o) {
-        this.map.registerAndPerformDelete(o);
-    }
-
-    @Override
     public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
 
     }
@@ -528,26 +515,25 @@ public class GameplayView extends MapView {
         if (!hasSelection())
             return;
 
-        this.map.registerReverse(true, selectedObjects);
-        refreshSelection();
+        this.map.registerReverse(true, getSelection(true));
     }
 
     @Override
     public void deleteSelection() {
-        if (selectedObjects != null)
+        MapObjectTreeMap<MapObject> selection = getSelection(true);
+        if (selection != null)
         {
-            this.map.registerAndPerformDelete(selectedObjects);
+            this.map.registerAndPerformDelete(selection);
             clearSelection();
         }
     }
 
     @Override
     public void registerMove(long totalMovement) {
-        if (selectedObjects != null && totalMovement != 0)
+        MapObjectTreeMap<MapObject> selection = getSelection(true);
+        if (selection != null && totalMovement != 0)
         {
-            MapObjectTreeMap<MapObject> movementCopy = new MapObjectTreeMap<>();
-            movementCopy.addAll(selectedObjects); //use addAll to make a copy without sharing any references other than the positionalobjects themselves
-            this.map.registerAndPerformObjectMovement(movementCopy, totalMovement);
+            this.map.registerAndPerformObjectMovement(selection, totalMovement);
         }
     }
 
