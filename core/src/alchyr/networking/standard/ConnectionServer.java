@@ -61,10 +61,10 @@ public class ConnectionServer implements AutoCloseable {
 
         logger.info(InetAddress.getLocalHost().getHostAddress());
         logger.info(getPublicIP());
-        //hostAddress = getPublicIP();
+        hostAddress = getPublicIP();
 
         //Temp
-        hostAddress = InetAddress.getLocalHost().getHostAddress();
+        //hostAddress = InetAddress.getLocalHost().getHostAddress();
 
         serverSocket = new ServerSocket(port, 20);
         clients = new ArrayList<>();
