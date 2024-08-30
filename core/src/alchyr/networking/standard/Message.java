@@ -1,7 +1,6 @@
 package alchyr.networking.standard;
 
 public class Message {
-    //00 spam is considered Garbage Data and ignored
     public static final int UTF = 0x01;
     public static final int FILE = 0x02;
 

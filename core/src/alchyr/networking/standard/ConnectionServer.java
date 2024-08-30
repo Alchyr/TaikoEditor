@@ -1,6 +1,11 @@
 package alchyr.networking.standard;
 
 import alchyr.taikoedit.util.GeneralUtils;
+import alchyr.taikoedit.util.TextRenderer;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,6 +27,9 @@ import static alchyr.networking.standard.Message.UTF;
 //requires port forwarding
 public class ConnectionServer implements AutoCloseable {
     private static final Logger logger = LogManager.getLogger("connection server");
+
+    public String name;
+    private final Color nameRenderingColor = Color.WHITE.cpy();
 
     private final ServerSocket serverSocket;
     private final int clientLimit;
@@ -48,13 +56,17 @@ public class ConnectionServer implements AutoCloseable {
     private ServerMessageHandler messageHandler = null;
     private final Map<String, List<Function<Object[], Boolean>>> eventTriggers = new HashMap<>();
 
+    public static final String SERVER_MSG = "SVMSG";
+
     //Events
     public static final String EVENT_NEW_CLIENT = "EV_NC"; //When a new client is accepted. Client is parameter.
     public static final String EVENT_SENT = "EV_ST"; //When a message is received that starts with EVT, rest of message is appended as event key. Client is parameter.
     public static final String EVENT_FILE_REQ = "EV_FL"; //When a message requests a file. Params: client, 4 character "key", request info
 
-    public ConnectionServer(int port, int clientLimit) throws IOException {
+    public ConnectionServer(String name, int port, int clientLimit) throws IOException {
         if (port < 30000 || port > 60000) throw new IllegalArgumentException("Expected a port between 30000 and 60000");
+
+        this.name = name;
 
         this.clientLimit = clientLimit;
         pass = GeneralUtils.generateCode(64);
@@ -97,8 +109,8 @@ public class ConnectionServer implements AutoCloseable {
                             return;
                         }
 
-                        ConnectionClient tempClient = new ConnectionClient(clientSocket);
-                        tempClient.waitPass(pass, incomingClients);
+                        ConnectionClient tempClient = new ConnectionClient("???", clientSocket);
+                        tempClient.checkClient(pass, incomingClients);
                     }
                     catch (SocketException e) {
                         live = false;
@@ -130,20 +142,38 @@ public class ConnectionServer implements AutoCloseable {
                 client.startStandardReceiver();
                 client.send("success" + client.ID);
                 triggerEvent(EVENT_NEW_CLIENT, client);
+
+                client.send(SERVER_MSG + "MEMBER" + name); //server name
+                for (ConnectionClient existingClient : clients) {
+                    if (!existingClient.equals(client)) {
+                        existingClient.send(SERVER_MSG + "MEMBER" + client); //notify existing client of new client
+                        client.send(SERVER_MSG + "MEMBER" + existingClient); //notify new client of existing clients
+                    }
+                }
             }
             else {
                 logger.info("Client limit reached, dropping client: " + client);
             }
         }
 
-        while (!deadClients.isEmpty()) {
-            ConnectionClient client = deadClients.poll();
-            logger.info("Client disconnected, removing: " + client);
-            clients.remove(client);
-            try {
-                client.close();
-            } catch (Exception e) {
-                logger.error("Exception occurred while closing client", e);
+        if (!deadClients.isEmpty()) {
+            List<String> dead = new ArrayList<>();
+            while (!deadClients.isEmpty()) {
+                ConnectionClient client = deadClients.poll();
+                dead.add(client.toString());
+                logger.info("Client disconnected, removing: " + client);
+                clients.remove(client);
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    logger.error("Exception occurred while closing client", e);
+                }
+            }
+
+            for (String clientName : dead) {
+                for (ConnectionClient client : clients) {
+                    client.send(SERVER_MSG + "REMOVE" + clientName);
+                }
             }
         }
 
@@ -226,4 +256,31 @@ public class ConnectionServer implements AutoCloseable {
     public boolean isAlive() {
         return !serverSocket.isClosed();
     }
+
+    public void renderConnectedNames(TextRenderer textRenderer, SpriteBatch sb, Texture connectedTex, BitmapFont font, float rightX, float opacity) {
+        nameRenderingColor.a = opacity;
+
+        rightX -= connectedTex.getWidth();
+        float y = (clients.size() + 1) * 32;
+        float texY = y - connectedTex.getHeight();
+
+        textRenderer.setFont(font);
+        sb.setColor(nameRenderingColor);
+
+        sb.draw(connectedTex, rightX, texY);
+        textRenderer.renderTextRightAlign(sb, name, rightX - 5, y, nameRenderingColor);
+
+        for (ConnectionClient client : clients) {
+            y -= 32;
+            texY -= 32;
+            sb.draw(connectedTex, rightX, texY);
+            textRenderer.renderTextRightAlign(sb, client.toString(), rightX - 5, y, nameRenderingColor);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+
 }

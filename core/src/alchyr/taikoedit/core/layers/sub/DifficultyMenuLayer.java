@@ -57,7 +57,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
     private final Mapset set;
     private final List<MapInfo> maps;
 
-    public DifficultyMenuLayer(EditorLayer editor, Mapset set)
+    public DifficultyMenuLayer(EditorLayer editor, Mapset set, boolean canCreateNew)
     {
         this.type = LAYER_TYPE.UPDATE_STOP;
 
@@ -95,7 +95,8 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium")).setAction("gameplay"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gimmick Editor", assetMaster.getFont("aller medium")).setAction("gimmick"));
         viewOptions.add(new Button(viewOptionX, middleY, "Changelog", assetMaster.getFont("aller medium")).setAction("changelog"));
-        viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
+        if (canCreateNew)
+            viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
 
         openButton = new Button(openButtonX, middleY, "Open", assetMaster.getFont("aller medium")).setClick(this::open);
 

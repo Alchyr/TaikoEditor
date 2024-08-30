@@ -1,12 +1,20 @@
 package alchyr.networking.standard;
 
+import alchyr.taikoedit.util.TextRenderer;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -17,6 +25,11 @@ import static alchyr.networking.standard.Message.UTF;
 
 public class ConnectionClient implements AutoCloseable {
     private static final Logger logger = LogManager.getLogger("connection client");
+
+    public String name;
+    private final Color nameRenderingColor = Color.WHITE.cpy();
+
+    public final List<String> connectionList = new ArrayList<>();
 
     private final Socket socket;
     private final DataInputStream in;
@@ -85,30 +98,43 @@ public class ConnectionClient implements AutoCloseable {
 
                 byte[] buffer = new byte[4 * 1024];
 
-                try (FileInputStream fileReader = new FileInputStream(file)) {
-                    out.writeLong(length);
-                    out.writeUTF(file.getName());
-                    out.flush();
+                try {
+                    MessageDigest md = MessageDigest.getInstance("MD5");
 
-                    int bytes;
+                    try (FileInputStream fileReader = new FileInputStream(file)) {
+                        DigestInputStream mdFileReader = new DigestInputStream(fileReader, md);
+                        out.writeLong(length);
+                        out.writeUTF(file.getName());
+                        out.flush();
 
-                    while ((bytes = fileReader.read(buffer)) != -1) {
-                        out.write(buffer, 0, bytes);
-                        sent += bytes;
+                        int bytes;
+
+                        while ((bytes = mdFileReader.read(buffer)) != -1) {
+                            out.write(buffer, 0, bytes);
+                            sent += bytes;
+                        }
+
+                        logger.info("Finished sending file; sending hash");
+
+                        byte[] digest = md.digest();
+                        out.writeInt(digest.length);
+                        out.write(digest);
+
+                        out.flush();
                     }
-                    out.flush();
-
-                    logger.info("Finished sending file.");
+                    catch (Exception e) {
+                        logger.error("Exception occurred sending file, sending empty data to compensate", e);
+                        Arrays.fill(buffer, (byte) 0);
+                        int amt;
+                        while (sent < length) {
+                            amt = (int) Math.min(length - sent, buffer.length);
+                            out.write(buffer, 0, amt);
+                            sent += amt;
+                        }
+                    }
                 }
-                catch (Exception e) {
-                    logger.error("Exception occurred sending file, sending empty data to compensate", e);
-                    Arrays.fill(buffer, (byte) 0);
-                    int amt;
-                    while (sent < length) {
-                        amt = (int) Math.min(length - sent, buffer.length);
-                        out.write(buffer, 0, amt);
-                        sent += amt;
-                    }
+                catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException("Failed to find algorithm", e);
                 }
             }
         }, (in)->{
@@ -124,33 +150,51 @@ public class ConnectionClient implements AutoCloseable {
 
             String filename = in.readUTF();
 
-            int bytes;
-            List<byte[]> fileData = new ArrayList<>();
+            try {
+                MessageDigest md = MessageDigest.getInstance("MD5");
+                DigestInputStream mdInputReader = new DigestInputStream(in, md);
 
-            while (fileLength > 0) {
-                byte[] buffer = new byte[4 * 1024];
-                bytes = in.read(buffer, 0, (int)Math.min(buffer.length, fileLength));
-                if (bytes == -1) {
-                    break;
+                int bytes;
+                List<byte[]> fileData = new ArrayList<>();
+
+                while (fileLength > 0) {
+                    byte[] buffer = new byte[4 * 1024];
+                    bytes = mdInputReader.read(buffer, 0, (int)Math.min(buffer.length, fileLength));
+                    if (bytes == -1) {
+                        break;
+                    }
+
+                    if (bytes < buffer.length) {
+                        byte[] temp = new byte[bytes];
+                        System.arraycopy(buffer, 0, temp, 0, bytes);
+                        //nextBuffer = buffer;
+                        buffer = temp;
+                    }
+
+                    fileData.add(buffer);
+                    fileLength -= bytes;
                 }
 
-                /*if (!GeneralUtils.arraySectionEquals(buffer, nextBuffer, 0, bytes)) {
-                    logger.warn("Data confirmation failed, error occurred in transfer");
-                    return new Message(FILE, pass, "Data lost in transfer", null);
-                }*/
-
-                if (bytes < buffer.length) {
-                    byte[] temp = new byte[bytes];
-                    System.arraycopy(buffer, 0, temp, 0, bytes);
-                    //nextBuffer = buffer;
-                    buffer = temp;
+                logger.info("Finished receiving file. Checking hash.");
+                byte[] digest = md.digest();
+                int len = in.readInt();
+                byte[] receivedHash = new byte[len];
+                int read = in.read(receivedHash);
+                if (read != len) {
+                    return new Message(FILE, pass, "Failed to verify received file.", null);
                 }
 
-                fileData.add(buffer);
-                fileLength -= bytes;
+                if (!Arrays.equals(digest, receivedHash)) {
+                    return new Message(FILE, pass, "Hash of received file does not match.", null);
+                }
+
+                logger.info("Verified file successfully.");
+
+                return new Message(FILE, pass, filename, fileData);
             }
-
-            return new Message(FILE, pass, filename, fileData);
+            catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("Failed to find algorithm", e);
+            }
         });
     }
 
@@ -159,7 +203,8 @@ public class ConnectionClient implements AutoCloseable {
         messageReceivers.put(identifier, messageReceiver);
     }
 
-    public ConnectionClient(Socket socket) throws IOException {
+    public ConnectionClient(String name, Socket socket) throws IOException {
+        this.name = name;
         this.socket = socket;
 
         in = new DataInputStream(socket.getInputStream());
@@ -240,7 +285,7 @@ public class ConnectionClient implements AutoCloseable {
         return receiver.receiveMessage(in);
     }
 
-    public void waitPass(String pass, ConcurrentLinkedQueue<ConnectionClient> incomingClients) {
+    public void checkClient(String pass, ConcurrentLinkedQueue<ConnectionClient> incomingClients) {
         if (receiverThread == null || !receiverThread.isAlive()) {
             receiverThread = new Thread(()->{
                 try {
@@ -253,7 +298,16 @@ public class ConnectionClient implements AutoCloseable {
                             return;
                         }
                         else if (msg.identifier == UTF) {
-                            testPass = msg.contents[0].toString();
+                            String text = msg.contents[0].toString();
+                            if (text.startsWith("$")) {
+                                logger.info("Received client name.");
+                                name = text.substring(1);
+                                ++tries;
+                                continue;
+                            }
+                            else {
+                                testPass = msg.contents[0].toString();
+                            }
                             break;
                         }
                     }
@@ -301,8 +355,10 @@ public class ConnectionClient implements AutoCloseable {
         }
     }
 
-    public boolean waitValidation() {
+    public boolean waitValidation(String pass) {
         try {
+            send("$" + name);
+            send(pass);
             Message message = receiveMessage();
             if (message != null && message.identifier == UTF) {
                 String contents = message.contents[0].toString();
@@ -337,6 +393,16 @@ public class ConnectionClient implements AutoCloseable {
                             logger.info("Received null message, standard receiver cancelled.");
                             break;
                         }
+
+                        if (msg.identifier == UTF) {
+                            String text = msg.contents[0].toString();
+                            if (text.startsWith(ConnectionServer.SERVER_MSG)) {
+                                if (processServerMessage(text.substring(5))) {
+                                    continue;
+                                }
+                            }
+                        }
+
                         receivedMessages.add(msg);
                     }
                 }
@@ -357,6 +423,19 @@ public class ConnectionClient implements AutoCloseable {
             receiverThread.setDaemon(true);
             receiverThread.start();
         }
+    }
+
+    private boolean processServerMessage(String msg) {
+        logger.info("Received server message: " + msg);
+        switch (msg.substring(0, 6)) {
+            case "MEMBER":
+                connectionList.add(msg.substring(6));
+                return true;
+            case "REMOVE":
+                connectionList.remove(msg.substring(6));
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -413,8 +492,29 @@ public class ConnectionClient implements AutoCloseable {
         return socket.isConnected() && !socket.isClosed();
     }
 
+    public void renderConnectedNames(TextRenderer textRenderer, SpriteBatch sb, Texture connectedTex, BitmapFont font, float rightX, float opacity) {
+        nameRenderingColor.a = opacity;
+
+        rightX -= connectedTex.getWidth();
+        float y = (connectionList.size() + 1) * 32;
+        float texY = y - connectedTex.getHeight();
+
+        textRenderer.setFont(font);
+        sb.setColor(nameRenderingColor);
+
+        sb.draw(connectedTex, rightX, texY);
+        textRenderer.renderTextRightAlign(sb, name, rightX - 5, y, nameRenderingColor);
+        for (String name : connectionList) {
+            y -= 32;
+            texY -= 32;
+
+            sb.draw(connectedTex, rightX, texY);
+            textRenderer.renderTextRightAlign(sb, name, rightX - 5, y, nameRenderingColor);
+        }
+    }
+
     @Override
     public String toString() {
-        return socket.getInetAddress().toString();
+        return name;
     }
 }

@@ -343,7 +343,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         //First step is threaded to avoid halting on connection establishment
         joinThread = new Thread(()->{
             try {
-                ConnectionClient test = new ConnectionClient(new Socket(params[0], Integer.parseInt(params[1])));
+                ConnectionClient test = new ConnectionClient(SettingsMaster.NAME, new Socket(params[0], Integer.parseInt(params[1])));
 
                 waiter.onCancel(()-> {
                     try {
@@ -357,9 +357,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                     return;
                 }
 
-                test.send(params[2]);
-
-                if (!test.waitValidation()) {
+                if (!test.waitValidation(params[2])) {
                     textOverlay.setText("Failed to join; was not validated.", 2.0f);
                     waiter.setComplete();
                     return;

@@ -176,7 +176,8 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
             map.getFullMapInfo().setDifficultyName(diffName.text);
 
             ViewSet set = sourceLayer.getViewSet(map);
-            set.updateDiffNamePosition();
+            if (set != null)
+                set.updateDiffNamePosition();
             if (map.save()) {
                 sourceLayer.textOverlay.setText("Difficulty \"" + map.getName() + "\" saved!", 0.5f);
             }

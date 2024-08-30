@@ -17,6 +17,7 @@ import static alchyr.taikoedit.TaikoEditor.audioMaster;
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
 public class SettingsMaster {
+    public static String NAME = "Unnamed";
     private static int WIDTH, HEIGHT, Y_OFFSET, X_MIDDLE;
 
     public static float SCALE = 1.0f;
@@ -144,6 +145,8 @@ public class SettingsMaster {
                                         case "WaveformOffset":
                                             waveformOffset = Integer.parseInt(keyVal[1]);
                                             break;
+                                        case "Name":
+                                            NAME = keyVal[1];
                                         default:
                                             editorLogger.info("Unknown setting key \"" + keyVal[0] + "\" with value " + keyVal[1]);
                                     }
@@ -243,7 +246,8 @@ public class SettingsMaster {
                 "KY:" + bigKatY + '\n' +
                 "LazerSnaps:" + lazerSnaps + '\n' +
                 "WaveformOffset:" + waveformOffset + '\n' +
-                "Skin:" + Skins.currentSkin.toString();
+                "Skin:" + Skins.currentSkin.toString() + '\n' +
+                "Name:" + NAME;
         //.replace(":", "](}").replace("|", "})]");
     }
 

@@ -64,6 +64,8 @@ public class FakeSliderTool extends EditorTool {
         {
             ViewSet v = views.get(m);
 
+            if (v == null) continue;
+
             if (v.containsY(y))
             {
                 MapView hovered = v.getView(y);

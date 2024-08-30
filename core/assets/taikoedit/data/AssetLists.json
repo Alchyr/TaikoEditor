@@ -162,6 +162,11 @@
       "name": "updateh",
       "file": "taikoedit/images/ui/updatehover.png",
       "class": "Texture"
+    },
+    {
+      "name": "connected",
+      "file": "taikoedit/images/ui/connected.png",
+      "class": "Texture"
     }
   ],
   "menu": [

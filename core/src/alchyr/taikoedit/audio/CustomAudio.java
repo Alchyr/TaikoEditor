@@ -15,6 +15,7 @@ import org.lwjgl.openal.AL11;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.*;
@@ -161,7 +162,7 @@ public abstract class CustomAudio extends OpenALMusic {
         alSourcei(sourceID, AL_BUFFER, 0); //Detach all buffers
 
         renderedSecondsQueue.clear();
-        buffers.clear();
+        ((Buffer) buffers).clear();
         buffers.put(bufferIDs); //Ensure buffer IDs are always the same 4
         buffers.rewind();
 
@@ -275,7 +276,7 @@ public abstract class CustomAudio extends OpenALMusic {
                     {
                         bufferIDs[i] = buffers.get(i);
                     }
-                    buffers.clear();
+                    ((Buffer) buffers).clear(); //helps if gradle is using wrong jdk... but you really shouldn't. Just use 8.
                     buffers.put(bufferIDs);
                     buffers.rewind();
                 }

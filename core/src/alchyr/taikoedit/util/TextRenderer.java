@@ -90,11 +90,22 @@ public class TextRenderer {
     public TextRenderer renderTextCentered(SpriteBatch sb, String s, float x, float y, Color c)
     {
         int index = layoutIndex;
-        layouts[index].reset();
 
+        layouts[index].reset();
         layouts[index].setText(currentRendering, s, c, 1, Align.center, false);
 
         currentRendering.draw(sb, layouts[index], x, y + layouts[index].height / 2.0f);
+
+        return this;
+    }
+    public TextRenderer renderTextRightAlign(SpriteBatch sb, String s, float x, float y, Color c)
+    {
+        int index = layoutIndex;
+
+        layouts[index].reset();
+        layouts[index].setText(currentRendering, s, c, 1, Align.right, false);
+
+        currentRendering.draw(sb, layouts[index], x, y);
 
         return this;
     }

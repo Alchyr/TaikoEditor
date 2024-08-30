@@ -1,27 +1,27 @@
 package alchyr.taikoedit.editor.tools;
 
-import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.input.BindingGroup;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.maps.EditorBeatmap;
+import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.editor.maps.EditorBeatmap;
-import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.core.input.BindingGroup;
-import alchyr.taikoedit.core.input.MouseHoldObject;
-import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static alchyr.taikoedit.core.input.BindingGroup.shift;
-import static alchyr.taikoedit.core.layers.EditorLayer.viewScale;
 
 public class GreenLineTool extends EditorTool {
     private static final int MAX_SNAP_OFFSET = 40;
@@ -67,6 +67,8 @@ public class GreenLineTool extends EditorTool {
         for (EditorBeatmap m : activeMaps)
         {
             ViewSet v = views.get(m);
+
+            if (v == null) continue;
 
             if (v.containsY(y))
             {

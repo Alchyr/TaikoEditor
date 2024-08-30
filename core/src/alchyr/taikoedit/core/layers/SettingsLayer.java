@@ -82,7 +82,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         X_CENTER = (int) (X_1 + displayAreaWidth / 2);
 
-        LABEL_Y_START = (int) (SettingsMaster.getHeight() * 0.8f);
+        LABEL_Y_START = SettingsMaster.getHeight() - 80;
         HOTKEY_Y_START = (int) (SettingsMaster.getHeight() * 0.9f);
     }
 
@@ -173,6 +173,10 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
             currentPage = page;
             processor.setProcessors(pages[currentPage], mainProcessor);
         }
+    }
+    private void updateName(String t, TextField f) {
+        SettingsMaster.NAME = t;
+        SettingsMaster.saveGeneralSettings();
     }
     private void updateMusicVolume(String t, TextField f) {
         try {
@@ -315,6 +319,15 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         //editor settings page
         int y = LABEL_Y_START;
+        editorSettings.addLabel(X_1 + 10, y, font, "Name: ");
+        TextField nameField = new TextField(X_1 + 10, y, LARGE_SECTION_WIDTH, "Name:", SettingsMaster.NAME, 32, font)
+                .setOnEndInput(this::updateName);
+        nameField.setOnEnter(nameField::disable);
+
+        editorSettings.add(nameField);
+
+        y -= (int) (LABEL_Y_SPACING * 1.5f);
+
         editorSettings.addLabel(X_1 + 10, y, font, "Don");
         editorSettings.add(xPositions[0] = new Label(X_2 + 10, y, font, "x:" + SettingsMaster.donX));
         editorSettings.add(yPositions[0] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.donY));
@@ -328,6 +341,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         xField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "x:", "", 3, font).setType(TextField.TextType.INTEGER);
         xField.setOnEndInput(this::setXPosition);
+        xField.setOnEnter(xField::disable);
         xField.lock();
         editorSettings.add(xField);
 
@@ -342,6 +356,7 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         yField = new TextField(X_5, y, SMALL_SECTION_WIDTH, "y:", "", 3, font).setType(TextField.TextType.INTEGER);
         yField.setOnEndInput(this::setYPosition);
+        yField.setOnEnter(yField::disable);
         yField.lock();
         editorSettings.add(yField);
 
@@ -351,17 +366,20 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
         editorSettings.add(yPositions[3] = new Label(X_3 + 10, y, font, "y:" + SettingsMaster.bigKatY));
         Button bigKat = new Button(X_1, y - LABEL_Y_SPACING / 2.0f, SMALL_SECTION_WIDTH * 3, LABEL_Y_SPACING, null, font).setClick((b)->togglePositioning(3)).useBorderRendering();
 
-        y -= LABEL_Y_SPACING * 2;
+        y -= (int) (LABEL_Y_SPACING * 1.5f);
 
         TextField musicVolume = new TextField(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateMusicVolume);
         TextField effectVolume = new TextField(X_4 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateEffectVolume);
 
+        musicVolume.setOnEnter(musicVolume::disable);
+        effectVolume.setOnEnter(effectVolume::disable);
+
         editorSettings.add(musicVolume);
         editorSettings.add(effectVolume);
 
-        y -= LABEL_Y_SPACING * 2;
+        y -= LABEL_Y_SPACING;
 
         ToggleButton lazerSnaps = new ToggleButton(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, "Use Lazer Snappings", font, SettingsMaster.lazerSnaps)
                 .setOnToggle(this::updateUseLazerSnappings);

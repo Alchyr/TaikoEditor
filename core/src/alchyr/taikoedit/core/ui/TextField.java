@@ -4,7 +4,7 @@ import alchyr.taikoedit.core.UIElement;
 import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.input.sub.TextInputReceiver;
 import alchyr.taikoedit.util.GeneralUtils;
-import com.badlogic.gdx.Gdx;
+import alchyr.taikoedit.util.interfaces.functional.VoidMethod;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -96,6 +96,12 @@ public class TextField implements UIElement, TextInputReceiver {
         this.displaySuffix = s;
         return this;
     }
+    public TextField setOnEnter(VoidMethod onEnter) {
+        return setOnEnter((s)->{
+            onEnter.run();
+            return false;
+        });
+    }
     public TextField setOnEnter(Function<String, Boolean> onEnter) {
         this.onEnter = onEnter;
         return this;
@@ -118,6 +124,8 @@ public class TextField implements UIElement, TextInputReceiver {
     public boolean acceptCharacter(char c) {
         if (!enabled || filtered.contains(c))
             return false;
+
+        if (onEnter != null && (c == '\n' || c == '\r')) return true;
 
         switch (type) {
             case INTEGER:

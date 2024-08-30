@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static alchyr.taikoedit.core.input.BindingGroup.shift;
-
 public class RedLineTool extends EditorTool {
     private static final int MAX_SNAP_OFFSET = 40;
     protected static final Color previewColor = new Color(1.0f, 1.0f, 1.0f, 0.6f);
@@ -67,6 +65,8 @@ public class RedLineTool extends EditorTool {
         for (EditorBeatmap m : activeMaps)
         {
             ViewSet v = views.get(m);
+
+            if (v == null) continue;
 
             if (v.containsY(y))
             {

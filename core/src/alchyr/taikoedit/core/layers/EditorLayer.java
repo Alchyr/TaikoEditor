@@ -81,6 +81,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
     /* * * * * * UI ELEMENTS * * * * * */
     private Texture pixel; //General rendering
+    private Texture connected; //General rendering
+    private BitmapFont aller;
 
     //Overlays
     public TextOverlay textOverlay;
@@ -233,9 +235,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             bgHeight = (int) Math.ceil(background.getHeight() * bgScale);
         }
 
-        BitmapFont aller = assetMaster.getFont("aller medium");
+        aller = assetMaster.getFont("aller medium");
 
         pixel = assetMaster.get("ui:pixel");
+        connected = assetMaster.get("ui:connected");
         topBarHeight = 40;
         timelineY = SettingsMaster.getHeight() - (topBarHeight + Timeline.HEIGHT);
         topBarY = SettingsMaster.getHeight() - topBarHeight;
@@ -614,6 +617,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         tools.render(sb, sr);
 
         //Overlays
+        if (server != null) {
+            server.renderConnectedNames(textRenderer, sb, connected, aller, SettingsMaster.getWidth() - 16, 0.6f);
+        }
+        else if (client != null) {
+            client.renderConnectedNames(textRenderer, sb, connected, aller, SettingsMaster.getWidth() - 16, 0.6f);
+        }
+
         topBarDropdown.render(sb, sr);
         textOverlay.render(sb, sr);
 
@@ -1442,7 +1452,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private void openDifficultyMenu()
     {
         clean();
-        TaikoEditor.addLayer(new DifficultyMenuLayer(this, set));
+        TaikoEditor.addLayer(new DifficultyMenuLayer(this, set, (client == null && server == null)));
     }
     private void settings()
     {
@@ -1580,7 +1590,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         //Open text prompt for port, then open server on that port
         TaikoEditor.addLayer(new ServerSetupLayer(30000, (port, clientLimit)->{
             try {
-                server = new ConnectionServer(port, clientLimit);
+                server = new ConnectionServer(SettingsMaster.NAME, port, clientLimit);
 
                 networkingButton.setTextures(assetMaster.get("ui:connecth"), assetMaster.get("ui:connecth"));
                 networkingButton.setHovered(()->{ hoverText.setText("Server Open"); });
