@@ -33,10 +33,13 @@ import com.badlogic.gdx.math.MathUtils;
 
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +85,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     private static final Color bgColor = new Color(0.3f, 0.3f, 0.25f, 1.0f);
 
-    private String updateID = null;
+    private String updateURL = null;
+    private byte[] updateHash = null;
 
     public MenuLayer(boolean delayMapload)
     {
@@ -200,7 +204,16 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
                 if (latestID > VERSION) {
                     editorLogger.info("Newer version detected.");
-                    updateID = result[1];
+                    //updateID = result[1]; For compatibility, a useless entry is left in the middle.
+                    updateURL = "https://" + result[2];
+                    editorLogger.info("URL: " + updateURL.replace('/', ' '));
+
+                    int offset = 3;
+                    updateHash = new byte[result.length - offset];
+                    for (int i = offset; i < result.length; ++i) {
+                        updateHash[i - offset] = Byte.parseByte(result[i]);
+                    }
+
                     buttons.add(new ImageButton(buttonX - 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:update"), (Texture) assetMaster.get("ui:updateh"))
                             .setClick(this::versionUpdate).setHovered(()->hoverText.setText("Update Available")));
                 }
@@ -209,8 +222,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                 }
             }
             catch (Exception e) {
-                editorLogger.error("Failed to process update data.");
-                e.printStackTrace();
+                editorLogger.error("Failed to process update data.", e);
             }
         });
         updateCheck.setName("Update Check");
@@ -740,11 +752,11 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     }
 
     private void versionUpdate() {
-        if (updateID != null) {
+        if (updateURL != null && updateHash != null) {
             TaikoEditor.addLayer(new ConfirmationLayer("Exit and update?", "Yes", "No", false).onConfirm(
                     ()->{
                         music.pause();
-                        TaikoEditor.addLayer(new UpdatingLayer(updateID, new File("lib").getAbsolutePath()));
+                        TaikoEditor.addLayer(new UpdatingLayer(updateURL, updateHash, new File("lib").getAbsolutePath()));
                     }));
         }
     }
@@ -847,33 +859,47 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                 sourceLayer.quit();
             });
 
-            /*bindings.bind("1", ()->{
+            bindings.bind("???", ()->{
                 try {
-                    Transferable data = Toolkit.getDefaultToolkit()
-                            .getSystemClipboard()
-                            .getContents(this);
-                    if (data != null) {
-                        if (data.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                            String clipboardData = (String) data.getTransferData(DataFlavor.stringFlavor);
-                            String[] params = clipboardData.split("\\|");
+                    //Copy to clipboard byte[] md hash of this jar file, in string format with each byte being converted to a char while adding 192
+                    File jarFile = GeneralUtils.urlToFile(GeneralUtils.getLocation(TaikoEditor.class));
 
-                            sourceLayer.test = new ConnectionClient(new Socket(params[0], Integer.parseInt(params[1])));
+                    editorLogger.info("Generating hash for " + jarFile);
 
-                            sourceLayer.test.send(params[2]);
+                    try {
+                        MessageDigest md = MessageDigest.getInstance("MD5");
+
+                        FileInputStream fileReader = new FileInputStream(jarFile);
+                        DigestInputStream mdFileReader = new DigestInputStream(fileReader, md);
+
+                        byte[] buffer = new byte[1024 * 4];
+                        while (mdFileReader.read(buffer) != -1);
+                        byte[] digest = md.digest();
+
+                        StringBuilder result = new StringBuilder();
+                        for (byte b : digest) {
+                            result.append(String.valueOf(b)).append(':');
                         }
+                        result.deleteCharAt(result.length() - 1);
+
+                        String out = result.toString();
+                        editorLogger.info("Generated hash: " + out);
+
+                        Toolkit.getDefaultToolkit()
+                                .getSystemClipboard()
+                                .setContents(new StringSelection(out), null);
+
+                        sourceLayer.textOverlay.setText("Generated hash.", 1.0f);
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    catch (Exception e) {
+                        editorLogger.error("Failed to generate hash for jar.", e);
+                    }
+                }
+                catch (Exception e) {
+                    sourceLayer.textOverlay.setText("Failed to find jar location.", 1.0f);
+                    editorLogger.error(e);
                 }
             });
-
-            bindings.bind("2", ()->{
-                if (sourceLayer.test != null) {
-                    sourceLayer.test.send(".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____" +
-                            ".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____" +
-                            ".____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____.____"); //300 chars
-                }
-            });*/
 
             bindings.bind("Up", ()->{
                 sourceLayer.mapSelect.scroll(-5);

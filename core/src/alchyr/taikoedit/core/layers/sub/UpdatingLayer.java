@@ -12,10 +12,24 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.awt.*;
 import java.io.File;
-import java.io.InputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.*;
+import java.net.URLConnection;
+import java.net.UnknownHostException;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.jar.JarEntry;
@@ -29,6 +43,19 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
     private static final String ACTIVE = "desktop-1.0.jar";
     private static final String TEMP = "temp.jar";
 
+    private static final boolean openInBrowser;
+    private static final String FAIL_MESSAGE;
+    static {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            openInBrowser = true;
+            FAIL_MESSAGE = "Failed to update.\nPress any key to return to editor and\nopen the file page in a web browser.";
+        }
+        else {
+            openInBrowser = false;
+            FAIL_MESSAGE = "Failed to update.\nPress any key to return to editor.";
+        }
+    }
+
     private static UpdatingLayerProcessor processor;
 
     //Rendering
@@ -39,23 +66,35 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
 
     //Parts
     private String text;
+    private boolean openInBrowserThisTime = openInBrowser;
 
-    private final String id, location;
+    private URL downloadURL;
+    private final byte[] hash;
 
     private final Path destination;
     private final Path updatePath;
 
-    private int state = 0;
+    private int state;
 
-    public UpdatingLayer(String id, String location) {
+    public UpdatingLayer(String url, byte[] hash, String location) {
         this.type = LAYER_TYPE.FULL_STOP;
 
         processor = new UpdatingLayerProcessor(this);
 
-        this.text = "Downloading update. Do not end process.";
+        this.hash = hash;
 
-        this.id = id;
-        this.location = location;
+        this.text = "Downloading update. Do not end process.";
+        state = 0;
+
+        try {
+            downloadURL = new URL(url);
+        }
+        catch (MalformedURLException e) {
+            openInBrowserThisTime = false;
+            editorLogger.error("Invalid update URL", e);
+            text = "Update URL was invalid.\nPress any button to return to editor.";
+            state = -1;
+        }
 
         destination = Paths.get(location);
         updatePath = Paths.get(location, TEMP);
@@ -72,19 +111,19 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
                             try {
                                 Files.createDirectory(destination);
                             }
-                            catch (Exception e) {
+                            catch (IOException e) {
                                 e.printStackTrace();
-                                text = "ERROR: Target folder did not exist and could not be created. Press any key to return to editor.";
+                                text = "ERROR: Target folder did not exist and could not be created.\nPress any key to return to editor and\nopen the file page in a web browser.";
                                 state = -1;
                                 return;
                             }
                         }
+
                         state = 2;
                     }
                     catch (Exception e) {
-                        System.out.println("Update process failed.");
-                        e.printStackTrace();
-                        text = "Failed to update. Press any key to return to editor.";
+                        editorLogger.info("Update process failed.", e);
+                        text = FAIL_MESSAGE;
                         state = - 1;
                     }
                 });
@@ -92,31 +131,59 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
             case 2:
                 state = 3;
                 executor.submit(()->{
-                    try {
-                        InputStream in = new URL("https://drive.google.com/uc?export=download&id=" + id).openStream();
+                    try (FileOutputStream out = new FileOutputStream(updatePath.toFile())) {
+                        FileChannel outChannel = out.getChannel();
+                        this.text = "Downloading update. Do not end process.\nConnecting...";
+                        URLConnection connection = downloadURL.openConnection();
 
-                        Files.copy(in, updatePath, StandardCopyOption.REPLACE_EXISTING);
-                        //Download file to temporary location, as to not try to replace currently running jar.
-                        in.close();
+                        MessageDigest md = MessageDigest.getInstance("MD5");
+                        DigestInputStream mdInputReader = new DigestInputStream(connection.getInputStream(), md);
+
+                        ReadableByteChannel readableByteChannel = Channels.newChannel(mdInputReader);
+                        this.text = "Downloading update. Do not end process.\nDownloading...";
+
+                        long written = outChannel.transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+
+                        editorLogger.info("Wrote " + written + " bytes");
+
+                        byte[] digest = md.digest();
+
+                        if (!Arrays.equals(hash, digest)) {
+                            editorLogger.warn("Download file hash does not match.");
+                            state = -1;
+                            openInBrowserThisTime = false;
+                            mdInputReader.close();
+
+                            text = "Downloaded file's hash did not match.\nPress any button to return to editor.";
+                            Thread.sleep(1000);
+                            Files.delete(updatePath);
+                            return;
+                        }
 
                         state = 4;
                         text = "Checking validity of file...";
                     }
+                    catch (UnknownHostException e) {
+                        openInBrowserThisTime = false;
+                        editorLogger.info("Probably invalid URL.", e);
+                        text = "Update URL is invalid.\nPress any button to return to editor.";
+                        state = -1;
+                    }
                     catch (NoSuchFileException e) {
-                        System.out.println("Target folder did not exist.");
-                        e.printStackTrace();
-                        text = "Failed to update. Press any key to return to editor.";
+                        editorLogger.info("Target location was invalid.", e);
+                        text = FAIL_MESSAGE;
                         state = -1;
                     }
                     catch (Exception e) {
-                        System.out.println("Update process failed.");
-                        e.printStackTrace();
-                        text = "Failed to update. Press any key to return to editor.";
+                        editorLogger.info("Update process failed.", e);
+                        text = FAIL_MESSAGE;
                         state = - 1;
                     }
                 });
                 break;
             case 4:
+                state = 5;
+
                 executor.submit(()->{
                     try (JarFile editorJar = new JarFile(updatePath.toFile(), false)) {
                         JarEntry mainFile = editorJar.getJarEntry("alchyr/taikoedit/TaikoEditor.class");
@@ -124,13 +191,13 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
                             throw new RuntimeException("Downloaded jar is invalid.");
                         }
 
-                        state = 5;
                         text = "Update downloaded successfully. Press any key to exit and complete update.";
+                        state = 6;
                     }
                     catch (Exception e) {
-                        System.out.println("Update process failed.");
-                        e.printStackTrace();
-                        text = "Failed to update. Press any key to return to editor.";
+                        editorLogger.info("Update process failed.", e);
+                        openInBrowserThisTime = false;
+                        text = "Downloaded file does not seem to be a valid .jar file.\nPress any button to return to editor.";
                         state = - 1;
                     }
                 });
@@ -149,10 +216,18 @@ public class UpdatingLayer extends ProgramLayer implements InputLayer {
     private void receiveInput() {
         if (state == -1) {
             //Failure.
+            if (openInBrowserThisTime) {
+                try {
+                    Desktop.getDesktop().browse(downloadURL.toURI());
+                }
+                catch (Exception e) {
+                    editorLogger.error("Failed to open page in browser", e);
+                }
+            }
             executor.shutdownNow();
             close();
         }
-        else if (state == 5) {
+        else if (state == 6) {
             //Success.
             try {
                 Path p = destination.resolve("update");

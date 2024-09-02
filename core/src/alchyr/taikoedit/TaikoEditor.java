@@ -46,7 +46,7 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter implements EventWindowListener.WindowEventReceiver {
-    public static final int VERSION = 400; //x.x.x -> xxx
+    public static final int VERSION = 401; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = false; //ctrl+alt+d
 

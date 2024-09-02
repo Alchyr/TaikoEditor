@@ -152,6 +152,7 @@ public class BindingMaster {
                 new InputBinding.InputInfo(Input.Keys.PAGE_DOWN, Maybe.MAYBE, Maybe.MAYBE, Maybe.MAYBE))
                 .setConflicts((id)->id.equals("Up"), InputBinding.ConflictType.CANCELLING));
         creating.addBinding(InputBinding.create("Refresh", new InputBinding.InputInfo(Input.Keys.F5)));
+        creating.addBinding(InputBinding.create("???", new InputBinding.InputInfo(Input.Keys.F12, Maybe.TRUE)));
 
         creating.initialize(bindingGroups, loadedData.get(creating.getID()));
 
