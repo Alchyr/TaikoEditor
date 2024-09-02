@@ -144,7 +144,6 @@ public class MapObjectTreeMap<V extends MapObject>
                 c.addKey(entry.getKey(), (V) obj.shiftedCopy(entry.getKey()));
             }
         }
-        c.addAll(this);
         return c;
     }
 
