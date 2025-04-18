@@ -57,6 +57,11 @@ public class TextRenderer {
         currentRendering.getData().setScale(1.0f);
         return this;
     }
+
+    public boolean hasFont() {
+        return currentRendering != null;
+    }
+
     public TextRenderer renderText(SpriteBatch sb, String s, float x, float y)
     {
         currentRendering.draw(sb, s, x, y);

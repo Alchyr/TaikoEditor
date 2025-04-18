@@ -110,6 +110,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         addOverlayButton(new ImageButton(assetMaster.get("editor:mode"), assetMaster.get("editor:modeh")).setClick(this::swapMode).setAction("Swap Modes"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:graph"), assetMaster.get("editor:graphh")).setClick(this::waveformMode).setAction("Waveform Mode"));
         addOverlayButton(new ImageButton(assetMaster.get("editor:timing"), assetMaster.get("editor:timingh")).setClick(this::swapTimingEnabled).setAction("Edit Timing"));
+        addOverlayButton(new ImageButton(assetMaster.get("editor:label"), assetMaster.get("editor:labelh")).setClick(this::toggleLabels).setAction("Show Labels"));
         addLockPositionButton();
 
         font = assetMaster.getFont("base:aller small");
@@ -167,6 +168,12 @@ public class EffectView extends MapView implements TextInputReceiver {
         parent.showText(timingEnabled ? "Timing editing enabled." : "Timing editing disabled.");
         clearSelection();
         updateToolset();
+    }
+
+    public void toggleLabels(int button)
+    {
+        renderLabels = !renderLabels;
+        parent.showText(renderLabels ? "Labels enabled." : "Labels disabled.");
     }
 
     public void waveformMode(int button)
@@ -1020,7 +1027,7 @@ public class EffectView extends MapView implements TextInputReceiver {
         else {
             for (Map.Entry<MapObject, MapObject> copyPair : copyMap.entrySet()) {
                 if (copyPair.getValue() instanceof TimingPoint && !(((TimingPoint) copyPair.getValue()).uninherited)) {
-                    copyPair.getValue().setVolume(MathUtils.clamp((int) (copyPair.getKey().getVolume() + Math.round(adjustment / 2)), 1, 100));
+                    copyPair.getValue().setVolume(MathUtils.clamp((int) (copyPair.getKey().getVolume() - Math.round(adjustment * 1.5)), 1, 100));
                 }
             }
         }

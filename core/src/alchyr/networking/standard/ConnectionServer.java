@@ -75,7 +75,7 @@ public class ConnectionServer implements AutoCloseable {
         logger.info(getPublicIP());
         hostAddress = getPublicIP();
 
-        //Temp
+        //Temp for local non-port-forwarding test
         //hostAddress = InetAddress.getLocalHost().getHostAddress();
 
         serverSocket = new ServerSocket(port, 20);

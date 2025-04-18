@@ -3,9 +3,12 @@ package alchyr.taikoedit;
 import alchyr.taikoedit.audio.MusicWrapper;
 import alchyr.taikoedit.audio.mp3.PreloadedMp3;
 import alchyr.taikoedit.audio.ogg.PreloadOgg;
-import alchyr.taikoedit.core.ProgramLayer;
 import alchyr.taikoedit.core.InputLayer;
-import alchyr.taikoedit.core.layers.*;
+import alchyr.taikoedit.core.ProgramLayer;
+import alchyr.taikoedit.core.layers.EditorLayer;
+import alchyr.taikoedit.core.layers.EditorLoadingLayer;
+import alchyr.taikoedit.core.layers.LoadingLayer;
+import alchyr.taikoedit.core.layers.MenuLayer;
 import alchyr.taikoedit.core.layers.sub.SvFunctionLayer;
 import alchyr.taikoedit.core.ui.CursorHoverText;
 import alchyr.taikoedit.editor.changes.MapChange;
@@ -46,7 +49,7 @@ import static alchyr.taikoedit.management.assets.skins.Skins.currentSkin;
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
 public class TaikoEditor extends ApplicationAdapter implements EventWindowListener.WindowEventReceiver {
-    public static final int VERSION = 401; //x.x.x -> xxx
+    public static final int VERSION = 404; //x.x.x -> xxx
 
     public static final boolean DIFFCALC = false; //ctrl+alt+d
 
@@ -94,7 +97,8 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
     //update/framerate control
     private Thread updateThread;
     private boolean paused;
-    private final RunningAverage fpsTracker = new RunningAverage(20);
+    private final RunningAverage fpsLimitTracker = new RunningAverage(20);
+    private float frameTimer, targetFrameDuration = 0; //setForegroundFps was added to lwjgl3 config
     private int updateCount = 0;
 
     private static final ReentrantLock layerLock = new ReentrantLock();
@@ -105,10 +109,11 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
 
     private static final Sync sync = new Sync();
 
-    public TaikoEditor(int width, int height, boolean borderless, boolean fastMenu, String directOpen) {
-        //this.targetFps = fps;
-        //this.frameDuration = this.targetFrameDuration = 1.0f / targetFps; //1 second / number of frames per second
-        fpsTracker.init(1.0f / 60.0f);
+    public TaikoEditor(int width, int height, int targetFps, boolean borderless, boolean fastMenu, String directOpen) {
+        if (targetFps > 0) {
+            this.frameTimer = this.targetFrameDuration = 1.0f / targetFps; //1 second / number of frames per second
+        }
+        fpsLimitTracker.init(1.0f / 60.0f);
 
         launchWidth = width;
         launchHeight = height;
@@ -170,23 +175,30 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
     }
 
     private void postCreate() {
+        //Gdx.graphics.setVSync(true);
+        Gdx.graphics.setVSync(false);
         if (launchWidth != -1 && launchHeight != -1) {
-            //windowed/borderless
             if (borderless) {
+                //borderless
                 Gdx.graphics.setUndecorated(true); //updating size directly in the create method results in issues
                 Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
                 //OnionExtension.setBorderlessFullscreen((Lwjgl3Graphics) Gdx.graphics, displayMode.width, displayMode.height + 1); //little +1 to avoid certain fullscreen mode
-                Gdx.graphics.setWindowedMode(displayMode.width, displayMode.height);
+                Gdx.graphics.setWindowedMode(displayMode.width, displayMode.height + 1);
+                SettingsMaster.updateDimensions(displayMode, displayMode.width, displayMode.height + 1);
             }
             else {
+                //windowed
                 Gdx.graphics.setWindowedMode(launchWidth, launchHeight);
+                SettingsMaster.updateDimensions(null, launchWidth, launchHeight);
                 /*((Lwjgl3Graphics)Gdx.graphics).getWindow().setPosition( //auto-repositioning was added
                         ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionX() + 200 - (launchWidth / 2),
                         ((Lwjgl3Graphics)Gdx.graphics).getWindow().getPositionY() + 200 - (launchHeight / 2));*/
             }
         }
+        else {
+            SettingsMaster.updateDimensions();
+        }
 
-        SettingsMaster.updateDimensions();
 
         sb = new SpriteBatch();
         sr = new ShapeRenderer();
@@ -214,9 +226,6 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
         }
 
         //Setup and start update thread
-        //Gdx.graphics.setContinuousRendering(false);
-        //GLFW.glfwSwapInterval(2);
-
         updateThread = new Thread(() -> {
             try {
                 if (lastTime == 0)
@@ -227,19 +236,19 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
                 while (!end) {
                     sync.sync(paused ? 24 : 480, paused ? 25 : 2);
 
+                    layerLock.lock();
+
                     time = getTime();
                     elapsed = (float)(time - lastTime);
-
-                    layerLock.lock();
                     music.update(time - lastTime);
                     updateLayers();
                     renderLayer = gameUpdate(elapsed);
                     layerLock.unlock();
 
-                    lastTime = time;
-
                     DeviceSwapping.updateActiveDevice(elapsed);
                     ++updateCount;
+
+                    lastTime = time;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -335,11 +344,18 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
 
         //editorLogger.info(Gdx.graphics.getFramesPerSecond());
 
-        layerLock.lock();
-
         float elapsed = Gdx.graphics.getDeltaTime();
-        fpsTracker.add(elapsed);
+        fpsLimitTracker.add(elapsed);
+        /*frameTimer += elapsed;
 
+        if (frameTimer < targetFrameDuration && targetFrameDuration > 0) {
+            return;
+        }
+        else {
+            frameTimer %= targetFrameDuration; //no "catchup"
+        }*/
+
+        layerLock.lock();
         updateCount = 0;
 
         VoidMethod m;
@@ -423,6 +439,9 @@ public class TaikoEditor extends ApplicationAdapter implements EventWindowListen
             }
 
             hoverText.render(sb, sr);
+
+            /*if (textRenderer.hasFont())
+                textRenderer.renderText(sb, String.valueOf(1 / fpsLimitTracker.avg()), 30, 30, Color.WHITE);*/
 
             sb.end();
         }

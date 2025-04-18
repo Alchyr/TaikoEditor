@@ -13,6 +13,7 @@ import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.*;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import com.badlogic.gdx.utils.StreamUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,6 +40,7 @@ public class DesktopLauncher {
 
 	private static int width = -1, height = -1;
 	private static boolean borderless = false;
+	private static int fps = 0; //0 = vsync, <0 = unlimited
 
 	private static boolean fast = false;
 	private static String directOpen = null;
@@ -106,9 +108,9 @@ public class DesktopLauncher {
 			logger.info("Launching.");
 			logger.info(" - Resolution: " + (width == -1 && height == -1 ? "Fullscreen" : width + "x" + height));
 			logger.info(" - Borderless: " + (borderless ? "Yes" : "No"));
-			//logger.info(" - FPS Setting: " + (fpsMode == 0 ? "VSync" : (fpsMode == 2 ? "Unlimited" : fps)));
+			logger.info(" - FPS Setting: " + (fps == 0 ? "VSync" : (fps < 0 ? "Unlimited" : fps)));
 			logger.info(" - Menu: " + (fast ? "Fast" : "Normal"));
-			new Lwjgl3Application(new TaikoEditor(width, height, borderless, fast, directOpen), config);
+			new Lwjgl3Application(new TaikoEditor(width, height, fps, borderless, fast, directOpen), config);
 		}
 		catch (Exception e)
 		{
@@ -156,7 +158,8 @@ public class DesktopLauncher {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 
 		config.setAudioConfig(16, 2048, 6);
-		config.useVsync(true);
+		config.useVsync(false);
+		config.setHdpiMode(HdpiMode.Pixels);
 
 		config.setWindowIcon(Files.FileType.Internal, "taikoedit/images/icon_48.png", "taikoedit/images/icon_32.png", "taikoedit/images/icon_16.png");
 
@@ -196,21 +199,22 @@ public class DesktopLauncher {
 						height = Math.min(programConfig.height, primaryDesktopMode.height);
 
 						borderless = (width >= primaryDesktopMode.width) && (height >= primaryDesktopMode.height);
-						/*if (borderless) {
-							--height;
-						}*/
 
-						config.setWindowedMode(400, 400);
+						config.setWindowedMode(width, borderless ? height + 1 : height);
 						config.setResizable(false);
 						config.setAutoIconify(false);
 					}
+
+					config.useVsync(programConfig.fpsMode == 0);
+					fps = programConfig.fpsMode == 0 ? 0 : (programConfig.fpsMode == 2 ? -1 : programConfig.fps);
+					if (fps > 0)
+						config.setForegroundFPS(fps);
 
 					SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 
 					if (programConfig.useFastMenu) {
 						fast = true; //will be enabled by command line or this
 					}
-
 				}
 				catch (Exception e)
 				{
@@ -304,17 +308,22 @@ public class DesktopLauncher {
 				height = Math.min(programConfig.height, displayMode.height);
 
 				borderless = (width >= displayMode.width) && (height >= displayMode.height);
-				if (borderless) {
-					--height;
-				}
 
-				config.setWindowedMode(400, 400);
+				config.setWindowedMode(width, borderless ? height + 1 : height);
 				config.setResizable(false);
 				config.setAutoIconify(false);
 			}
 
+			config.useVsync(programConfig.fpsMode == 0);
+			fps = programConfig.fpsMode == 0 ? 0 : (programConfig.fpsMode == 2 ? -1 : programConfig.fps);
+			if (fps > 0)
+				config.setForegroundFPS(fps);
+
 			SettingsMaster.osuFolder = FileHelper.withSeparator(programConfig.osuFolder);
 
+			if (programConfig.useFastMenu) {
+				fast = true; //will be enabled by command line or this
+			}
 			return true;
 		}
 		else

@@ -18,10 +18,17 @@ import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.lwjgl.openal.AL10.*;
+import static org.lwjgl.openal.EXTDouble.AL_FORMAT_MONO_DOUBLE_EXT;
+import static org.lwjgl.openal.EXTDouble.AL_FORMAT_STEREO_DOUBLE_EXT;
+import static org.lwjgl.openal.EXTFloat32.AL_FORMAT_MONO_FLOAT32;
+import static org.lwjgl.openal.EXTFloat32.AL_FORMAT_STEREO_FLOAT32;
+import static org.lwjgl.openal.EXTMCFormats.*;
 import static org.lwjgl.openal.SOFTDirectChannels.AL_DIRECT_CHANNELS_SOFT;
 
 public abstract class CustomAudio extends OpenALMusic {
@@ -59,7 +66,7 @@ public abstract class CustomAudio extends OpenALMusic {
 
     //playback
     protected final int[] bufferIDs = new int[bufferCount];
-    protected final Set<Integer> bufferTracker = new TreeSet<>(), activeBuffers = new HashSet<>();
+    protected final Set<Integer> activeBuffers = new HashSet<>();
     protected final FloatArray renderedSecondsQueue = new FloatArray(bufferCount);
     protected IntBuffer buffers;
     protected int sourceID = -1;
@@ -184,8 +191,6 @@ public abstract class CustomAudio extends OpenALMusic {
         boolean filled = false;
 
         activeBuffers.clear();
-        for (int buffer : bufferIDs)
-            bufferTracker.add(buffer);
 
         int i = 0;
         for (; i < bufferCount; i++) {
@@ -229,10 +234,42 @@ public abstract class CustomAudio extends OpenALMusic {
     }
 
     @Override
-    protected void setup(int channels, int sampleRate) {
-        this.format = channels > 1 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
+    protected void setup(int channels, int bitDepth, int sampleRate) {
+        switch (channels) {
+            case 1:
+                switch (bitDepth) {
+                    case 8: format = AL_FORMAT_MONO8; break;
+                    case 16: format = AL_FORMAT_MONO16; break;
+                    case 32: format = AL_FORMAT_MONO_FLOAT32; break;
+                    case 64: format = AL_FORMAT_MONO_DOUBLE_EXT; break;
+                    default: throw new GdxRuntimeException("Audio: Bit depth must be 8, 16, 32 or 64.");
+                }
+                break;
+            case 2: // Doesn't work on mono devices (#6631)
+                switch (bitDepth) {
+                    case 8: format = AL_FORMAT_STEREO8; break;
+                    case 16: format = AL_FORMAT_STEREO16; break;
+                    case 32: format = AL_FORMAT_STEREO_FLOAT32; break;
+                    case 64: format = AL_FORMAT_STEREO_DOUBLE_EXT; break;
+                    default: throw new GdxRuntimeException("Audio: Bit depth must be 8, 16, 32 or 64.");
+                }
+                break;
+            case 4: format = AL_FORMAT_QUAD16; break; // Works on stereo devices but not mono as above
+            case 6: format = AL_FORMAT_51CHN16; break;
+            case 7: format = AL_FORMAT_61CHN16; break;
+            case 8: format = AL_FORMAT_71CHN16; break;
+            default: throw new GdxRuntimeException("Audio: Invalid number of channels. " +
+                    "Must be mono, stereo, quad, 5.1, 6.1 or 7.1.");
+        }
+        if (channels >= 4) {
+            if (bitDepth == 8) format--; // Use 8-bit AL_FORMAT instead
+            else if (bitDepth == 32) format++; // Use 32-bit AL_FORMAT instead
+            else if (bitDepth != 16)
+                throw new GdxRuntimeException("Audio: Bit depth must be 8, 16 or 32 when 4+ channels are present.");
+        }
+
         this.sampleRate = sampleRate;
-        maxSecondsPerBuffer = (float)bufferSize / (bytesPerSample * channels * sampleRate);
+        this.maxSecondsPerBuffer = (float)bufferSize / ((bitDepth >> 3) * channels * sampleRate);
     }
 
     @Override
@@ -291,8 +328,6 @@ public abstract class CustomAudio extends OpenALMusic {
                 boolean filled = false; // Check if there's anything to actually play.
 
                 activeBuffers.clear();
-                for (int buffer : bufferIDs)
-                    bufferTracker.add(buffer);
 
                 for (int i = 0; i < bufferCount; i++) { //Fill and queue buffers until there is nothing left to queue or no more buffers
                     int bufferID = buffers.get(i);

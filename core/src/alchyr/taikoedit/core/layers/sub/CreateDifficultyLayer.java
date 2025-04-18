@@ -185,7 +185,8 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
 
         EditorBeatmap newMap = new EditorBeatmap(base, newBase, keepObjects.enabled, keepSv.enabled, keepVolume.enabled);
 
-        if (newMap.save()) {
+        String err = newMap.save();
+        if (err == null) {
             this.set.add(newBase);
 
             sourceLayer.addMap(newMap);
@@ -194,7 +195,7 @@ public class CreateDifficultyLayer extends ProgramLayer implements InputLayer {
             return true;
         }
         else {
-            textOverlay.setText("Failed to save new difficulty!", 2.0f);
+            textOverlay.setText(err, 3.0f);
             return false;
         }
     }

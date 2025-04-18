@@ -8,25 +8,28 @@ import alchyr.taikoedit.editor.DivisorOptions;
 import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.Timeline;
 import alchyr.taikoedit.editor.changes.*;
-import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
+import alchyr.taikoedit.editor.views.EffectView;
 import alchyr.taikoedit.editor.views.GameplayView;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
-import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.management.assets.FileHelper;
+import alchyr.taikoedit.util.GeneralUtils;
 import alchyr.taikoedit.util.structures.BranchingStateQueue;
-import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.utils.StreamUtils;
 
+import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.List;
 import java.util.function.BiFunction;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -306,6 +309,10 @@ public class EditorBeatmap {
         else {
             objectKeyOffset = OBJECT_KEY_OFFSET_SPACING * (2 + client.ID);
         }
+    }
+
+    public BranchingStateQueue<MapChange> changeState() {
+        return changes;
     }
 
     public void clearState() {
@@ -1908,7 +1915,11 @@ public class EditorBeatmap {
         return true;
     }
 
-    public boolean save()
+    /**
+     *
+     * @return null if successful, or error message string
+     */
+    public String save()
     {
         FileOutputStream out = null;
         BufferedWriter w = null;
@@ -1979,10 +1990,11 @@ public class EditorBeatmap {
             dirty = false;
 
             fullMapInfo.setMapFile(newFile);
-            return true;
+            return null;
         }
         catch (Exception e)
         {
+            //Failure
             if (w != null)
             {
                 try
@@ -2001,6 +2013,9 @@ public class EditorBeatmap {
             }
             editorLogger.error("Failed to save beatmap.", e);
 
+            String errorMsg = "Failed to save: " + e.getMessage();
+
+            //Log failure
             try {
                 File f = new File("error.txt");
                 PrintWriter pWriter = null;
@@ -2008,7 +2023,7 @@ public class EditorBeatmap {
                 try {
                     pWriter = new PrintWriter(f);
                     pWriter.println("Version: " + TaikoEditor.VERSION);
-                    pWriter.println("Error occurred during save: " + e.getMessage());
+                    pWriter.println(errorMsg);
                     e.printStackTrace(pWriter);
                 }
                 catch (Exception ignored) {
@@ -2021,7 +2036,69 @@ public class EditorBeatmap {
 
             }
 
-            return false;
+            editorLogger.info("Attempting to save to backup location.");
+            boolean malformed = false;
+            File emergency = null;
+
+            try {
+
+                String mapInfo = "";
+                String lines = "";
+                String objects = "";
+                try {
+                    mapInfo = fullMapInfo.toString();
+                }
+                catch (Exception ignored) {
+                    malformed = true;
+                }
+                try {
+                    lines = timingPoints();
+                }
+                catch (Exception ignored) {
+                    malformed = true;
+                }
+                try {
+                    objects = hitObjects();
+                }
+                catch (Exception ignored) {
+                    malformed = true;
+                }
+
+                try {
+                    Toolkit.getDefaultToolkit()
+                            .getSystemClipboard()
+                            .setContents(new StringSelection(mapInfo + lines + objects), null);
+                }
+                catch (Exception ignored) {
+
+                }
+
+                File parent = fullMapInfo.getMapFile().getParentFile(), target;
+                do {
+                    target = parent;
+                    parent = target.getParentFile();
+                } while (parent != null);
+
+                emergency = new File(target, fullMapInfo.generateFilename());
+
+                out = new FileOutputStream(emergency, false);
+                w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+
+                w.write(mapInfo);
+                w.write(lines);
+                w.write(objects);
+
+                w.close();
+                out.close();
+
+                dirty = false;
+            }
+            catch (Exception ignored) {
+
+            }
+
+            return errorMsg + " | Copied map to clipboard" +
+                    (emergency != null ? " and attempted to save " + (malformed ? "malformed " : "") + "map to " + emergency.getPath() : "");
         }
     }
 

@@ -487,7 +487,7 @@ public abstract class MapView {
             }
         }
         lastReturnedSelection.removeIf((obj)->!obj.selected); //selection can be messed with by a different view with same object type
-        return lastReturnedSelection;
+        return lastReturnedSelection.isEmpty() ? null : lastReturnedSelection;
     }
     public abstract String getSelectionString();
 
@@ -566,6 +566,8 @@ public abstract class MapView {
         int changed = 0;
 
         MapObjectTreeMap<MapObject> originalPositions = getSelection(true);
+        if (originalPositions == null || originalPositions.isEmpty()) return;
+
         MapObjectTreeMap<MapObject> newPositions = new MapObjectTreeMap<>();
 
         for (Map.Entry<Long, ArrayList<MapObject>> objs : originalPositions.entrySet())

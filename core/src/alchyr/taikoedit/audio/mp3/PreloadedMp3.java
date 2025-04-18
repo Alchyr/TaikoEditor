@@ -42,7 +42,7 @@ public class PreloadedMp3 extends CustomAudio {
         try
         {
             bitstream = new PreloadMp3Bitstream(file.read(), file.length());
-            setup(bitstream.channels, bitstream.sampleRate);
+            setup(bitstream.channels, 16, bitstream.sampleRate);
         } catch (Exception e) {
             this.audio = null;
             throw new GdxRuntimeException("error while preloading mp3", e);

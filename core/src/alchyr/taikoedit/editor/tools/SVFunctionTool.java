@@ -461,6 +461,7 @@ public class SVFunctionTool extends EditorTool {
                 //Otherwise just generate a new one.
 
                 Long lastPos = Long.MIN_VALUE;
+                double lastSv = -1;
                 boolean adjust = info.adjustExisting && info.basedOnFollowingObject;
 
                 for (long pos : sortedPositions)
@@ -493,7 +494,7 @@ public class SVFunctionTool extends EditorTool {
                         if (lastPos == null || lastPos < closest.getPos()) {
                             //There's no other object between the closest green line and the current position.
                             TimingPoint p = new TimingPoint(closest);
-                            p.setValue((isv + (dsv * info.function.apply((pos - start) / dist))) * ratio);
+                            p.setValue(lastSv = (isv + (dsv * info.function.apply((pos - start) / dist))) * ratio);
                             sv.add(p);
 
                             lastPos = pos;
@@ -505,13 +506,18 @@ public class SVFunctionTool extends EditorTool {
                     long genPos = pos + info.genOffset;
                     if (timing.getPos() <= pos && genPos < timing.getPos())
                         genPos = timing.getPos();
-                    TimingPoint p = ((TimingPoint) closest.shiftedCopy(genPos)).inherit();
 
-                    p.setValue((isv + (dsv * info.function.apply((MathUtils.clamp(pos, start, end) - start) / dist))) * ratio);
-
-                    sv.add(p);
-
+                    double newSv = (isv + (dsv * info.function.apply((MathUtils.clamp(pos, start, end) - start) / dist))) * ratio;
                     lastPos = pos;
+
+                    //Not skipping, new value, or right after a red line
+                    if (!info.skipUnnecessary || (newSv != lastSv) || (closest.uninherited && newSv != 1)) {
+                        lastSv = newSv;
+
+                        TimingPoint p = ((TimingPoint) closest.shiftedCopy(genPos)).inherit();
+                        p.setValue(newSv);
+                        sv.add(p);
+                    }
                 }
 
                 map.registerAndPerformAddObjects("SV Function", sv, null, previewView.replaceTest);

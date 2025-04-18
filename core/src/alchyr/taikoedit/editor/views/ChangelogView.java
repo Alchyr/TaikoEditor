@@ -12,6 +12,7 @@ import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -35,6 +36,8 @@ public class ChangelogView extends MapView {
 
     private static final int midPos = SettingsMaster.getWidth() / 2;
 
+    private final BitmapFont font;
+
     //Base position values
     private int baseTextY = 0;
 
@@ -46,6 +49,7 @@ public class ChangelogView extends MapView {
     public ChangelogView(EditorLayer parent, EditorBeatmap beatmap) {
         super(ViewType.CHANGELOG_VIEW, parent, beatmap, HEIGHT);
         lastSounded = 0;
+        font = assetMaster.getFont("aller medium");
 
         addOverlayButton(new ImageButton(assetMaster.get("editor:exit"), assetMaster.get("editor:exith")).setClick(this::close).setAction("Close View"));
     }
@@ -106,6 +110,8 @@ public class ChangelogView extends MapView {
     public void renderBase(SpriteBatch sb, ShapeRenderer sr) {
         sb.setColor(backColor);
         sb.draw(pix, 0, bottom, SettingsMaster.getWidth(), height);
+
+        textRenderer.setFont(font);
 
         MapChange change = map.lastChange();
         if (change != null) {

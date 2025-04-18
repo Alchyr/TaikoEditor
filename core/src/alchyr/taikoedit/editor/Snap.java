@@ -39,7 +39,7 @@ public class Snap implements Comparable<Snap> {
 
     private Texture pix;
 
-    public final int divisor; //1 = 1/1, 2 = 1/2, 3 = 1/3, etc.
+    public final int divisor; //1 = 1/1, 2 = 1/2, 3 = 1/3, etc. (0 is 1/1, barline)
     private final double precisePos;
     public final long pos;
 

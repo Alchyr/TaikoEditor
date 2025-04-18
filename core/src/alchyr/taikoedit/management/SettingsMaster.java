@@ -5,6 +5,7 @@ import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.files.FileHandle;
 
 import java.util.HashMap;
@@ -219,10 +220,15 @@ public class SettingsMaster {
 
     public static void updateDimensions()
     {
-        WIDTH = Gdx.graphics.getWidth();
+        updateDimensions(Gdx.graphics.getDisplayMode(), Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    }
+
+    public static void updateDimensions(Graphics.DisplayMode displayMode, int width, int height)
+    {
+        WIDTH = width;
         X_MIDDLE = WIDTH / 2;
-        HEIGHT = Gdx.graphics.getHeight();
-        if (HEIGHT == Gdx.graphics.getDisplayMode().height + 1) //borderless fullscreen workaround
+        HEIGHT = height;
+        if (displayMode != null && HEIGHT == displayMode.height + 1) //borderless fullscreen workaround
             --HEIGHT;
 
         Y_OFFSET = HEIGHT - 1;

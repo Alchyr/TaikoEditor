@@ -707,9 +707,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                     .onConfirm(()->{
                         boolean success = true;
                         for (EditorBeatmap m : dirtyMaps) {
-                            if (!m.save()) {
+                            String err = m.save();
+                            if (err != null) {
                                 success = false;
-                                textOverlay.setText("Failed to save!", 2.0f);
+                                textOverlay.setText(err, 3.0f);
                             }
                         }
 
@@ -1002,7 +1003,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             if (container.getViews().contains(toRemove) && container.getViews().size() == 0 && toRemove.map.dirty) {
                 TaikoEditor.addLayer(new ConfirmationLayer("Save changes to difficulty [" + toRemove.map.getName() + "]?", "Yes", "No", true)
                         .onConfirm(()->{
-                            if (toRemove.map.save()) {
+                            String err = toRemove.map.save();
+                            if (err == null) {
                                 container.removeView(toRemove);
 
                                 if (container.isEmpty()) {
@@ -1015,7 +1017,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                                 }
                             }
                             else {
-                                textOverlay.setText("Failed to save!", 2.0f);
+                                textOverlay.setText(err, 3.0f);
                             }
                         })
                         .onDeny(()->{
@@ -1126,12 +1128,13 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     //Menu option methods
     public boolean savePrimary() {
         if (primaryView != null) {
-            if (primaryView.map.save()) {
+            String err = primaryView.map.save();
+            if (err == null) {
                 textOverlay.setText("Difficulty \"" + primaryView.map.getName() + "\" saved!", 0.5f);
                 return true;
             }
             else {
-                textOverlay.setText("Failed to save!", 2.0f);
+                textOverlay.setText(err, 3.0f);
             }
         }
         return false;
@@ -1143,7 +1146,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         int failures = 0;
         StringBuilder failed = new StringBuilder();
         for (EditorBeatmap m : activeMaps) {
-            if (!m.save()) {
+            String err = m.save();
+            if (err != null) {
                 failed.append(" [").append(m.getName()).append("]");
                 ++failures;
             }
@@ -1220,7 +1224,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     {
         if (newScale > 0.93f && newScale < 1.07f)
             newScale = 1;
-        viewScale = Math.min(Math.max(0.1f, newScale), 500.0f);
+        viewScale = Math.min(Math.max(0.001f, newScale), 500.0f);
         viewTime = (int) ((SettingsMaster.getMiddleX() + 500) / viewScale);
     }
 
@@ -1464,7 +1468,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (music.isPlaying())
             music.pause();
 
-        topBarDropdown.close();
+        if (topBarDropdown != null)
+            topBarDropdown.close();
 
         processor.releaseInput(false);
     }

@@ -6,6 +6,8 @@ Would be nice if theres a timing tool that automatically adjusts the BPM of a re
 
 Pool arraylists?
 
+add fps/vsync/stuff settings to in-editor
+
 
 Need to test - multiple clients
 Hard to test - synchronization code when changes are made at the same time before receiving change from other
@@ -60,4 +62,3 @@ BUGS:
 Sometimes audio will not play the first time you seek. Seeking again fixes this.
 Changing speed before playing the audio at least once will result in audio issues. Seeking or pausing and playing again will fix this.
 Audio - Fixed by loading and playing the music automatically in menu? Could maybe still accomplish the issue by selecting map very fast?
-When the snap divisor is set to 0 (none) the program is much (?) laggier. May simply be a visual illusion thing. - fixed due to dumb snap generation code

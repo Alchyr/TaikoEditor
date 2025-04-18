@@ -35,7 +35,7 @@ public class CharacterTreeMap<T> {
                 for (CharacterTreeNode start : startPoints) {
                     for (WeightedEntry result : start.find(key)) {
                         if (start.isTop && result.exactMatch) {
-                            max = Math.max(max, results.merge(result.entry, result.weight * 2.5f, Float::sum));
+                            max = Math.max(max, results.merge(result.entry, result.weight * (valueMul + 1), Float::sum));
                         }
                         else {
                             max = Math.max(max, results.merge(result.entry, result.weight * valueMul, Float::sum));

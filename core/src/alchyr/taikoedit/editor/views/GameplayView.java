@@ -9,6 +9,7 @@ import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.tools.Toolset;
 import alchyr.taikoedit.management.SettingsMaster;
+import alchyr.taikoedit.util.EditorTime;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
@@ -472,7 +473,8 @@ public class GameplayView extends MapView {
 
     @Override
     public void selectAll() {
-
+        clearSelection();
+        selectObjects(map.objects);
     }
 
     @Override
@@ -487,12 +489,114 @@ public class GameplayView extends MapView {
 
     @Override
     public String getSelectionString() {
-        return "";
+        if (hasSelection())
+        {
+            MapObjectTreeMap<MapObject> selectedObjects = getSelection();
+
+            StringBuilder sb = new StringBuilder(new EditorTime(selectedObjects.firstKey()).toString()).append(" (");
+
+            int comboCount = 0;
+            boolean foundStart = false;
+
+            NavigableMap<Long, ArrayList<HitObject>> precedingObjects = map.objects.descendingSubMap(selectedObjects.firstKey(), true);
+
+            //Find initial combo count
+            for (Map.Entry<Long, ArrayList<HitObject>> entry : precedingObjects.entrySet())
+            {
+                for (HitObject h : entry.getValue())
+                {
+                    if (foundStart)
+                    {
+                        ++comboCount;
+                        if (h.newCombo)
+                            break;
+                    }
+                    else
+                    {
+                        if (h.equals(selectedObjects.firstEntry().getValue().get(0)))
+                        {
+                            foundStart = true;
+                            comboCount = 0;
+                            if (h.newCombo)
+                                break;
+                        }
+                    }
+                }
+            }
+
+            Iterator<Map.Entry<Long, ArrayList<HitObject>>> allObjects = map.objects.subMap(selectedObjects.firstKey(), true, selectedObjects.lastKey(), true).entrySet().iterator();
+            Iterator<Map.Entry<Long, ArrayList<MapObject>>> selectionObjects = selectedObjects.entrySet().iterator();
+
+            Map.Entry<Long, ArrayList<HitObject>> currentList = null;
+            Map.Entry<Long, ArrayList<MapObject>> selectedObjectList = null;
+
+            if (allObjects.hasNext())
+                currentList = allObjects.next();
+
+            if (selectionObjects.hasNext())
+                selectedObjectList = selectionObjects.next();
+
+            while (currentList != null && selectedObjectList != null)
+            {
+                if (currentList.getKey().equals(selectedObjectList.getKey())) //Position of lists match.
+                {
+                    for (HitObject h : currentList.getValue()) //For each object in map. Have to go through all of them to track combo count.
+                    {
+                        ++comboCount;
+                        if (h.newCombo)
+                            comboCount = 1;
+
+                        if (selectedObjectList.getValue().contains(h)) //This is a selected object, so add it to text
+                        {
+                            sb.append(comboCount).append(",");
+                        }
+                    }
+                    //This part of selected objects is done, move to next list in selected objects.
+                    if (selectionObjects.hasNext())
+                        selectedObjectList = selectionObjects.next();
+                    else
+                        selectedObjectList = null;
+                }
+                else //This list has no selected objects, just track combo.
+                {
+                    for (HitObject h : currentList.getValue())
+                    {
+                        if (h.newCombo)
+                        {
+                            comboCount = 1;
+                        }
+                        ++comboCount;
+                    }
+                }
+
+                //Move to next list in map.
+                if (allObjects.hasNext())
+                    currentList = allObjects.next();
+                else
+                    currentList = null;
+            }
+
+            //All done.
+            sb.deleteCharAt(sb.length() - 1).append(") - ");
+
+            return sb.toString();
+        }
+
+        return new EditorTime(time) + " - ";
     }
 
     @Override
     public void addSelectionRange(long startTime, long endTime) {
+        if (startTime == endTime)
+            return;
 
+        MapObjectTreeMap<MapObject> newSelection = new MapObjectTreeMap<>();
+        if (startTime > endTime)
+            newSelection.addAll(map.getSubMap(endTime, startTime));
+        else
+            newSelection.addAll(map.getSubMap(startTime, endTime));
+
+        selectObjects(newSelection);
     }
 
     @Override

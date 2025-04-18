@@ -238,7 +238,9 @@ public class SelectionTool extends EditorTool {
                     clickStartTime = selectingView.getTimeFromPosition(x);
                     int clickStartY = Gdx.input.getY();
                     mode = SelectionToolMode.DRAGGING;
-                    return hold = new DraggingMouseHoldObject(this, selectingView, dragObject, clickStartY);
+                    MapObjectTreeMap<MapObject> selection = selectingView.getSelection();
+                    if (selection == null) return null;
+                    return hold = new DraggingMouseHoldObject(this, selectingView, selection, dragObject, clickStartY);
                 }
                 else if (canSelect)
                 {
@@ -429,7 +431,7 @@ public class SelectionTool extends EditorTool {
         private long totalHorizontalOffset = 0;
         private double totalVerticalOffset = 0;
 
-        public DraggingMouseHoldObject(SelectionTool tool, MapView selectingView, MapObject dragObject, double lastY)
+        public DraggingMouseHoldObject(SelectionTool tool, MapView selectingView, MapObjectTreeMap<MapObject> selection, MapObject dragObject, double lastY)
         {
             super(null, null);
 
@@ -438,7 +440,6 @@ public class SelectionTool extends EditorTool {
             this.lastY = lastY;
             this.dragObjStartPos = dragObject.getPos();
 
-            MapObjectTreeMap<MapObject> selection = selectingView.getSelection();
             copyObjects = new MapObjectTreeMap<>();
             copyMap = new HashMap<>(selection.count());
 

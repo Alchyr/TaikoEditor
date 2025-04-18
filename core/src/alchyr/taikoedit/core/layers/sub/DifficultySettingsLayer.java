@@ -178,11 +178,13 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
             ViewSet set = sourceLayer.getViewSet(map);
             if (set != null)
                 set.updateDiffNamePosition();
-            if (map.save()) {
+
+            String err = map.save();
+            if (err == null) {
                 sourceLayer.textOverlay.setText("Difficulty \"" + map.getName() + "\" saved!", 0.5f);
             }
             else {
-                sourceLayer.textOverlay.setText("Failed to save!", 2.0f);
+                sourceLayer.textOverlay.setText(err, 3.0f);
             }
         }
         catch (Exception e) {

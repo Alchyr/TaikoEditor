@@ -35,11 +35,11 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
 
     public static class SvFunctionProperties {
         public final double isv, fsv;
-        public final boolean generateLines, fixedSnapping, svObjects, selectedOnly, svBarlines, adjustExisting, basedOnFollowingObject, relativeLast;
+        public final boolean generateLines, fixedSnapping, svObjects, selectedOnly, svBarlines, adjustExisting, basedOnFollowingObject, relativeLast, skipUnnecessary;
         public final int genOffset, snap;
         public final Function<Double, Double> function;
 
-        public SvFunctionProperties(double isv, double fsv, boolean generateLines, int genOffset, boolean fixedSnapping, int snap, boolean svObjects, boolean selectedOnly, boolean svBarlines, boolean adjustExisting, boolean basedOnFollowingObject, boolean relativeLast, Function<Double, Double> func) {
+        public SvFunctionProperties(double isv, double fsv, boolean generateLines, int genOffset, boolean fixedSnapping, int snap, boolean svObjects, boolean selectedOnly, boolean svBarlines, boolean adjustExisting, boolean basedOnFollowingObject, boolean relativeLast, boolean skipUnnecessary, Function<Double, Double> func) {
             this.isv = isv;
             this.fsv = fsv;
             this.generateLines = generateLines;
@@ -54,6 +54,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
             this.basedOnFollowingObject = basedOnFollowingObject;
 
             this.relativeLast = relativeLast;
+            this.skipUnnecessary = skipUnnecessary;
             this.function = func;
         }
     }
@@ -68,7 +69,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private static final int LEFT_POS = 50;
     private static final int SHIFT_STEP = 22;
     private static final int RIGHT_POS = SettingsMaster.getWidth() - 100;
-    private static final int BUTTON_OFFSET = 60;
+    private static final int BUTTON_OFFSET = 50;
     private final int middleY = SettingsMaster.getHeight() / 2;
 
     private static final int FORMULA_SIZE = (int) (150 * SettingsMaster.SCALE);
@@ -92,6 +93,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private final ToggleButton adjustExisting;
     private final ToggleButton basedOnObjects;
 
+    private final ToggleButton skipUnnecessaryLines;
     private final ToggleButton relativeLast;
 
     private final List<ImageButton> formulaButtons = new ArrayList<>();
@@ -216,7 +218,8 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         adjustExisting = new ToggleButton(LEFT_POS, middleY - BUTTON_OFFSET * 3.5f, "Adjust Existing Lines", font, true);
         basedOnObjects = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY - BUTTON_OFFSET * 4.5f, "Based on Following Object", font, true);
 
-        relativeLast = new ToggleButton(LEFT_POS, middleY - BUTTON_OFFSET * 6f, "Relative to Final BPM", font, true);
+        skipUnnecessaryLines = new ToggleButton(LEFT_POS, middleY - BUTTON_OFFSET * 6f, "Skip Lines With No Change", font, true);
+        relativeLast = new ToggleButton(LEFT_POS, middleY - BUTTON_OFFSET * 7f, "Relative to Final BPM", font, true);
 
         loadFormulas = true;
 
@@ -336,6 +339,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         adjustExisting.update(elapsed);
         basedOnObjects.update(elapsed);
 
+        skipUnnecessaryLines.update(elapsed);
         relativeLast.update(elapsed);
 
 
@@ -393,6 +397,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         adjustExisting.render(sb, sr);
         basedOnObjects.render(sb, sr);
 
+        skipUnnecessaryLines.render(sb, sr);
         relativeLast.render(sb, sr);
 
         sb.setColor(Color.FOREST);
@@ -487,7 +492,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         }
 
         if (success) {
-            result = new SvFunctionProperties(isv, fsv, generateLines.enabled, offset, fixedSpacing.enabled, snap, svObjects.enabled, selectedOnly.enabled, svBarlines.enabled, adjustExisting.enabled, basedOnObjects.enabled, relativeLast.enabled, formulas.get(formulaButtons.indexOf(selectedFormula)).a);
+            result = new SvFunctionProperties(isv, fsv, generateLines.enabled, offset, fixedSpacing.enabled, snap, svObjects.enabled, selectedOnly.enabled, svBarlines.enabled, adjustExisting.enabled, basedOnObjects.enabled, relativeLast.enabled, skipUnnecessaryLines.enabled, formulas.get(formulaButtons.indexOf(selectedFormula)).a);
             active = false;
             close();
         }
@@ -547,6 +552,9 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
                         if (sourceLayer.adjustExisting.click(p.x, p.y, b))
                             return null;
                         if (sourceLayer.basedOnObjects.click(p.x, p.y, b))
+                            return null;
+
+                        if (sourceLayer.skipUnnecessaryLines.click(p.x, p.y, b))
                             return null;
 
                         if (sourceLayer.relativeLast.click(p.x, p.y, b))
