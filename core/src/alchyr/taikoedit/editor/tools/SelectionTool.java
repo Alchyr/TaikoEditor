@@ -425,7 +425,7 @@ public class SelectionTool extends EditorTool {
         private final MapObjectTreeMap<MapObject> copyObjects;
         private final HashMap<MapObject, MapObject> copyMap; //map of original object -> copy object
 
-        private final MapObject referenceObject;
+        private final MapObject dragObject, referenceObject;
         private final long dragObjStartPos;
 
         private long totalHorizontalOffset = 0;
@@ -438,6 +438,7 @@ public class SelectionTool extends EditorTool {
             this.tool = tool;
             this.view = selectingView;
             this.lastY = lastY;
+            this.dragObject = dragObject;
             this.dragObjStartPos = dragObject.getPos();
 
             copyObjects = new MapObjectTreeMap<>();
@@ -563,7 +564,7 @@ public class SelectionTool extends EditorTool {
                     //proper way - pass copy objects into updateVerticalDrag
                     //then copy final values over on release. This also avoids any fuckery if another editor sets value of a line being dragged during adjustment.
                     totalVerticalOffset += verticalChange; //Track separately every time so holding shift can adjust just new input
-                    view.updateVerticalDrag(copyObjects, copyMap, totalVerticalOffset);
+                    view.updateVerticalDrag(dragObject, copyObjects, copyMap, totalVerticalOffset);
 
                     lastY = Gdx.input.getY();
                 }

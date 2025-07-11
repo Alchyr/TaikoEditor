@@ -20,10 +20,7 @@ import alchyr.taikoedit.editor.maps.MapInfo;
 import alchyr.taikoedit.editor.maps.Mapset;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
-import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.editor.views.MapView;
-import alchyr.taikoedit.editor.views.ObjectView;
-import alchyr.taikoedit.editor.views.ViewSet;
+import alchyr.taikoedit.editor.views.*;
 import alchyr.taikoedit.management.BindingMaster;
 import alchyr.taikoedit.management.LocalizationMaster;
 import alchyr.taikoedit.management.MapMaster;
@@ -107,7 +104,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
     private final List<Dropdown.DropdownElement<String>> svDropdownList = new ArrayList<>();
     //TODO: More lists based on selection (primary view type)?
 
-    private List<ImageButton> buttons = new ArrayList<>();
+    private final List<ImageButton> buttons = new ArrayList<>();
     private ImageButton networkingButton;
 
     private Timeline timeline; //Timeline
@@ -389,11 +386,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             baseSelectionList.add(new Dropdown.ItemElement<>("Paste", aller)
                     .setCondition((e) -> {
                         e.setHoverText(editorBindings.getBindingInputString("Paste", keyNameArray));
-                        return copyObjects != null && primaryView != null && primaryView.type == copyType;
+                        return copyObjects != null && primaryView != null;
                     })
                     .setOnClick((e) -> {
-                        if (copyObjects != null && primaryView != null && primaryView.type == copyType) {
-                            primaryView.pasteObjects(copyObjects);
+                        if (copyObjects != null && primaryView != null) {
+                            primaryView.pasteObjects(copyType, copyObjects);
                         }
                         return true;
                     })
@@ -786,15 +783,31 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
     @Override
     public LoadingLayer getLoader() {
-        return new EditorLoadingLayer()
-                .addLayers(true, this)
-                .addTask(this::stopMusic)
-                .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(), true) //music loading starts in song select
-                .addFailure(music::noTrack)
-                .addTask(true, ()->{ music.play(); music.pause(); })
-                .addTask(true, ()->music.seekSecond(0))
-                .addTask(true, ()->SettingsMaster.loadMapSettings(EditorLayer.this, set))
-                .addTask(true, this::loadBeatmap);
+        if (!initial.isEmpty() && !initial.get(0).getSongFile().equals(set.getSongFile())) {
+            //Different song
+            editorLogger.info("Difficulty has different song, loading audio");
+            return new EditorLoadingLayer()
+                    .addLayers(true, this)
+                    .addTask(this::stopMusic)
+                    .newSet().addTask(()->music.loadAsync(initial.get(0).getSongFile(), null))
+                    .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(), true) //music loading starts in song select
+                    .addFailure(music::noTrack)
+                    .addTask(true, ()->{ music.play(); music.pause(); })
+                    .addTask(true, ()->music.seekSecond(0))
+                    .addTask(true, ()->SettingsMaster.loadMapSettings(EditorLayer.this, set))
+                    .addTask(true, this::loadBeatmap);
+        }
+        else {
+            return new EditorLoadingLayer()
+                    .addLayers(true, this)
+                    .addTask(this::stopMusic)
+                    .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(), true) //music loading starts in song select
+                    .addFailure(music::noTrack)
+                    .addTask(true, ()->{ music.play(); music.pause(); })
+                    .addTask(true, ()->music.seekSecond(0))
+                    .addTask(true, ()->SettingsMaster.loadMapSettings(EditorLayer.this, set))
+                    .addTask(true, this::loadBeatmap);
+        }
     }
 
     public void loadViewsetInfo(String val) {
@@ -902,6 +915,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
         if (view == null) {
             addObjectView(mapToPrep, false);
             addEffectView(mapToPrep, false);
+            addView(new GameplayView(this, mapToPrep), false);
         }
     }
 
@@ -1764,11 +1778,11 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 bindings.bind("ZoomIn", () -> zoom(-1));
                 bindings.bind("ZoomOut", () -> zoom(1));
 
-                bindings.bind("SnapUp", () -> changeSnapping(-1));
-                bindings.bind("SnapDown", () -> changeSnapping(1));
+                bindings.bind("SnapUpNew", () -> changeSnapping(-1));
+                bindings.bind("SnapDownNew", () -> changeSnapping(1));
 
-                bindings.bind("MoveViewUp", () -> moveViewUp());
-                bindings.bind("MoveViewDown", () -> moveViewDown());
+                bindings.bind("MoveViewUp", this::moveViewUp);
+                bindings.bind("MoveViewDown", this::moveViewDown);
             }
 
             bindings.bind("Bookmark", () -> {
@@ -1814,10 +1828,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 });
 
                 bindings.bind("Paste", () -> {
-                    if (copyObjects != null && sourceLayer.primaryView != null && sourceLayer.primaryView.type == copyType) {
+                    if (copyObjects != null && sourceLayer.primaryView != null) {
                         releaseMouse(true);
 
-                        sourceLayer.primaryView.pasteObjects(copyObjects);
+                        sourceLayer.primaryView.pasteObjects(copyType, copyObjects);
                     }
                 });
 
@@ -1831,6 +1845,14 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                         releaseMouse(true);
 
                         sourceLayer.primaryView.reverse();
+                    }
+                });
+
+                bindings.bind("Invert", () -> {
+                    if (sourceLayer.primaryView != null && sourceLayer.primaryView.hasSelection()) {
+                        releaseMouse(true);
+
+                        sourceLayer.primaryView.invert();
                     }
                 });
 
@@ -2098,8 +2120,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             sourceLayer.textOverlay.setText("View scale: " + oneDecimal.format(viewScale), 1.0f);
         }
         private void changeSnapping(float direction) {
-            sourceLayer.divisorOptions.adjust(direction);
-            sourceLayer.textOverlay.setText("Snapping: " + sourceLayer.divisorOptions.toString(), 1.0f);
+            sourceLayer.divisorOptions.adjust(direction, BindingGroup.shift());
+            sourceLayer.textOverlay.setText("Snapping: " + sourceLayer.divisorOptions, 1.0f);
         }
 
         private void moveViewUp() {

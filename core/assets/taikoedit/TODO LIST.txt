@@ -1,6 +1,8 @@
 consider improving loading more
 
 
+
+
 Would be nice if theres a timing tool that automatically adjusts the BPM of a red line, and the red line before it so that the nearest barline tick intersects cleanly with it. Would just be nice on those drifting BPM maps
 
 

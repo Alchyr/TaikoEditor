@@ -77,7 +77,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
     private TextInput searchInput;
 
-    private List<ImageButton> buttons = new ArrayList<>();
+    private final List<ImageButton> buttons = new ArrayList<>();
 
     private final ConcurrentLinkedQueue<Function<Float, Boolean>> updaters = new ConcurrentLinkedQueue<>();
 
@@ -94,10 +94,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         this.type = LAYER_TYPE.FULL_STOP;
 
         this.delayMapload = delayMapload;
-
-        //buttons = new ArrayList<>();
-        //mapOptions = new ArrayList<>();
-        //hashedMapOptions = new HashMap<>();
 
         initialized = false;
     }
@@ -127,16 +123,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             searchTextOffsetX = 10;
             searchTextOffsetY = 35;
 
-            /*for (Map.Entry<String, Mapset> setEntry : MapMaster.mapDatabase.mapsets.entrySet())
-            {
-                Mapset set = setEntry.getValue();
-
-                Button setButton = new Button(0, 0, OPTION_WIDTH, OPTION_HEIGHT, set.getShortArtist(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")) + '\n' + set.getShortTitle(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")) + '\n' + set.getShortCreator(OPTION_WIDTH * 0.9f, assetMaster.getFont("default")), null);
-                setButton.setAction(setEntry.getKey());
-
-                mapOptions.add(setButton);
-                hashedMapOptions.put(setEntry.getKey(), setButton);
-            }*/
 
             mapSelect = new MapSelect(searchY + 1);
 
@@ -144,14 +130,14 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
 
             int buttonX = SettingsMaster.getWidth() - 40;
             buttons.add(new ImageButton(buttonX, SettingsMaster.getHeight() - 40, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"))
-                    .setClick(this::quit).setHovered(()->{ hoverText.setText("Exit"); }));
+                    .setClick(this::quit).setHovered(()-> hoverText.setText("Exit")));
             buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:settings"), (Texture) assetMaster.get("ui:settingsh"))
-                    .setClick(this::settings).setHovered(()->{ hoverText.setText("Settings"); }));
+                    .setClick(this::settings).setHovered(()-> hoverText.setText("Settings")));
             /*buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth"))
                     .setClick(this::openConnect).setHovered(()->{ hoverText.setText("Start Hosting"); }));*/
 
             buttons.add(new ImageButton(buttonX -= 40, SettingsMaster.getHeight() - 40, assetMaster.get("ui:connect"), (Texture) assetMaster.get("ui:connecth"))
-                    .setClick(this::joinSession).setHovered(()->{ hoverText.setText("Join Session"); }));
+                    .setClick(this::joinSession).setHovered(()-> hoverText.setText("Join Session")));
 
             textOverlay = new TextOverlay(assetMaster.getFont("aller medium"), SettingsMaster.getHeight() / 2, 100);
 
@@ -312,8 +298,6 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         TaikoEditor.addLayer(new SettingsLayer(useOsuBackground ? osuBackground : currentSkin.background));
     }
 
-    private ConnectionClient client = null;
-
     private Thread joinThread = null;
     private void joinSession() {
         if (joinThread != null && joinThread.isAlive()) {
@@ -387,7 +371,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                 });
 
                 //Next, receive difficulties. This will receive ALL difficulties, and any existing difficulties of the same name will be overwritten.
-                //Files will be added locally, with the "current state" of the map on host side (even if host's *saved* version is different.
+                //Files will be added locally, with the "current state" of the map on host side (even if host's *saved* version is different).
                 //Next, send all contents of undo/redo queue. With that, should be synced enough for editing.
                 //If working as a client, cannot open not-open difficulties. They should be greyed out in new view dialog.
             } catch (Exception e) {
@@ -509,6 +493,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                                 break outer;
                             }
                             path = FileHelper.concat(SettingsMaster.osuFolder, "Songs", folderName + "(" + extra + ")");
+                            extra += 1;
                             setDirectory = new File(path);
                         }
 
@@ -665,7 +650,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                                 editorLogger.info("Failed to receive editor state, closing connection.");
                                 break;
                             case "DIFF":
-                                String mapKey = text.substring(4, 8);
+                                //String mapKey = text.substring(4, 8);
                                 String diffname = text.substring(8);
                                 openDifficulties.add(diffname);
                                 editorLogger.info("Open difficulty: \"" + diffname + "\"");
@@ -702,9 +687,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                                 waiter.setComplete();
 
                                 loader.addTask(true, ()->music.seekSecond(initialMusicPos));
-                                loader.addCallback(()->{
-                                    client.send(ConnectionServer.EVENT_SENT + "CLIENT_READY" + client.ID);
-                                });
+                                loader.addCallback(()->client.send(ConnectionServer.EVENT_SENT + "CLIENT_READY" + client.ID));
                                 return;
                         }
                         return;
@@ -774,9 +757,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
             menuLoad = new EditorLoadingLayer()
                     .loadLists("ui", "font", "menu", "editor", "hitsound")
                     .addTask(() ->
-                        MapMaster.loadDelayed(()->{
-                            updateMaps = true;
-                        })
+                        MapMaster.loadDelayed(()->updateMaps = true)
                     ).addTracker(MapMaster::getProgress).addTask(Skins::load);
         }
         else {
@@ -827,17 +808,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
     @Override
     public void dispose() {
         super.dispose();
-
-        if (client != null) {
-            try {
-                client.close();
-            }
-            catch (Exception e) {
-                editorLogger.error("Exception occurred while closing client", e);
-            }
-        }
     }
-
 
     private static class MenuProcessor extends BoundInputProcessor {
         private final MenuLayer sourceLayer;
@@ -901,12 +872,8 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
                 }
             });
 
-            bindings.bind("Up", ()->{
-                sourceLayer.mapSelect.scroll(-5);
-            }, new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, -25));
-            bindings.bind("Down", ()->{
-                sourceLayer.mapSelect.scroll(5);
-            }, new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, 25));
+            bindings.bind("Up", ()->sourceLayer.mapSelect.scroll(-5), new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, -25));
+            bindings.bind("Down", ()->sourceLayer.mapSelect.scroll(5), new Scrollable.ScrollKeyHold(sourceLayer.mapSelect, 25));
 
             bindings.bind("Refresh", ()->sourceLayer.mapSelect.reloadDatabase());
 

@@ -33,7 +33,7 @@ ctrl+z - undo
 ctrl+y - redo
 delete/backspace - delete selection, or if nothing is selected, delete object near the current time.
 
-ctrl+scroll wheel to change snaps
+ctrl+scroll wheel to change snaps. Adding shift will skip unusual snaps.
 shift+scroll wheel to change zoom
 Scroll wheel can also be used to navigate through song.
 If there are enough views to enable view scrolling, the scroll wheel will do that instead.

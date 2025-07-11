@@ -1,22 +1,24 @@
 package alchyr.taikoedit.editor.views;
 
 import alchyr.taikoedit.audio.Waveform;
+import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.sub.TextInputReceiver;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
+import alchyr.taikoedit.editor.changes.MapObjectChange;
 import alchyr.taikoedit.editor.changes.ValueSetChange;
 import alchyr.taikoedit.editor.changes.VolumeSetChange;
-import alchyr.taikoedit.editor.tools.*;
-import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
+import alchyr.taikoedit.editor.tools.*;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.GeneralUtils;
-import alchyr.taikoedit.util.structures.MultiMergeIterator;
-import alchyr.taikoedit.util.structures.Pair;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MapObjectTreeMap;
+import alchyr.taikoedit.util.structures.MultiMergeIterator;
+import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -961,27 +963,42 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
+    public void pasteObjects(ViewType copyType, MapObjectTreeMap<MapObject> copyObjects) {
         endAdjust();
         long offset, targetPos;
 
         offset = time - copyObjects.firstKey();
 
         MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
-        Map<MapObject, MapObject> copyToOriginal = new HashMap<>();
 
-        for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
-        {
-            targetPos = entry.getKey() + offset;
-            for (MapObject o : entry.getValue())
+        if (copyType == type) {
+            Map<MapObject, MapObject> copyToOriginal = new HashMap<>();
+
+            for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
             {
-                MapObject cpy = o.shiftedCopy(targetPos);
-                placementCopy.add(cpy);
-                copyToOriginal.put(cpy, o);
+                targetPos = entry.getKey() + offset;
+                for (MapObject o : entry.getValue())
+                {
+                    MapObject cpy = o.shiftedCopy(targetPos);
+                    placementCopy.add(cpy);
+                    copyToOriginal.put(cpy, o);
+                }
             }
-        }
 
-        this.map.registerAndPerformAddObjects("Paste Lines", placementCopy, copyToOriginal, replaceTest);
+            this.map.registerAndPerformAddObjects("Paste Lines", placementCopy, copyToOriginal, replaceTest);
+        }
+        else {
+            for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
+            {
+                targetPos = entry.getKey() + offset;
+
+                Map.Entry<Long, ArrayList<TimingPoint>> stack = map.allPoints.floorEntry(targetPos);
+
+                MapObject asLine = stack == null ? new TimingPoint(targetPos) : ((TimingPoint) GeneralUtils.listLast(stack.getValue()).shiftedCopy(targetPos)).inherit();
+                placementCopy.add(asLine);
+            }
+            map.registerAndPerformAddObjects("Paste ? As Lines", placementCopy, null, replaceTest);
+        }
     }
 
     @Override
@@ -991,6 +1008,49 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         endAdjust();
         this.map.registerReverse(false, getSelection());
+    }
+
+    @Override
+    public void invert() {
+        if (!hasSelection())
+            return;
+
+        MapObjectTreeMap<MapObject> toInvert = getSelection(true);
+        MapObjectTreeMap<MapObject> replacement = new MapObjectTreeMap<>();
+
+
+        //Generate an inherited copy of the closest previous timing point
+        Map.Entry<Long, ArrayList<TimingPoint>> lastEffectStack = map.effectPoints.floorEntry(toInvert.firstKey());
+        Map.Entry<Long, ArrayList<TimingPoint>> lastTimingStack = map.timingPoints.floorEntry(toInvert.firstKey());
+
+        if (lastEffectStack == null) {
+            lastEffectStack = lastTimingStack;
+        }
+        else if (lastTimingStack != null) {
+            if (lastTimingStack.getKey() > lastEffectStack.getKey())
+                lastEffectStack = lastTimingStack;
+        }
+
+        TimingPoint lastEffect = lastEffectStack == null ? new TimingPoint(0) : GeneralUtils.listLast(lastEffectStack.getValue());
+        TimingPoint lastTiming = lastTimingStack == null ? new TimingPoint(0).uninherit() : GeneralUtils.listLast(lastTimingStack.getValue());
+
+        for (Map.Entry<Long, ArrayList<MapObject>> stack : toInvert.entrySet()) {
+            for (MapObject obj : stack.getValue()) {
+                if (obj instanceof TimingPoint) {
+                    if (((TimingPoint) obj).uninherited) { //red line -> green line
+                        lastEffect = ((TimingPoint) lastEffect.shiftedCopy(obj.getPos())).inherit();
+                        replacement.add(lastEffect);
+                    }
+                    else { //green line -> red line
+                        lastTiming = (TimingPoint) lastTiming.shiftedCopy(obj.getPos());
+                        lastEffect = lastTiming;
+                        replacement.add(lastTiming);
+                    }
+                }
+            }
+        }
+
+        map.registerChange(new MapObjectChange(map, "Invert Lines", toInvert, replacement).preDo());
     }
 
     @Override
@@ -1015,12 +1075,19 @@ public class EffectView extends MapView implements TextInputReceiver {
     }
 
     @Override
-    public void updateVerticalDrag(MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double adjustment) {
+    public void updateVerticalDrag(MapObject dragObject, MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double adjustment) {
         //copyMap is original -> copy
         if (mode) { //sv mode
+            double svAdjust = dragObject.getValue() - (adjustment / 20.0); //calculate basic adjustment on original object
+            if (!BindingGroup.alt()) { //round if not holding alt
+                svAdjust = Math.round(svAdjust * 100.0) / 100.0; //ew
+            }
+            svAdjust -= dragObject.getValue(); //convert from "new value" to "difference"
+
             for (Map.Entry<MapObject, MapObject> copyPair : copyMap.entrySet()) {
                 if (copyPair.getValue() instanceof TimingPoint && !(((TimingPoint) copyPair.getValue()).uninherited)) {
-                    copyPair.getValue().setValue(Math.max(TimingPoint.MIN_SV, copyPair.getKey().getValue() - (adjustment / 20.0)));
+                    double newVal = Math.max(TimingPoint.MIN_SV, copyPair.getKey().getValue() + svAdjust);
+                    copyPair.getValue().setValue(newVal);
                 }
             }
         }

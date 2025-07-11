@@ -171,11 +171,15 @@ public class ChangelogView extends MapView {
     }
 
     @Override
-    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
+    public void pasteObjects(ViewType copyType, MapObjectTreeMap<MapObject> copyObjects) {
     }
 
     @Override
     public void reverse() {
+    }
+
+    @Override
+    public void invert() {
     }
 
     @Override

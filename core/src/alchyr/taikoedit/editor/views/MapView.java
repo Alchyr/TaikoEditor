@@ -27,7 +27,6 @@ import static alchyr.taikoedit.TaikoEditor.*;
 public abstract class MapView {
     public enum ViewType {
         OBJECT_VIEW,
-        GIMMICK_VIEW,
         EFFECT_VIEW,
         GAMEPLAY_VIEW,
         DIFFICULTY_VIEW,
@@ -436,7 +435,7 @@ public abstract class MapView {
         return false;
     }
 
-    public void updateVerticalDrag(MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double totalVerticalOffset) {
+    public void updateVerticalDrag(MapObject dragObject, MapObjectTreeMap<MapObject> copyObjects, HashMap<MapObject, MapObject> copyMap, double totalVerticalOffset) {
 
     }
     public void deleteObject(MapObject o) {
@@ -447,8 +446,9 @@ public abstract class MapView {
     public void registerValueChange(HashMap<MapObject, MapObject> copyMap) { //Registers a modification of currently selected objects with underlying map for undo/redo support
 
     }
-    public abstract void pasteObjects(MapObjectTreeMap<MapObject> copyObjects);
+    public abstract void pasteObjects(ViewType copyType, MapObjectTreeMap<MapObject> copyObjects);
     public abstract void reverse();
+    public abstract void invert();
 
     //Selection logic
     public abstract NavigableMap<Long, ? extends ArrayList<? extends MapObject>> getVisibleRange(long start, long end);
@@ -467,7 +467,6 @@ public abstract class MapView {
             switch (type) {
                 case OBJECT_VIEW:
                 case GAMEPLAY_VIEW:
-                case GIMMICK_VIEW:
                     baseMap = map.objects;
                     break;
                 case EFFECT_VIEW:
@@ -508,6 +507,12 @@ public abstract class MapView {
                     o.selected = false;
             }
             selectedObjects = null;
+
+            for (MapView view : parent.getViewSet(map).getViews()) {
+                if (view != this && view.type == type) {
+                    view.clearSelection();
+                }
+            }
         }
         lastReturnedSelection = null;
     }

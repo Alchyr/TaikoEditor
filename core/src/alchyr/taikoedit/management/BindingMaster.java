@@ -58,6 +58,7 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("Cut", new InputBinding.InputInfo(Input.Keys.X, true)));
         creating.addBinding(InputBinding.create("Paste", new InputBinding.InputInfo(Input.Keys.V, Maybe.TRUE, Maybe.MAYBE, Maybe.FALSE)));
         creating.addBinding(InputBinding.create("Reverse", new InputBinding.InputInfo(Input.Keys.G, true)));
+        creating.addBinding(InputBinding.create("Invert", new InputBinding.InputInfo(Input.Keys.F, true)));
         creating.addBinding(InputBinding.create("NudgeLeft", new InputBinding.InputInfo(Input.Keys.LEFT, Maybe.FALSE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("NudgeRight", new InputBinding.InputInfo(Input.Keys.RIGHT, Maybe.FALSE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("ClearSelect", new InputBinding.InputInfo(Input.Keys.GRAVE)));
@@ -78,8 +79,8 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("RateDown", new InputBinding.InputInfo(Input.Keys.DOWN)));
         creating.addBinding(InputBinding.create("ZoomIn", new InputBinding.InputInfo(Input.Keys.UP, false, false, true)));
         creating.addBinding(InputBinding.create("ZoomOut", new InputBinding.InputInfo(Input.Keys.DOWN, false, false, true)));
-        creating.addBinding(InputBinding.create("SnapUp", new InputBinding.InputInfo(Input.Keys.UP, true)));
-        creating.addBinding(InputBinding.create("SnapDown", new InputBinding.InputInfo(Input.Keys.DOWN, true)));
+        creating.addBinding(InputBinding.create("SnapUpNew", new InputBinding.InputInfo(Input.Keys.UP, Maybe.TRUE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("SnapDownNew", new InputBinding.InputInfo(Input.Keys.DOWN, Maybe.TRUE, Maybe.FALSE, Maybe.MAYBE)));
         creating.addBinding(InputBinding.create("MoveViewUp", new InputBinding.InputInfo(Input.Keys.UP, false, true, false)));
         creating.addBinding(InputBinding.create("MoveViewDown", new InputBinding.InputInfo(Input.Keys.DOWN, false, true, false)));
 

@@ -6,6 +6,7 @@ import alchyr.taikoedit.editor.Snap;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
+import alchyr.taikoedit.editor.views.GimmickView;
 import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.editor.views.ViewSet;
 import alchyr.taikoedit.management.SettingsMaster;
@@ -135,6 +136,6 @@ public class FakeSliderTool extends EditorTool {
 
     @Override
     public boolean supportsView(MapView view) {
-        return view.type == MapView.ViewType.GIMMICK_VIEW;
+        return view instanceof GimmickView;
     }
 }

@@ -128,11 +128,11 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         labels.add(new Label(rightCenter, y, big, "Difficulty", Label.LabelAlign.CENTER));
 
         y -= 60;
-        diffName = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "Name:", map.getName(), METADATA_LIMIT, font);
+        diffName = new TextField(rightX, y, SettingsMaster.getMiddleX() - 140, "Name:", map.getName(), METADATA_LIMIT, font);
         textFields.add(diffName.setOnEnter((s)->{diffName.disable(); return true;}));
 
         y -= 40;
-        hp = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "HP:", oneDecimal.format(map.getFullMapInfo().hp), 4, font).setType(TextField.TextType.NUMERIC);
+        hp = new TextField(rightX, y, SettingsMaster.getMiddleX() - 140, "HP:", oneDecimal.format(map.getFullMapInfo().hp), 4, font).setType(TextField.TextType.NUMERIC);
         hp.setOnEndInput(this::testDiffValue);
         textFields.add(hp.setOnEnter((s)->{hp.disable(); return true;}));
         y -= 30;
@@ -141,7 +141,7 @@ public class DifficultySettingsLayer extends ProgramLayer implements InputLayer 
         hpSlider.onValueChange(this::setHP);
 
         y -= 50;
-        od = new TextField(rightX, y, SettingsMaster.getMiddleX() - leftX, "OD:", oneDecimal.format(map.getFullMapInfo().od), 4, font).setType(TextField.TextType.NUMERIC);
+        od = new TextField(rightX, y, SettingsMaster.getMiddleX() - 140, "OD:", oneDecimal.format(map.getFullMapInfo().od), 4, font).setType(TextField.TextType.NUMERIC);
         od.setOnEndInput(this::testDiffValue);
         textFields.add(od.setOnEnter((s)->{od.disable(); return true;}));
         y -= 30;

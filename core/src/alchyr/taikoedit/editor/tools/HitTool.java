@@ -145,7 +145,7 @@ public class HitTool extends EditorTool {
                 }
             }
 
-            view.map.registerChange(new RimChange(view.map, hits, isRim).preDo());
+            view.map.registerChange(new RimChange(view.map, isRim ? hits : null, isRim ? null : hits).preDo());
             return false; //Don't swap off of selection tool when modifying selected objects
         }
         else {
@@ -169,6 +169,6 @@ public class HitTool extends EditorTool {
 
     @Override
     public boolean supportsView(MapView view) {
-        return view.type == MapView.ViewType.OBJECT_VIEW || view.type == MapView.ViewType.GIMMICK_VIEW;
+        return view.type == MapView.ViewType.OBJECT_VIEW;
     }
 }

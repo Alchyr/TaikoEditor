@@ -7,6 +7,7 @@ import java.util.*;
 //the BeatDivisors in dependents hold the actual snappings for each individual difficulty.
 public class DivisorOptions {
     public static final NavigableSet<Integer> autoGen = new TreeSet<>();
+    private static final NavigableSet<Integer> commonSnappings = new TreeSet<>();
     static {
         for (int i = 1; i <= 16; ++i)
             autoGen.add(i);
@@ -15,6 +16,15 @@ public class DivisorOptions {
         autoGen.add(32);
         autoGen.add(36);
         autoGen.add(48);
+
+        commonSnappings.add(1);
+        commonSnappings.add(2);
+        commonSnappings.add(3);
+        commonSnappings.add(4);
+        commonSnappings.add(6);
+        commonSnappings.add(8);
+        commonSnappings.add(12);
+        commonSnappings.add(16);
     }
 
     public final Set<Integer> divisorOptions;
@@ -139,39 +149,39 @@ public class DivisorOptions {
         }
     }
 
-    public void adjust(float adjustment)
+    public void adjust(float adjustment, boolean onlyCommon)
     {
         if (adjustment > 0)
         {
-            set(prev());
+            set(prev(onlyCommon ? commonSnappings : autoGen));
         }
         else
         {
-            set(next());
+            set(next(onlyCommon ? commonSnappings : autoGen));
         }
     }
 
-    private int prev() {
+    private int prev(NavigableSet<Integer> snappingSet) {
         int dec = currentSnapping - 1;
 
         if (dec <= 0)
             return 0;
 
-        if (divisorOptions.contains(dec) || autoGen.contains(dec))
+        if (snappingSet.contains(dec))
             return dec;
 
-        Integer prev = autoGen.lower(currentSnapping);
+        Integer prev = snappingSet.lower(currentSnapping);
         if (prev == null)
             return currentSnapping;
         return prev;
     }
-    private int next() {
+    private int next(NavigableSet<Integer> snappingSet) {
         int inc = currentSnapping + 1;
-        if (divisorOptions.contains(inc) || autoGen.contains(inc)) {
+        if (snappingSet.contains(inc)) {
             return inc;
         }
         else {
-            Integer next = autoGen.higher(currentSnapping);
+            Integer next = snappingSet.higher(currentSnapping);
             if (next == null)
                 return currentSnapping;
             return next;

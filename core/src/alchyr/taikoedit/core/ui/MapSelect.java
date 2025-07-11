@@ -199,7 +199,19 @@ public class MapSelect implements Scrollable {
     }
     public void sort() {
         if (sortingEnabled) {
-            Comparator<String> comparer = new AlphabeticComparer();
+            String[] names = SettingsMaster.NAME.split(",");
+            for (int i = 0; i < names.length; ++i) names[i] = names[i].trim();
+
+            Comparator<String> comparer = ((Comparator<String>) (o1, o2) -> {
+                if (o1.equals(o2)) return 0;
+
+                for (String s : names) {
+                    if (s.equals(o1)) return -1;
+                    else if (s.equals(o2)) return 1;
+                }
+                return 0;
+            }).thenComparing(new AlphabeticComparer());
+
             if (mapperSortAscending) {
                 activeGroups.sort(Comparator.comparing((u)->u.mapper, comparer));
             }

@@ -5,13 +5,12 @@ import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
 import alchyr.taikoedit.editor.Snap;
-import alchyr.taikoedit.editor.changes.BreakAdjust;
-import alchyr.taikoedit.editor.changes.BreakRemoval;
-import alchyr.taikoedit.editor.changes.RepositionChange;
+import alchyr.taikoedit.editor.changes.*;
 import alchyr.taikoedit.editor.maps.BreakInfo;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
 import alchyr.taikoedit.editor.maps.components.ILongObject;
+import alchyr.taikoedit.editor.maps.components.hitobjects.Hit;
 import alchyr.taikoedit.editor.tools.*;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.EditorTime;
@@ -680,7 +679,7 @@ public class ObjectView extends MapView {
     }
 
     @Override
-    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
+    public void pasteObjects(ViewType copyType, MapObjectTreeMap<MapObject> copyObjects) {
         //This should overwrite existing objects.
 
         //Make copies of the hitobjects (add a copy() method to the HitObject class) and shift their position appropriately
@@ -688,38 +687,61 @@ public class ObjectView extends MapView {
 
         long offset, targetPos;
 
-        Snap closest = getClosestSnap(preciseTime, 250);
-        offset = closest == null ? time : closest.pos;
+        boolean resnap = !BindingGroup.alt();
+        Snap closest = getClosestSnap(preciseTime, 200);
+        offset = !resnap || closest == null ? time : closest.pos;
         offset -= copyObjects.firstKey();
 
         MapObjectTreeMap<MapObject> placementCopy = new MapObjectTreeMap<>();
         Map<MapObject, MapObject> copyToOriginal = new HashMap<>();
         TreeMap<Long, Snap> snaps = map.getAllSnaps();
-        boolean resnap = !BindingGroup.alt();
 
-        for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
-        {
-            targetPos = entry.getKey() + offset;
-
-            if (resnap) {
-                closest = snaps.get(targetPos);
-                if (closest == null)
-                    closest = snaps.get(targetPos + 1);
-                if (closest == null)
-                    closest = snaps.get(targetPos - 1);
-                if (closest != null)
-                    targetPos = closest.pos;
-            }
-
-            for (MapObject o : entry.getValue())
+        if (copyType == type) {
+            for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
             {
-                MapObject cpy = o.shiftedCopy(targetPos);
-                placementCopy.add(cpy);
-                copyToOriginal.put(cpy, o);
-            }
-        }
+                targetPos = entry.getKey() + offset;
 
-        this.map.registerAndPerformAddObjects("Paste Objects", placementCopy, copyToOriginal, replaceTest);
+                if (resnap) {
+                    closest = snaps.get(targetPos);
+                    if (closest == null)
+                        closest = snaps.get(targetPos + 1);
+                    if (closest == null)
+                        closest = snaps.get(targetPos - 1);
+                    if (closest != null)
+                        targetPos = closest.pos;
+                }
+
+                for (MapObject o : entry.getValue())
+                {
+                    MapObject cpy = o.shiftedCopy(targetPos);
+                    placementCopy.add(cpy);
+                    copyToOriginal.put(cpy, o);
+                }
+            }
+
+            this.map.registerAndPerformAddObjects("Paste Objects", placementCopy, copyToOriginal, replaceTest);
+        }
+        else {
+            for (Map.Entry<Long, ArrayList<MapObject>> entry : copyObjects.entrySet())
+            {
+                targetPos = entry.getKey() + offset;
+
+                if (resnap) {
+                    closest = snaps.get(targetPos);
+                    if (closest == null)
+                        closest = snaps.get(targetPos + 1);
+                    if (closest == null)
+                        closest = snaps.get(targetPos - 1);
+                    if (closest != null)
+                        targetPos = closest.pos;
+                }
+
+                MapObject obj = new Hit(targetPos, false);
+                placementCopy.add(obj);
+            }
+
+            this.map.registerAndPerformAddObjects("Paste ? as Objects", placementCopy, null, replaceTest);
+        }
     }
 
     @Override
@@ -728,6 +750,28 @@ public class ObjectView extends MapView {
             return;
 
         this.map.registerReverse(true, getSelection());
+    }
+
+    @Override
+    public void invert() {
+        if (!hasSelection())
+            return;
+
+        MapObjectTreeMap<MapObject> toInvert = getSelection();
+        List<Hit> dons = new ArrayList<>(), kats = new ArrayList<>();
+
+        toInvert.forEachObject((obj)->{
+            if (obj instanceof Hit) {
+                if (((Hit) obj).isRim()) {
+                    kats.add((Hit) obj);
+                }
+                else {
+                    dons.add((Hit) obj);
+                }
+            }
+        });
+
+        map.registerChange(new RimChange(map, dons, kats).preDo());
     }
 
     @Override

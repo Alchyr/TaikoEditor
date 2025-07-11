@@ -162,6 +162,6 @@ public class SliderTool extends EditorTool {
 
     @Override
     public boolean supportsView(MapView view) {
-        return view.type == MapView.ViewType.OBJECT_VIEW || view.type == MapView.ViewType.GIMMICK_VIEW;
+        return view.type == MapView.ViewType.OBJECT_VIEW;
     }
 }

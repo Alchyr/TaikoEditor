@@ -610,7 +610,7 @@ public class GameplayView extends MapView {
     }
 
     @Override
-    public void pasteObjects(MapObjectTreeMap<MapObject> copyObjects) {
+    public void pasteObjects(ViewType copyType, MapObjectTreeMap<MapObject> copyObjects) {
 
     }
 
@@ -620,6 +620,9 @@ public class GameplayView extends MapView {
             return;
 
         this.map.registerReverse(true, getSelection(true));
+    }
+    @Override
+    public void invert() {
     }
 
     @Override

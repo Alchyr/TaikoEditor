@@ -368,9 +368,9 @@ public class SettingsLayer extends ProgramLayer implements InputLayer {
 
         y -= (int) (LABEL_Y_SPACING * 1.5f);
 
-        TextField musicVolume = new TextField(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
+        TextField musicVolume = new TextField(X_2 + 10 - (SMALL_SECTION_WIDTH / 2), y, SMALL_SECTION_WIDTH, "Music Volume:", oneDecimal.format(SettingsMaster.getMusicVolume() * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateMusicVolume);
-        TextField effectVolume = new TextField(X_4 + 10 - (SMALL_SECTION_WIDTH / 2), y, LARGE_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
+        TextField effectVolume = new TextField(X_4 + 10 - (SMALL_SECTION_WIDTH / 2), y, SMALL_SECTION_WIDTH, "Effect Volume:", oneDecimal.format(SettingsMaster.effectVolume * 100), 5, font)
                 .setType(TextField.TextType.NUMERIC).setOnEndInput(this::updateEffectVolume);
 
         musicVolume.setOnEnter(musicVolume::disable);

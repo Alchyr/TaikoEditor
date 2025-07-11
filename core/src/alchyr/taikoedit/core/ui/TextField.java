@@ -26,6 +26,8 @@ public class TextField implements UIElement, TextInputReceiver {
     private static final float BLIP_BUFFER = 2;
     private static final float BLIP_WIDTH = 2;
 
+    private static final Color BACK_COLOR = new Color(1f, 1f, 1f, 0.15f);
+
     private TextType type;
 
     public enum TextType {
@@ -49,6 +51,8 @@ public class TextField implements UIElement, TextInputReceiver {
     private Function<String, Boolean> onEnter = null;
     private BiConsumer<String, TextField> onEndInput = null;
 
+    private Color backColor = BACK_COLOR;
+
     //blip
     private boolean renderBlip;
     private float blipTimer = 0;
@@ -62,7 +66,7 @@ public class TextField implements UIElement, TextInputReceiver {
 
     public String displaySuffix = "";
 
-    public TextField(float leftX, float centerY, float maxWidth, String labelText, String inputText, int charLimit, BitmapFont font)
+    public TextField(float leftX, float centerY, float width, String labelText, String inputText, int charLimit, BitmapFont font)
     {
         this.font = font;
         this.label = labelText;
@@ -71,14 +75,14 @@ public class TextField implements UIElement, TextInputReceiver {
         this.charLimit = charLimit;
 
         float labelWidth = textRenderer.setFont(font).getWidth(labelText + " ");
-        width = maxWidth;
+        this.width = width;
         height = textRenderer.getHeight(labelText) + BUFFER;
 
         x = leftX;
         y = centerY - height / 2.0f;
         textX = x + labelWidth;
         this.centerY = MathUtils.floor(centerY);
-        x2 = x + width;
+        x2 = x + this.width;
         y2 = y + height;
         blipX = textX + textRenderer.getWidth(text) + BLIP_BUFFER;
 
@@ -237,6 +241,9 @@ public class TextField implements UIElement, TextInputReceiver {
         textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x, this.centerY);
         textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text + displaySuffix, this.textX, this.centerY);
 
+        sb.setColor(backColor);
+        sb.draw(pix, this.textX - 2, this.y - 1, this.x2 - this.textX + 3, height + 2);
+
         if (renderBlip) {
             sb.setColor(Color.WHITE);
             sb.draw(pix, blipX, y, BLIP_WIDTH, height);
@@ -247,12 +254,15 @@ public class TextField implements UIElement, TextInputReceiver {
         dx = x; //adjustment to hover/click check position
         dy = y;
 
+        sb.setColor(backColor);
+        sb.draw(pix, this.textX - 2, this.y - 1, this.x2 - this.textX + 3, height + 2);
+
         textRenderer.setFont(font).resetScale().renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, label, this.x + x, this.centerY + y);
         textRenderer.renderTextYCentered(sb, enabled ? Color.WHITE : Color.GRAY, text + displaySuffix, this.textX + x, this.centerY + y);
 
         if (renderBlip) {
             sb.setColor(Color.WHITE);
-            sb.draw(pix, blipX + x, this.y + y, BLIP_WIDTH, height);
+            sb.draw(pix, this.blipX + x, this.y + y, BLIP_WIDTH, height);
         }
     }
 

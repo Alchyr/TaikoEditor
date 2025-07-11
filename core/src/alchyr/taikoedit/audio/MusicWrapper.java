@@ -4,7 +4,6 @@ import alchyr.taikoedit.audio.mp3.PreloadedMp3;
 import alchyr.taikoedit.audio.ogg.PreloadOgg;
 import alchyr.taikoedit.util.RunningAverage;
 import alchyr.taikoedit.util.TrackedThread;
-import alchyr.taikoedit.util.structures.Pair;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.files.FileHandle;
@@ -82,6 +81,9 @@ public class MusicWrapper implements Music.OnCompletionListener {
     }
 
     private final LinkedList<AudioLoadThread> loadingThreads = new LinkedList<>();
+    public AudioLoadThread loadAsync(String songFile) {
+        return loadAsync(songFile, null);
+    }
     public AudioLoadThread loadAsync(String songFile, Consumer<TrackedThread> followup) {
         loadingThreads.removeIf((t)->!t.isAlive());
 
