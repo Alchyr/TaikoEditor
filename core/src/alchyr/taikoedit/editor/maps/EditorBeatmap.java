@@ -1672,6 +1672,12 @@ public class EditorBeatmap {
                                 case "LetterboxInBreaks":
                                     fullMapInfo.letterboxInBreaks = line.substring(18).trim().equals("1");
                                     break;
+                                case "SkinPreference":
+                                    fullMapInfo.skinPreference = line.substring(15);
+                                    break;
+                                case "EpilepsyWarning":
+                                    fullMapInfo.epilepsyWarning = line.substring(16).trim().equals("1");
+                                    break;
                                 case "WidescreenStoryboard":
                                     fullMapInfo.widescreenStoryboard = line.substring(21).trim().equals("1");
                                     break;

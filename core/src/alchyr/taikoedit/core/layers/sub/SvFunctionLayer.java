@@ -480,7 +480,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         if (fixedSpacing.enabled) {
             try {
                 snap = Integer.parseInt(snapping.text);
-                if (!DivisorOptions.autoGen.contains(snap)) {
+                if (!DivisorOptions.allSnaps.contains(snap)) {
                     success = false;
                     textOverlay.setText("Invalid snapping for generation.", 3.0f);
                 }

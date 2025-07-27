@@ -1,10 +1,11 @@
 package alchyr.taikoedit.editor.maps;
 
-import alchyr.taikoedit.util.structures.Pair;
-
 import java.io.File;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 import static alchyr.taikoedit.TaikoEditor.osuDecimalFormat;
 
@@ -19,6 +20,8 @@ public class FullMapInfo {
     public String sampleSet = "Normal";
     public String stackLeniency = "0.7"; //Save as string since it doesn't need to be modified as a float
     public boolean letterboxInBreaks = false;
+    public String skinPreference = null;
+    public boolean epilepsyWarning = false;
     public boolean widescreenStoryboard = false;
 
     //[Editor]
@@ -68,6 +71,8 @@ public class FullMapInfo {
         this.sampleSet = base.sampleSet;
         this.stackLeniency = base.stackLeniency;
         this.letterboxInBreaks = base.letterboxInBreaks;
+        this.skinPreference = base.skinPreference;
+        this.epilepsyWarning = base.epilepsyWarning;
         this.widescreenStoryboard = base.widescreenStoryboard;
 
         this.od = base.od;
@@ -177,6 +182,8 @@ public class FullMapInfo {
             "StackLeniency: " + stackLeniency + "\r\n" +
             "Mode: 1\r\n" +
             "LetterboxInBreaks: " + (letterboxInBreaks ? 1 : 0) + "\r\n" +
+            (skinPreference != null ? "SkinPreference:" + skinPreference + "\r\n" : "") +
+            (epilepsyWarning ? "EpilepsyWarning: 1\r\n" : "") +
             "WidescreenStoryboard: " + (widescreenStoryboard ? 1 : 0) + "\r\n" +
             "\r\n" +
             "[Editor]\r\n" +

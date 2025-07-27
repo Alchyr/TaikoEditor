@@ -11,6 +11,7 @@ import alchyr.taikoedit.core.input.TextInputProcessor;
 import alchyr.taikoedit.core.layers.sub.*;
 import alchyr.taikoedit.core.ui.Dropdown;
 import alchyr.taikoedit.core.ui.ImageButton;
+import alchyr.taikoedit.core.ui.SnappingButton;
 import alchyr.taikoedit.core.ui.TextOverlay;
 import alchyr.taikoedit.editor.*;
 import alchyr.taikoedit.editor.changes.FinisherChange;
@@ -252,6 +253,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                 .setClick(this::moreOptions).setHovered(()->{ hoverText.setText("Files"); }));
         buttons.add(new ImageButton(40, topBarY, assetMaster.get("editor:edit"), (Texture) assetMaster.get("editor:edith"))
                 .setClick(this::selectionOptions).setHovered(()->{ hoverText.setText("Edit"); }));
+        buttons.add(new SnappingButton(80, topBarY, divisorOptions, textOverlay).setHovered(() ->{ hoverText.setText("Right Click to Swap Modes"); }));
 
         int buttonX = SettingsMaster.getWidth();
         buttons.add(new ImageButton(buttonX -= 40, topBarY, assetMaster.get("ui:exit"), (Texture) assetMaster.get("ui:exith"))

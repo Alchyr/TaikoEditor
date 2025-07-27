@@ -107,6 +107,10 @@ public class ImageButton implements UIElement {
         this.hoveredImage = hover;
     }
 
+    public void setText(String s) {
+        text = s;
+    }
+
     @Override
     public void move(float dx, float dy) {
         x += dx;
@@ -170,7 +174,7 @@ public class ImageButton implements UIElement {
         }
         if (text != null)
         {
-            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX, this.centerY);
+            textRenderer.setFont(font).resetScale().renderTextCentered(sb, text, centerX, this.centerY, c);
         }
     }
 
@@ -178,11 +182,11 @@ public class ImageButton implements UIElement {
         dx = x; //adjustment to hover/click check position
         dy = y;
 
+        sb.setColor(Color.WHITE);
         if (hovered) {
             sb.draw(hoveredImage, this.x + x, this.y + y, 0, 0, hoverWidth, hoverHeight, 1, 1, 0, 0, 0, hoverWidth, hoverHeight, flipX, flipY);
         }
         else {
-            sb.setColor(Color.WHITE.cpy());
             sb.draw(image, this.x + x, this.y + y, 0, 0, imgWidth, imgHeight, 1, 1, 0, 0, 0, imgWidth, imgHeight, flipX, flipY);
         }
         if (text != null)

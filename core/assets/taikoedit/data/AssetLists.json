@@ -397,6 +397,11 @@
       "class": "Texture"
     },
     {
+      "name": "snapping",
+      "file": "taikoedit/images/editor/ui/snapping.png",
+      "class": "Texture"
+    },
+    {
       "name": "overlay end",
       "file": "taikoedit/images/editor/ui/overlayend.png",
       "class": "Texture"

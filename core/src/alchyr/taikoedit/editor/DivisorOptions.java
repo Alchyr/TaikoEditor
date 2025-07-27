@@ -6,33 +6,58 @@ import java.util.*;
 //Controls the options, controls setting the current divisor.
 //the BeatDivisors in dependents hold the actual snappings for each individual difficulty.
 public class DivisorOptions {
-    public static final NavigableSet<Integer> autoGen = new TreeSet<>();
-    private static final NavigableSet<Integer> commonSnappings = new TreeSet<>();
+    public static final NavigableSet<Integer> allSnaps = new TreeSet<>();
+    private static final NavigableSet<Integer> commonSnaps = new TreeSet<>();
+    private static final NavigableSet<Integer> evenSnaps = new TreeSet<>();
+    private static final NavigableSet<Integer> swingSnaps = new TreeSet<>();
     static {
         for (int i = 1; i <= 16; ++i)
-            autoGen.add(i);
-        autoGen.add(18);
-        autoGen.add(27);
-        autoGen.add(32);
-        autoGen.add(36);
-        autoGen.add(48);
+            allSnaps.add(i);
+        allSnaps.add(18);
+        allSnaps.add(27);
+        allSnaps.add(32);
+        allSnaps.add(36);
+        allSnaps.add(48);
 
-        commonSnappings.add(1);
-        commonSnappings.add(2);
-        commonSnappings.add(3);
-        commonSnappings.add(4);
-        commonSnappings.add(6);
-        commonSnappings.add(8);
-        commonSnappings.add(12);
-        commonSnappings.add(16);
+        commonSnaps.add(1);
+        commonSnaps.add(2);
+        commonSnaps.add(3);
+        commonSnaps.add(4);
+        commonSnaps.add(6);
+        commonSnaps.add(8);
+        commonSnaps.add(12);
+        commonSnaps.add(16);
+
+        evenSnaps.add(1);
+        evenSnaps.add(2);
+        evenSnaps.add(4);
+        evenSnaps.add(8);
+        evenSnaps.add(16);
+
+        swingSnaps.add(1);
+        swingSnaps.add(2);
+        swingSnaps.add(3);
+        swingSnaps.add(6);
+        swingSnaps.add(12);
     }
+
+    private NavigableSet<Integer> currentSnaps = allSnaps;
 
     public final Set<Integer> divisorOptions;
     public final List<Integer> activeDivisors;
 
+    private SnapMode mode = SnapMode.ALL;
+
+    public enum SnapMode {
+        ALL,
+        COMMON,
+        EVEN,
+        SWING
+    }
+
     private int currentSnapping;
 
-    private final List<BeatDivisors> dependents;
+    private final List<IDivisorListener> dependents;
 
     public DivisorOptions()
     {
@@ -45,18 +70,51 @@ public class DivisorOptions {
             addDivisor(i);
         }
     }
-    public void addDependent(BeatDivisors divisors)
+    public void addDependent(IDivisorListener thing)
     {
-        dependents.add(divisors);
+        dependents.add(thing);
     }
 
-    public void removeDependent(BeatDivisors divisors) {
-        dependents.remove(divisors);
+    public void removeDependent(IDivisorListener thing) {
+        dependents.remove(thing);
     }
 
     public void addDivisor(int divisor)
     {
         divisorOptions.add(divisor);
+    }
+
+
+    public SnapMode getMode() {
+        return mode;
+    }
+    public void swapMode() {
+        switch (mode) {
+            case ALL:
+                mode = SnapMode.COMMON;
+                currentSnaps = commonSnaps;
+                break;
+            case COMMON:
+                mode = SnapMode.EVEN;
+                currentSnaps = evenSnaps;
+                break;
+            case EVEN:
+                mode = SnapMode.SWING;
+                currentSnaps = swingSnaps;
+                break;
+            case SWING:
+                mode = SnapMode.ALL;
+                currentSnaps = allSnaps;
+                break;
+        }
+
+        if (!currentSnaps.contains(currentSnapping)) {
+            adjust(-1, false);
+        }
+    }
+
+    public int getCurrentSnapping() {
+        return currentSnapping;
     }
 
     public void reset()
@@ -87,9 +145,9 @@ public class DivisorOptions {
             currentSnapping = activeDivisors.get(0);
         }
 
-        for (BeatDivisors divisors : dependents)
+        for (IDivisorListener listener : dependents)
         {
-            divisors.refresh();
+            listener.refresh();
         }
     }
     //Disables this divisor and any divisors that rely on it.
@@ -105,9 +163,9 @@ public class DivisorOptions {
             currentSnapping = activeDivisors.get(0);
         }
 
-        for (BeatDivisors divisors : dependents)
+        for (IDivisorListener listener : dependents)
         {
-            divisors.refresh();
+            listener.refresh();
         }
     }
 
@@ -143,21 +201,21 @@ public class DivisorOptions {
             currentSnapping = activeDivisors.get(0);
         }
 
-        for (BeatDivisors divisors : dependents)
+        for (IDivisorListener listener : dependents)
         {
-            divisors.refresh();
+            listener.refresh();
         }
     }
 
-    public void adjust(float adjustment, boolean onlyCommon)
+    public void adjust(float adjustDirection, boolean useAllSnaps)
     {
-        if (adjustment > 0)
+        if (adjustDirection > 0)
         {
-            set(prev(onlyCommon ? commonSnappings : autoGen));
+            set(prev(useAllSnaps ? allSnaps : currentSnaps));
         }
         else
         {
-            set(next(onlyCommon ? commonSnappings : autoGen));
+            set(next(useAllSnaps ? allSnaps : currentSnaps));
         }
     }
 
@@ -190,6 +248,10 @@ public class DivisorOptions {
 
     @Override
     public String toString() {
-        return currentSnapping > 0 ? "1/" + currentSnapping : "None";
+        return currentSnapping > 0 ? "1/" + currentSnapping : "N/A";
+    }
+
+    public interface IDivisorListener {
+        void refresh();
     }
 }

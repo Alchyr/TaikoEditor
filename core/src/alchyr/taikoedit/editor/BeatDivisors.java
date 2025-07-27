@@ -9,7 +9,7 @@ import java.util.*;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
 
-public class BeatDivisors {
+public class BeatDivisors implements DivisorOptions.IDivisorListener {
     public static final int[] commonSnappings = new int[] {
             1, 2, 3, 4, 5, 6, 7, 8, 12, 16
     };
