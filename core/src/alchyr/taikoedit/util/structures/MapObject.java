@@ -15,6 +15,7 @@ public abstract class MapObject implements Comparable<MapObject> {
 
     private final List<Supplier<Boolean>> hideTests = new ArrayList<>();
 
+    //unique ID for objects used for network communication
     public int key = Integer.MIN_VALUE;
     private double pos = 0;
 

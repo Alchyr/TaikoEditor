@@ -1,6 +1,7 @@
 package alchyr.taikoedit.editor.maps.components;
 
 import alchyr.taikoedit.editor.views.EffectView;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.MapObject;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -16,8 +17,12 @@ public class TimingPoint extends MapObject {
     public static final Color RED = Color.RED.cpy();
     public static final Color GREEN = new Color(0.25f, 0.75f, 0.0f, 1.0f);
     public static final Color YELLOW = new Color(0.8f, 0.8f, 0.0f, 1.0f);
+    private static final Color OMIT_MARK = Color.LIGHT_GRAY.cpy();
 
     private static final Color selection = new Color(1.0f, 0.6f, 0.0f, 1.0f);
+
+    private static final int OMIT_MARK_SIZE = 2 * (int) (6 * SettingsMaster.SCALE) + 1;
+    private static final float OMIT_MARK_OFFSET = OMIT_MARK_SIZE / 2f;
 
     public static final double MIN_SV = 0.01;
 
@@ -142,11 +147,14 @@ public class TimingPoint extends MapObject {
         }
 
         Color c = uninherited ? RED : GREEN;
+        float origA = c.a;
         c.a = alpha;
         sb.setColor(c);
-        c.a = 1;
+        c.a = origA;
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
+
+        renderOmittedMark(sb, x, y, pos, viewScale, alpha);
     }
 
     public void renderColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c, float alpha) {
@@ -157,18 +165,38 @@ public class TimingPoint extends MapObject {
             renderSelection(sb, sr, pos, viewScale, x, y);
         }
 
+        float origA = c.a;
         c.a = alpha;
         sb.setColor(c);
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale, y, 1, EffectView.HEIGHT);
-        c.a = 1;
+        c.a = origA;
+
+        renderOmittedMark(sb, x, y, pos, viewScale, alpha);
+    }
+
+    public void renderOmittedMark(SpriteBatch sb, float x, float y, double pos, float viewScale, float alpha) {
+        if (omitted && uninherited) {
+            x += 1;
+            OMIT_MARK.a = alpha;
+            sb.setColor(OMIT_MARK);
+
+            sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - OMIT_MARK_OFFSET, y + OMIT_MARK_SIZE * 1.75f, OMIT_MARK_OFFSET, 0,
+                    OMIT_MARK_SIZE, 1, 1, 1, 45f, 0, 0, 1, 1, false, false);
+            sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - OMIT_MARK_OFFSET, y + OMIT_MARK_SIZE * 1.75f, OMIT_MARK_OFFSET, 0,
+                    OMIT_MARK_SIZE, 1, 1, 1, 135f, 0, 0, 1, 1, false, false);
+        }
     }
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
+        renderSelection(sb, sr, pos, viewScale, x, y, selection);
+    }
+
+    public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c) {
         if (testHidden()) return;
 
-        sb.setColor(selection);
+        sb.setColor(c);
 
         sb.draw(pix, x + (float) (this.getPos() - pos) * viewScale - 1, y, 3, EffectView.HEIGHT);
     }

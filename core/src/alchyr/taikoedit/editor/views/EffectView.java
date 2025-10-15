@@ -910,12 +910,14 @@ public class EffectView extends MapView implements TextInputReceiver {
 
         MapObject selected = null, mainObj = GeneralUtils.listLast(objects);
         int type = 0;
+        TimingPoint maybeOmitted = null;
         for (MapObject o : objects) {
             if (o.selected)
                 selected = o;
 
             if (((TimingPoint) o).uninherited) {
                 type |= 1;
+                maybeOmitted = (TimingPoint) o;
             }
             else {
                 type |= 2;
@@ -934,6 +936,9 @@ public class EffectView extends MapView implements TextInputReceiver {
             default:
                 ((TimingPoint) mainObj).renderColored(sb, sr, preciseTime, viewScale, SettingsMaster.getMiddleX(), bottom, green, 1);
                 break;
+        }
+        if (maybeOmitted != null) {
+            maybeOmitted.renderOmittedMark(sb, SettingsMaster.getMiddleX(), bottom, preciseTime, viewScale, 1);
         }
         if (selected != null)
             renderSelection(selected, sb, sr);
@@ -1428,14 +1433,22 @@ public class EffectView extends MapView implements TextInputReceiver {
     private void updateToolset() {
         tools.clear();
         tools.addTool(SelectionTool.get());
+
         if (timingEnabled)
             tools.addTool(RedLineTool.get());
+
         if (effectPointsEnabled)
             tools.addTool(GreenLineTool.get());
-        if (effectPointsEnabled) {
+
+        if (effectPointsEnabled)
             tools.addTool(mode ? SVFunctionTool.get() : VolumeFunctionTool.get());
+
+        if (effectPointsEnabled || timingEnabled)
             tools.addTool(KiaiTool.get());
-        }
+
+        if (timingEnabled)
+            tools.addTool(OmitBarlineTool.get());
+
         if (parent != null && parent.tools != null)
             parent.tools.changeToolset(this);
     }

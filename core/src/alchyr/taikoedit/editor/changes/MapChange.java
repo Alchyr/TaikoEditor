@@ -254,6 +254,11 @@ public abstract class MapChange extends BranchingStateQueue.StateChange {
      */
     public abstract boolean isValid();
 
+    /**
+     * Called when a change is received. Should reconstruct positional object maps or
+     * anything similar where the actual position of the object may not necessarily be the same.
+     * @return
+     */
     public MapChange reconstruct() {
         return this;
     }
