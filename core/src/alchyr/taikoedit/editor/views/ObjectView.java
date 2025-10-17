@@ -791,7 +791,7 @@ public class ObjectView extends MapView {
         }
     }
 
-    private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), SpinnerTool.get());
+    private static final Toolset toolset = new Toolset(SelectionTool.get(), HitTool.don(), HitTool.kat(), SliderTool.get(), SpinnerTool.get(), NewComboTool.get());
     public Toolset getToolset()
     {
         return toolset;

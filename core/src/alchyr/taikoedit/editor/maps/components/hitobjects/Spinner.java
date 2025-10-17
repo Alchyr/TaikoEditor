@@ -172,28 +172,36 @@ public class Spinner extends HitObject implements ILongObject {
     @Override
     public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
         currentSkin.gameplaySpinnerColor.a = alpha;
-        sb.setColor(currentSkin.gameplaySpinnerColor);
 
-        currentSkin.gameplaySpinner.renderC(sb, sr, 1 + baseX + Math.max(x, 0), y, currentSkin.gameplaySpinnerScale, spinner);
-        /*sb.draw(circle, baseX + Math.max(x, 0) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                currentSkin.largeScale, currentSkin.largeScale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+        currentSkin.gameplaySpinner.renderC(sb, sr, 1 + baseX + Math.max(x, 0), y, currentSkin.gameplaySpinnerScale, currentSkin.gameplaySpinnerColor);
+    }
+    @Override
+    public void grayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
+        disabled.a = alpha * 0.75f;
+
+        currentSkin.gameplaySpinner.renderC(sb, sr, 1 + baseX + Math.max(x, 0), y, currentSkin.gameplaySpinnerScale, disabled);
     }
 
     @Override
     public void renderSelection(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y) {
         if (testHidden()) return;
 
-        sb.setColor(Color.WHITE);
-
         if (duration > 0)
         {
             currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.endPos - pos) * viewScale, y, currentSkin.largeScale);
-            /*sb.draw(currentSkin.selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                    currentSkin.largeScale, currentSkin.largeScale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
         }
         currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale);
-        /*sb.draw(currentSkin.selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                currentSkin.largeScale, currentSkin.largeScale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+    }
+
+    @Override
+    public void renderSelectionColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c) {
+        if (testHidden()) return;
+
+        if (duration > 0)
+        {
+            currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.endPos - pos) * viewScale, y, currentSkin.largeScale, c);
+        }
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
     }
 
     @Override

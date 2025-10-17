@@ -43,4 +43,8 @@ public abstract class EditorTool {
         //Return value: Whether or not to swap to the tool
         return true;
     }
+
+    public void activate() {
+
+    }
 }

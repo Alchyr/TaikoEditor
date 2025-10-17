@@ -485,4 +485,28 @@ public class GeneralUtils {
         final String osName = System.getProperty("os.name");
         return osName == null ? "Unknown" : osName;
     }
+
+    public static double listAvg(List<Double> list) {
+        if (list.isEmpty()) return 0;
+        double avg = 0;
+        for (double d : list) avg += d;
+        return avg / list.size();
+    }
+
+    public static <T, U extends Comparable<U>> T listMax(List<T> list, Function<T, U> conv) {
+        if (list.isEmpty()) return null;
+
+        T max = list.get(0);
+        U maxConv = conv.apply(max);
+
+        for (int i = 1; i < list.size(); ++i) {
+            U converted = conv.apply(list.get(i));
+            if (maxConv.compareTo(converted) < 0) {
+                maxConv = converted;
+                max = list.get(i);
+            }
+        }
+
+        return max;
+    }
 }

@@ -13,7 +13,7 @@ import alchyr.taikoedit.editor.maps.components.ILongObject;
 import alchyr.taikoedit.editor.maps.components.TimingPoint;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.views.EffectView;
-import alchyr.taikoedit.editor.views.GameplayView;
+import alchyr.taikoedit.editor.views.MapView;
 import alchyr.taikoedit.management.MapMaster;
 import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.management.assets.FileHelper;
@@ -28,8 +28,8 @@ import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.function.BiFunction;
 
 import static alchyr.taikoedit.TaikoEditor.editorLogger;
@@ -86,7 +86,7 @@ public class EditorBeatmap {
 
     //Not the most "ideal" method, but it's quick and easy.
     private List<EffectView> effectViews = new ArrayList<>();
-    private List<GameplayView> gameplayViews = new ArrayList<>();
+    private List<MapView> gameplayChangeListener = new ArrayList<>();
 
 
     //Loading map from file
@@ -1437,10 +1437,8 @@ public class EditorBeatmap {
     }
 
     public void gameplayChanged() {
-        for (GameplayView view : gameplayViews) {
-            if (view.autoRefresh()) {
-                TaikoEditor.onMain(view::calculateTimes);
-            }
+        for (MapView view : gameplayChangeListener) {
+            view.onGameplayChange();
         }
     }
 
@@ -1492,14 +1490,14 @@ public class EditorBeatmap {
     {
         effectViews.remove(view);
     }
-    public void bindGameplayView(GameplayView view)
+    public void bindGameplayListener(MapView view)
     {
-        if (!gameplayViews.contains(view))
-            gameplayViews.add(view);
+        if (!gameplayChangeListener.contains(view))
+            gameplayChangeListener.add(view);
     }
-    public void removeGameplayView(GameplayView view)
+    public void removeGameplayListener(MapView view)
     {
-        gameplayViews.remove(view);
+        gameplayChangeListener.remove(view);
     }
     public void setTimeline(Timeline line) {
         this.timeline = line;

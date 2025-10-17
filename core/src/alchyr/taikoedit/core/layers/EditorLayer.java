@@ -237,6 +237,8 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
         pixel = assetMaster.get("ui:pixel");
         connected = assetMaster.get("ui:connected");
+        HitObject.circle = assetMaster.get("editor:nccircle");
+        HitObject.showNc = false;
         topBarHeight = 40;
         timelineY = SettingsMaster.getHeight() - (topBarHeight + Timeline.HEIGHT);
         topBarY = SettingsMaster.getHeight() - topBarHeight;
@@ -792,7 +794,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                     .addLayers(true, this)
                     .addTask(this::stopMusic)
                     .newSet().addTask(()->music.loadAsync(initial.get(0).getSongFile(), null))
-                    .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(), true) //music loading starts in song select
+                    .newSet().addTracker(music::getProgress, ()->music.noTrack() || music.hasMusic(initial.get(0).getSongFile()), true) //music loading starts in song select
                     .addFailure(music::noTrack)
                     .addTask(true, ()->{ music.play(); music.pause(); })
                     .addTask(true, ()->music.seekSecond(0))
@@ -1016,7 +1018,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
 
         if (container != null)
         {
-            if (container.getViews().contains(toRemove) && container.getViews().size() == 0 && toRemove.map.dirty) {
+            if (container.getViews().contains(toRemove) && container.getViews().size() == 1 && toRemove.map.dirty) {
                 TaikoEditor.addLayer(new ConfirmationLayer("Save changes to difficulty [" + toRemove.map.getName() + "]?", "Yes", "No", true)
                         .onConfirm(()->{
                             String err = toRemove.map.save();
@@ -1966,12 +1968,6 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                     }
                 }
             });*/
-
-            if (DIFFCALC)
-                bindings.bind("DIFFCALC", ()->{
-                   if (sourceLayer.primaryView != null)
-                       sourceLayer.getViewSet(sourceLayer.primaryView.map).calculateDifficulty();
-                });
 
             bindings.bind("PositionLines", ()->{
                 if (sourceLayer.primaryView != null) {

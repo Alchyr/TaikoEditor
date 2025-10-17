@@ -94,6 +94,7 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
         viewOptions.add(new Button(viewOptionX, middleY, "Effect Editor", assetMaster.getFont("aller medium")).setAction("sv"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gameplay View", assetMaster.getFont("aller medium")).setAction("gameplay"));
         viewOptions.add(new Button(viewOptionX, middleY, "Gimmick Editor", assetMaster.getFont("aller medium")).setAction("gimmick"));
+        viewOptions.add(new Button(viewOptionX, middleY, "Difficulty", assetMaster.getFont("aller medium")).setAction("difficulty"));
         viewOptions.add(new Button(viewOptionX, middleY, "Changelog", assetMaster.getFont("aller medium")).setAction("changelog"));
         if (canCreateNew)
             viewOptions.add(new Button(viewOptionX, middleY, "Create New", assetMaster.getFont("aller medium")).setAction("NEW"));
@@ -126,6 +127,9 @@ public class DifficultyMenuLayer extends ProgramLayer implements InputLayer {
                     break;
                 case "gimmick":
                     sourceLayer.addView(new GimmickView(sourceLayer, b), true);
+                    break;
+                case "difficulty":
+                    sourceLayer.addView(new DifficultyView(sourceLayer, b), true);
                     break;
                 case "changelog":
                     sourceLayer.addView(new ChangelogView(sourceLayer, b), true);

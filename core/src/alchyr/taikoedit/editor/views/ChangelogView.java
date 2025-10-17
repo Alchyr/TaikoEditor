@@ -103,6 +103,7 @@ public class ChangelogView extends MapView {
 
     @Override
     public MouseHoldObject click(float x, float y, int button) {
+        //clicking log jumps to that state
         return super.click(x, y, button);
     }
 

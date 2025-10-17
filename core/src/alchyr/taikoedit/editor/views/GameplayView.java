@@ -15,6 +15,7 @@ import alchyr.taikoedit.util.structures.MapObjectTreeMap;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Interpolation;
@@ -73,6 +74,9 @@ public class GameplayView extends MapView {
     //Offset
     private int objectY = 0;
 
+    private int coopPlayers = 1;
+    private int playerIndex = 0;
+
     private boolean autoRefresh = true;
 
     public GameplayView(EditorLayer parent, EditorBeatmap beatmap) {
@@ -100,6 +104,46 @@ public class GameplayView extends MapView {
             }
         });
         addOverlayButton(autoRefreshButton);
+
+        Texture coopOn = assetMaster.get("editor:coopon");
+        Texture coopOnH = assetMaster.get("editor:cooponh");
+        Texture coopOff = assetMaster.get("editor:coopoff");
+        Texture coopOffH = assetMaster.get("editor:coopoffh");
+        BitmapFont font = assetMaster.getFont("base:aller small");
+        ImageButton coopButton = new ImageButton(0, 0, coopOff, coopOffH, "", font).setAction("Enable Co-op Players");
+        coopButton.setClick((button)->{
+            if (button == Input.Buttons.LEFT) {
+                switch (coopPlayers) {
+                    case 1:
+                        coopButton.setTextures(coopOn, coopOnH);
+                        coopButton.setAction("Increase Players (Right Click to Change Current Player)");
+                        coopPlayers = 2;
+                        coopButton.setText(Integer.toString(coopPlayers));
+                        parent.showText("Players: " + coopPlayers + " | Current Player: " + (playerIndex + 1));
+                        break;
+                    case 4:
+                        autoRefreshButton.setTextures(coopOff, coopOffH);
+                        autoRefreshButton.setAction("Enable Co-op Players");
+                        coopPlayers = 1;
+                        playerIndex = 0;
+                        coopButton.setText("");
+                        break;
+                    default:
+                        ++coopPlayers;
+                        coopButton.setText(Integer.toString(coopPlayers));
+                        parent.showText("Players: " + coopPlayers + " | Current Player: " + (playerIndex + 1));
+                        break;
+                }
+            }
+            else if (button == Input.Buttons.RIGHT) {
+                playerIndex = (playerIndex + 1) % coopPlayers;
+                if (coopPlayers > 1) {
+                    parent.showText("Players: " + coopPlayers + " | Current Player: " + (playerIndex + 1));
+                }
+            }
+        });
+        addOverlayButton(coopButton);
+
         addLockPositionButton();
 
         startTimes = new TreeMap<>();
@@ -117,8 +161,11 @@ public class GameplayView extends MapView {
         calculateTimes();
     }
 
-    public boolean autoRefresh() {
-        return autoRefresh;
+    @Override
+    public void onGameplayChange() {
+        if (autoRefresh) {
+            TaikoEditor.onMain(this::calculateTimes);
+        }
     }
 
     public void calculateTimes() {
@@ -135,6 +182,9 @@ public class GameplayView extends MapView {
             visibleObjects.clear();
             barlines.clear();
             lastPos = Long.MIN_VALUE;
+
+            int comboIndex = 0;
+            boolean firstObj = true; //should also be set to true after breaks...
 
             Iterator<Map.Entry<Long, ArrayList<HitObject>>> objectIterator = map.objects.entrySet().iterator();
             Iterator<Map.Entry<Long, Snap>> snapIterator = map.getBarlineSnaps().entrySet().iterator();
@@ -280,7 +330,10 @@ public class GameplayView extends MapView {
                     }
 
                     for (HitObject h : stack.getValue()) {
+                        if (h.newCombo || firstObj) ++comboIndex;
+                        firstObj = false;
                         h.gameplayStart = startTime;
+                        h.comboIndex = comboIndex;
 
                         startTimes.get(h.gameplayStart).add(h);
                         endTimes.compute(h.getEndPos(), (k, v) -> {
@@ -362,9 +415,14 @@ public class GameplayView extends MapView {
         //end time is always pos, the start time of the object.
         if (h.type == HitObject.HitObjectType.SPINNER && h.getGameplayEndPos() - h.gameplayStart > 5000)
             //Dunno osu's logic to decide when to fade spinners in, this is merely an approximation for convenience
-            alpha *= 1 - MathUtils.clamp(((h.getPos() - preciseTime) - 1000) / 500.0, 0.0, 1.0);
+            alpha *= (float) (1 - MathUtils.clamp(((h.getPos() - preciseTime) - 1000) / 500.0, 0.0, 1.0));
 
-        h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
+        if (h.comboIndex % coopPlayers == playerIndex) {
+            h.gameplayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
+        }
+        else {
+            h.grayRender(sb, sr, svMap.floorEntry(h.getPos()).getValue(), HIT_AREA_X, Interpolation.linear.apply(VISIBLE_LENGTH, 0, (float) ((preciseTime - h.gameplayStart) / (h.getPos() - h.gameplayStart))), objectY, alpha);
+        }
 
         calculationLock.unlock();
     }

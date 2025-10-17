@@ -54,6 +54,7 @@ public class Tools  {
 
     public EditorTool getCurrentTool()
     {
+        if (currentTool != null) currentTool.activate();
         return currentTool;
     }
 
@@ -198,7 +199,7 @@ public class Tools  {
             }
 
             //Does not trigger onSelected
-            return false;
+            return currentTool == null;
         }
         return currentTool != null;
     }

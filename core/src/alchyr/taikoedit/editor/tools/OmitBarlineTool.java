@@ -101,8 +101,6 @@ public class OmitBarlineTool extends EditorTool {
 
     @Override
     public MouseHoldObject click(MapView view, float x, float y, int button, int modifiers) {
-        //Place an object at current previewed placement position
-        //For sliders/spinners, will need to track current start position using update, and next click will finish placement or cancel (if it's a right click)
         if (button == Input.Buttons.LEFT && previewObject != null && previewView.equals(view))
         {
             boolean toOmitted = !previewObject.omitted;

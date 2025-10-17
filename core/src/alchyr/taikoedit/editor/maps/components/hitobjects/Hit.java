@@ -134,7 +134,7 @@ public class Hit extends HitObject {
 
         Color c = isRim ? kat : don;
         c.a = alpha;
-        //sb.setColor(c);
+        sb.setColor(c);
 
         if (finish) {
             currentSkin.finisher.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
@@ -144,6 +144,11 @@ public class Hit extends HitObject {
         }
         /*sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+
+        if (showNc && newCombo) {
+            sb.setColor(Color.WHITE);
+            sb.draw(circle, -10 + x + (float) (this.getPos() - pos) * viewScale, y - 10, 20, 20);
+        }
 
         if (selected)
         {
@@ -158,7 +163,6 @@ public class Hit extends HitObject {
 
         Color c = isRim ? kat : don;
         c.a = alpha;
-        //sb.setColor(c);
 
         if (finish) {
             currentSkin.finisher.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
@@ -166,8 +170,26 @@ public class Hit extends HitObject {
         else {
             currentSkin.hit.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.normalScale, c);
         }
-        /*sb.draw(circle, x + (float) (this.getPos() - pos) * viewScale - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+
+        if (selected)
+        {
+            renderSelection(sb, sr, pos, viewScale, x, y);
+        }
+        c.a = 1;
+    }
+    public void grayRender(SpriteBatch sb, ShapeRenderer sr, float viewScale, float baseX, float x, int y, float alpha) {
+        long pos = getPos();
+        x += baseX;
+
+        Color c = isRim ? kat.cpy().mul(disabled) : don.cpy().mul(disabled);
+        c.a = alpha * 0.75f;
+
+        if (finish) {
+            currentSkin.finisher.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.largeScale, c);
+        }
+        else {
+            currentSkin.hit.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, currentSkin.normalScale, c);
+        }
 
         if (selected)
         {
@@ -183,6 +205,15 @@ public class Hit extends HitObject {
         float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
         currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale);
+    }
+
+    @Override
+    public void renderSelectionColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c) {
+        if (testHidden()) return;
+
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
+
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale, c);
     }
 
     @Override

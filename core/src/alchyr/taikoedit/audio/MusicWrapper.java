@@ -202,6 +202,9 @@ public class MusicWrapper implements Music.OnCompletionListener {
     public boolean hasMusic() {
         return hasMusic;
     }
+    public boolean hasMusic(String songFile) {
+        return hasMusic && music != null && music.getFile().equals(Gdx.files.absolute(songFile));
+    }
     public void setMusic(FileHandle handle)
     {
         if (this.music != null)

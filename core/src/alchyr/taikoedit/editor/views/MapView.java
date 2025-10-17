@@ -43,7 +43,10 @@ public abstract class MapView {
                 return new GameplayView(editor, map);
             case GimmickView.ID:
                 return new GimmickView(editor, map);
-            case DifficultyView.ID: //No
+            case DifficultyView.ID:
+                return new DifficultyView(editor, map);
+            case ChangelogView.ID:
+                return new ChangelogView(editor, map);
             default:
                 return null;
         }
@@ -335,6 +338,10 @@ public abstract class MapView {
         }
 
         additionalDisplayObjects.clear();
+    }
+
+    public void onGameplayChange() {
+
     }
 
     public Snap getPreviousSnap(long pos) {

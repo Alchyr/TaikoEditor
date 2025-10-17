@@ -1,17 +1,15 @@
 package alchyr.taikoedit.editor.views;
 
-import alchyr.diffcalc.TaikoDifficultyCalculator;
-import alchyr.diffcalc.taiko.difficulty.TaikoDifficultyAttributes;
-import alchyr.diffcalc.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
+import alchyr.diffcalc.test.taiko.difficulty.preprocessing.TaikoDifficultyHitObject;
 import alchyr.taikoedit.TaikoEditor;
+import alchyr.taikoedit.core.input.MouseHoldObject;
 import alchyr.taikoedit.core.layers.EditorLayer;
 import alchyr.taikoedit.core.layers.sub.DifficultySettingsLayer;
 import alchyr.taikoedit.core.ui.ImageButton;
-import alchyr.taikoedit.editor.tools.EditorTool;
-import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.editor.maps.EditorBeatmap;
 import alchyr.taikoedit.editor.maps.components.HitObject;
-import alchyr.taikoedit.core.input.MouseHoldObject;
+import alchyr.taikoedit.editor.tools.EditorTool;
+import alchyr.taikoedit.management.SettingsMaster;
 import alchyr.taikoedit.util.structures.MapObject;
 import alchyr.taikoedit.util.structures.MultiMergeIterator;
 import com.badlogic.gdx.Input;
@@ -19,10 +17,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
-import static alchyr.taikoedit.TaikoEditor.*;
+import static alchyr.taikoedit.TaikoEditor.assetMaster;
+import static alchyr.taikoedit.TaikoEditor.textRenderer;
 
 public class ViewSet {
     private final EditorLayer owner;
@@ -148,15 +150,12 @@ public class ViewSet {
                         }
                     }
 
-                    if (returnVal == null) {
-                    }
-
                     if (owner.tools.changeToolset(view) && returnVal == null)
                     {
                         //If current tool does not override "view clicking" input (just break dragging)
                         //do that first
                         EditorTool currentTool = owner.tools.getCurrentTool();
-                        if (currentTool.supportsView(view) && currentTool.overrideViewClick()) {
+                        if (currentTool != null && currentTool.supportsView(view) && currentTool.overrideViewClick()) {
                             //If the current tool is valid for the new toolset, use it immediately
                             returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
                             if (returnVal == null) {
@@ -165,7 +164,7 @@ public class ViewSet {
                         }
                         else {
                             returnVal = view.click(x, y, button);
-                            if (returnVal == null && currentTool.supportsView(view)) {
+                            if (returnVal == null && currentTool != null && currentTool.supportsView(view)) {
                                 returnVal = owner.tools.getCurrentTool().supportsView(view) ? owner.tools.getCurrentTool().click(view, x, y, button, modifiers) : null;
                             }
                         }
@@ -208,8 +207,8 @@ public class ViewSet {
             if (toAdd instanceof EffectView) {
                 map.bindEffectView((EffectView) toAdd);
             }
-            else if (toAdd instanceof GameplayView) {
-                map.bindGameplayView((GameplayView) toAdd);
+            else if (toAdd instanceof GameplayView || toAdd instanceof DifficultyView) {
+                map.bindGameplayListener(toAdd);
             }
         }
         else
@@ -232,8 +231,8 @@ public class ViewSet {
             if (toInsert instanceof EffectView) {
                 map.bindEffectView((EffectView) toInsert);
             }
-            else if (toInsert instanceof GameplayView) {
-                map.bindGameplayView((GameplayView) toInsert);
+            else if (toInsert instanceof GameplayView || toInsert instanceof DifficultyView) {
+                map.bindGameplayListener(toInsert);
             }
         }
         else
@@ -252,9 +251,7 @@ public class ViewSet {
         if (toRemove instanceof EffectView) {
             map.removeEffectView((EffectView) toRemove);
         }
-        else if (toRemove instanceof GameplayView) {
-            map.removeGameplayView((GameplayView) toRemove);
-        }
+        map.removeGameplayListener(toRemove);
     }
 
     public boolean contains(Predicate<MapView> condition)
@@ -285,12 +282,5 @@ public class ViewSet {
             view.dispose();
         }
         views.clear();
-    }
-
-    public void calculateDifficulty() {
-        TaikoDifficultyAttributes attributes = (TaikoDifficultyAttributes) TaikoDifficultyCalculator.calculateDifficulty(map, difficultyInfo);
-        owner.showText(attributes.StarRating + " : " + attributes.ContinuousRating + " : " + attributes.BurstRating);
-
-        owner.addView(new DifficultyView(owner, map, difficultyInfo), true);
     }
 }

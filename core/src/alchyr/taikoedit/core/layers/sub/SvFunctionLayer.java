@@ -28,6 +28,8 @@ import static alchyr.taikoedit.TaikoEditor.*;
 public class SvFunctionLayer extends ProgramLayer implements InputLayer {
     private static int selectedFormulaIndex = 0;
 
+    private static int lastGenOffset = -5;
+
     private final SvFunctionProcessor processor;
 
     public boolean active = true;
@@ -45,7 +47,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
             this.generateLines = generateLines;
             this.fixedSnapping = fixedSnapping;
             this.snap = snap;
-            this.genOffset = genOffset;
+            this.genOffset = lastGenOffset = genOffset;
             this.svObjects = svObjects;
             this.selectedOnly = selectedOnly;
             this.svBarlines = svBarlines;
@@ -210,7 +212,7 @@ public class SvFunctionLayer extends ProgramLayer implements InputLayer {
         generateLines = new ToggleButton(LEFT_POS, middleY + BUTTON_OFFSET * 3f, "Generate Lines", font, true);
         fixedSpacing = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 2, "Fixed ", font, false).setOnToggle(this::fixedSpacing);
         snapping = new TextField(fixedSpacing.endX(), middleY + BUTTON_OFFSET * 2, 300f - (fixedSpacing.endX() - LEFT_POS), "Snapping: 1/", "4", 3, font).setType(TextField.TextType.INTEGER).filter('-').blocking();
-        genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1f, 300f - SHIFT_STEP, "Position Offset:", "-5", 6, font).setType(TextField.TextType.INTEGER).blocking();
+        genOffset = new TextField(LEFT_POS + SHIFT_STEP, middleY + BUTTON_OFFSET * 1f, 300f - SHIFT_STEP, "Position Offset:", Integer.toString(lastGenOffset), 6, font).setType(TextField.TextType.INTEGER).blocking();
         svObjects = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY, "Objects", font, true).setOnToggle(this::svStuff);
         selectedOnly = new ToggleButton(LEFT_POS + (SHIFT_STEP * 2), middleY - BUTTON_OFFSET * 1f, "Selected Objects Only", font, false);
         svBarlines = new ToggleButton(LEFT_POS + SHIFT_STEP, middleY - BUTTON_OFFSET * 2f, "Barlines", font, true).setOnToggle(this::svStuff);

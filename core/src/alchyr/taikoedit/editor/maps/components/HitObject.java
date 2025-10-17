@@ -5,17 +5,21 @@ import alchyr.taikoedit.editor.maps.components.hitobjects.Slider;
 import alchyr.taikoedit.editor.maps.components.hitobjects.Spinner;
 import alchyr.taikoedit.management.assets.skins.Skins;
 import alchyr.taikoedit.util.structures.MapObject;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import static alchyr.taikoedit.TaikoEditor.audioMaster;
 
 public abstract class HitObject extends MapObject {
+    public static Color disabled = Color.DARK_GRAY.cpy();
     protected final static int CIRCLE_SIZE = 100;
     protected final static int CIRCLE_OFFSET = CIRCLE_SIZE / 2;
     //protected final static float LARGE_SCALE = 1.5f;
 
-    //protected static Texture circle;
+    public static boolean showNc = false;
+    public static Texture circle;
     //protected static Texture selection;
     //protected static Texture body;
 
@@ -37,6 +41,7 @@ public abstract class HitObject extends MapObject {
 
     //Gameplay preview
             public long gameplayStart = 0;
+            public int comboIndex = 0;
 
     public int x = 0, y = 0;
     public HitObjectType type;
@@ -157,9 +162,10 @@ public abstract class HitObject extends MapObject {
         return sb.toString();
     }
 
-    public void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
-        render(sb, sr, getPos(), sv, baseX + x, y, alpha);
-    }
+    public abstract void gameplayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha);
+    public abstract void grayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha); //co-op render
+
+    public abstract void renderSelectionColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c);
 
     public enum HitObjectType {
         CIRCLE,

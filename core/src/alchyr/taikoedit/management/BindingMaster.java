@@ -5,7 +5,6 @@ package alchyr.taikoedit.management;
 //Binding keys should be easily modifiable.
 //Binding to a key already bound within a group should unbind that key.
 
-import alchyr.taikoedit.TaikoEditor;
 import alchyr.taikoedit.core.input.BindingGroup;
 import alchyr.taikoedit.core.input.InputBinding;
 import alchyr.taikoedit.core.input.InputBinding.InputInfo.Maybe;
@@ -19,8 +18,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
 import java.util.Collections;
+import java.util.*;
 
 //One input binding is a linkage of a single input to a single result.
 //Bindings are bound to methods?
@@ -123,9 +122,6 @@ public class BindingMaster {
 
         //used for testing.
         //creating.addBinding(InputBinding.create("DEBUG", new InputBinding.InputInfo(Input.Keys.K, true, true, true)));
-
-        if (TaikoEditor.DIFFCALC)
-            creating.addBinding(InputBinding.create("DIFFCALC", new InputBinding.InputInfo(Input.Keys.D, true, true, false)));
 
         creating.initialize(bindingGroups, loadedData.get(creating.getID()));
 

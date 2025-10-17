@@ -259,6 +259,11 @@ public class Slider extends HitObject implements ILongObject {
         /*sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
                 scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
 
+        if (showNc && newCombo) {
+            sb.setColor(Color.WHITE);
+            sb.draw(circle, -10 + startX, y - 10, 20, 20);
+        }
+
         if (selected)
         {
             renderSelection(sb, sr, pos, viewScale, x, y);
@@ -272,21 +277,37 @@ public class Slider extends HitObject implements ILongObject {
         slider.a = alpha;
         float startX = 1 + x;
         float endX = 1 + x + (float) (this.endPos - getPos()) * sv;
-        sb.setColor(slider);
         float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
 
         if (duration > 0)
         {
             float bodyStart = Math.max(0, startX), bodyEnd = Math.min(SettingsMaster.getWidth(), endX);
             currentSkin.body.renderC(sb, sr, (bodyStart + bodyEnd) / 2f, y, (bodyEnd - bodyStart) / currentSkin.body.getWidth(), scale, 0, slider);
-            //sb.draw(body, startX, y - (CIRCLE_OFFSET * scale), endX - startX, CIRCLE_SIZE * scale);
         }
         currentSkin.end.renderC(sb, sr, endX, y, scale, slider);
         currentSkin.hit.renderC(sb, sr, startX, y, scale, slider);
-        /*sb.draw(circle, endX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);
-        sb.draw(circle, startX - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+
+        if (selected)
+        {
+            renderSelection(sb, sr, getPos(), sv, x, y);
+        }
+    }
+    @Override
+    public void grayRender(SpriteBatch sb, ShapeRenderer sr, float sv, float baseX, float x, int y, float alpha) {
+        x += baseX;
+
+        disabled.a = alpha * 0.75f;
+        float startX = 1 + x;
+        float endX = 1 + x + (float) (this.endPos - getPos()) * sv;
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
+
+        if (duration > 0)
+        {
+            float bodyStart = Math.max(0, startX), bodyEnd = Math.min(SettingsMaster.getWidth(), endX);
+            currentSkin.body.renderC(sb, sr, (bodyStart + bodyEnd) / 2f, y, (bodyEnd - bodyStart) / currentSkin.body.getWidth(), scale, 0, disabled);
+        }
+        currentSkin.end.renderC(sb, sr, endX, y, scale, disabled);
+        currentSkin.hit.renderC(sb, sr, startX, y, scale, disabled);
 
         if (selected)
         {
@@ -303,10 +324,17 @@ public class Slider extends HitObject implements ILongObject {
 
         currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.endPos - pos) * viewScale, y, scale);
         currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale);
-        /*sb.draw(currentSkin.selection, (x + (float) (this.endPos - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
-        /*sb.draw(currentSkin.selection, (x + (float) (this.getPos() - pos) * viewScale) - CIRCLE_OFFSET, y - CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_OFFSET, CIRCLE_SIZE, CIRCLE_SIZE,
-                scale, scale, 0, 0, 0, CIRCLE_SIZE, CIRCLE_SIZE, false, false);*/
+    }
+
+    @Override
+    public void renderSelectionColored(SpriteBatch sb, ShapeRenderer sr, double pos, float viewScale, float x, float y, Color c) {
+        if (testHidden()) return;
+
+        sb.setColor(Color.WHITE);
+        float scale = finish ? currentSkin.largeScale : currentSkin.normalScale;
+
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.endPos - pos) * viewScale, y, scale, c);
+        currentSkin.selection.renderC(sb, sr, 1 + x + (float) (this.getPos() - pos) * viewScale, y, scale, c);
     }
 
     @Override
