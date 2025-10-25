@@ -17,6 +17,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static alchyr.taikoedit.TaikoEditor.editorLogger;
+
 public class BindingGroup {
     private final String ID;
     private final boolean modifiable;
@@ -178,6 +180,8 @@ public class BindingGroup {
     {
         if (allBindings.containsKey(bindingKey))
             allBindings.get(bindingKey).bind(()->onDown);
+        else
+            editorLogger.warn("Binding not found: " + ID + ":" + bindingKey);
     }
 
     //Parameters of the function are: x, y, button (0 = left click, 1 = right click), return value of boolean for whether or not this click is valid

@@ -113,7 +113,7 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("i7", new InputBinding.InputInfo(Input.Keys.U)));
         creating.addBinding(InputBinding.create("i8", new InputBinding.InputInfo(Input.Keys.I)));
         creating.addBinding(InputBinding.create("i9", new InputBinding.InputInfo(Input.Keys.O)));
-        creating.addBinding(InputBinding.create("i0", new InputBinding.InputInfo(Input.Keys.P)));
+        creating.addBinding(InputBinding.create("i10", new InputBinding.InputInfo(Input.Keys.P)));
         creating.addBinding(InputBinding.create("Snap 1", new InputBinding.InputInfo(Input.Keys.NUM_1, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("Snap 2", new InputBinding.InputInfo(Input.Keys.NUM_2, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("Snap 3", new InputBinding.InputInfo(Input.Keys.NUM_3, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));

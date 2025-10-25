@@ -1932,7 +1932,7 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
             for (int i = 1; i <= 10; ++i)
             {
                 final int toolIndex = i - 1;
-                bindings.bind("Tool" + i, ()->sourceLayer.tools.selectToolIndex(toolIndex));
+                bindings.bind("Tool " + i, ()->sourceLayer.tools.selectToolIndex(toolIndex));
 
                 if (i > 1) { //instant use bindings
                     bindings.bind("i" + i, ()->{
