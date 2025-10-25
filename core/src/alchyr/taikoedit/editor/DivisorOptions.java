@@ -169,6 +169,20 @@ public class DivisorOptions {
         }
     }
 
+    public void setIndex(int divisorIndex, boolean useAllSnaps) {
+        activeDivisors.clear();
+
+        NavigableSet<Integer> snappingSet = useAllSnaps ? allSnaps : currentSnaps;
+
+        int currentIndex = 0;
+        for (int snapping : snappingSet) {
+            if (currentIndex == divisorIndex) {
+                set(snapping);
+            }
+            ++currentIndex;
+        }
+    }
+
     public void set(int divisor)
     {
         if (divisor < 0)

@@ -1929,10 +1929,10 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                     sourceLayer.returnToMenu();
             });
 
-            for (int i = 1; i < 10; ++i)
+            for (int i = 1; i <= 10; ++i)
             {
-                final int index = i - 1;
-                bindings.bind(Integer.toString(i), ()->sourceLayer.tools.selectToolIndex(index));
+                final int toolIndex = i - 1;
+                bindings.bind("Tool" + i, ()->sourceLayer.tools.selectToolIndex(toolIndex));
 
                 if (i > 1) { //instant use bindings
                     bindings.bind("i" + i, ()->{
@@ -1941,14 +1941,17 @@ public class EditorLayer extends LoadedLayer implements InputLayer, FileDropHand
                             return ()->{
                                 releaseMouse(true);
 
-                                sourceLayer.tools.instantUse(index, view);
+                                sourceLayer.tools.instantUse(toolIndex, view);
                             };
                         }
                         return null;
                     });
                 }
+
+                String key = "Snap " + i;
+                final int snapIndex = i - 1;
+                bindings.bind(key, ()->sourceLayer.divisorOptions.setIndex(snapIndex, BindingGroup.ctrl()));
             }
-            bindings.bind("0", ()->sourceLayer.tools.selectToolIndex(9));
 
             //NOTE: DEBUG
             /*bindings.bind("DEBUG", ()->{

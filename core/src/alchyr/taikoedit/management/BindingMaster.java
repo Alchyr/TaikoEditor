@@ -89,16 +89,16 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("DecreaseWaveformOffset", new InputBinding.InputInfo(Input.Keys.MINUS, Maybe.MAYBE, Maybe.TRUE, Maybe.FALSE)));
 
         creating.addBinding(InputBinding.create("FinishLock", new InputBinding.InputInfo(Input.Keys.Q)));
-        creating.addBinding(InputBinding.create("1", new InputBinding.InputInfo(Input.Keys.NUM_1, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("2", new InputBinding.InputInfo(Input.Keys.NUM_2, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("3", new InputBinding.InputInfo(Input.Keys.NUM_3, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("4", new InputBinding.InputInfo(Input.Keys.NUM_4, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("5", new InputBinding.InputInfo(Input.Keys.NUM_5, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("6", new InputBinding.InputInfo(Input.Keys.NUM_6, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("7", new InputBinding.InputInfo(Input.Keys.NUM_7, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("8", new InputBinding.InputInfo(Input.Keys.NUM_8, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("9", new InputBinding.InputInfo(Input.Keys.NUM_9, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
-        creating.addBinding(InputBinding.create("0", new InputBinding.InputInfo(Input.Keys.NUM_0, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE)));
+        creating.addBinding(InputBinding.create("Tool 1", new InputBinding.InputInfo(Input.Keys.NUM_1, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 2", new InputBinding.InputInfo(Input.Keys.NUM_2, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 3", new InputBinding.InputInfo(Input.Keys.NUM_3, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 4", new InputBinding.InputInfo(Input.Keys.NUM_4, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 5", new InputBinding.InputInfo(Input.Keys.NUM_5, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 6", new InputBinding.InputInfo(Input.Keys.NUM_6, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 7", new InputBinding.InputInfo(Input.Keys.NUM_7, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 8", new InputBinding.InputInfo(Input.Keys.NUM_8, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 9", new InputBinding.InputInfo(Input.Keys.NUM_9, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
+        creating.addBinding(InputBinding.create("Tool 10", new InputBinding.InputInfo(Input.Keys.NUM_0, Maybe.FALSE, Maybe.FALSE, Maybe.FALSE)));
         creating.addBinding(InputBinding.create("i2",
                 new InputBinding.InputInfo(Input.Keys.W, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
                 new InputBinding.InputInfo(Input.Keys.F, Maybe.FALSE, Maybe.FALSE, Maybe.MAYBE),
@@ -114,6 +114,16 @@ public class BindingMaster {
         creating.addBinding(InputBinding.create("i8", new InputBinding.InputInfo(Input.Keys.I)));
         creating.addBinding(InputBinding.create("i9", new InputBinding.InputInfo(Input.Keys.O)));
         creating.addBinding(InputBinding.create("i0", new InputBinding.InputInfo(Input.Keys.P)));
+        creating.addBinding(InputBinding.create("Snap 1", new InputBinding.InputInfo(Input.Keys.NUM_1, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 2", new InputBinding.InputInfo(Input.Keys.NUM_2, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 3", new InputBinding.InputInfo(Input.Keys.NUM_3, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 4", new InputBinding.InputInfo(Input.Keys.NUM_4, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 5", new InputBinding.InputInfo(Input.Keys.NUM_5, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 6", new InputBinding.InputInfo(Input.Keys.NUM_6, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 7", new InputBinding.InputInfo(Input.Keys.NUM_7, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 8", new InputBinding.InputInfo(Input.Keys.NUM_8, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 9", new InputBinding.InputInfo(Input.Keys.NUM_9, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
+        creating.addBinding(InputBinding.create("Snap 10", new InputBinding.InputInfo(Input.Keys.NUM_0, Maybe.MAYBE, Maybe.FALSE, Maybe.TRUE)));
         creating.addBinding(InputBinding.create("Exit", new InputBinding.InputInfo(Input.Keys.ESCAPE)));
         creating.addBinding(InputBinding.create("Messy", new InputBinding.InputInfo(Input.Keys.H, true)));
         creating.addBinding(InputBinding.create("Resnap", new InputBinding.InputInfo(Input.Keys.R, true, true, false)));
