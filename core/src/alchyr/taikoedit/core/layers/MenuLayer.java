@@ -754,7 +754,7 @@ public class MenuLayer extends LoadedLayer implements InputLayer, FileDropHandle
         LoadingLayer menuLoad;
 
         if (delayMapload) {
-            menuLoad = new EditorLoadingLayer()
+            menuLoad = new MenuLoadingLayer()
                     .loadLists("ui", "font", "menu", "editor", "hitsound")
                     .addTask(() ->
                         MapMaster.loadDelayed(()->updateMaps = true)

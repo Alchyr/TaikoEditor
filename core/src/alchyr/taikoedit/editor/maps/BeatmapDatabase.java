@@ -33,7 +33,7 @@ public class BeatmapDatabase {
 
     private static final String DATABASE_VER = "0";
 
-
+    public static String status = "";
     public static float progress = 0;
     public static int mapCount = 0;
 
@@ -146,6 +146,7 @@ public class BeatmapDatabase {
     }
 
     private void loadData(File songsFolder) {
+        status = "Finding map folders";
         Path songsFolderPath = songsFolder.toPath();
         Collection<Path> subFolders = new ConcurrentLinkedQueue<>();
 
@@ -158,6 +159,7 @@ public class BeatmapDatabase {
 
             logger.info("Checking subfolders of folders with no maps");
             while (!subFolders.isEmpty()) {
+                status = "Checking subfolders";
                 Collection<Path> current = subFolders;
                 subFolders = new ArrayList<>();
 
@@ -175,7 +177,7 @@ public class BeatmapDatabase {
             int total = mapsets.size();
 
             logger.info("Finished collecting mapsets, starting indexing");
-
+            status = "Indexing mapsets";
             for (Mapset mapset : mapsets.values()) {
                 index(mapset);
                 ++completeCount;
@@ -192,6 +194,7 @@ public class BeatmapDatabase {
         //Similar to loadData, but first checks old data map.
         //If old data with matching filename exists, it will be used.
         //If filename has no match, it will be loaded normally.
+        status = "Updating data";
         updating = true;
 
         Path songsFolderPath = songsFolder.toPath();
@@ -405,6 +408,7 @@ public class BeatmapDatabase {
     private HashMap<String, Mapset> loadDatabase(File f, boolean immediatelyIndex) throws Exception {
         if (f.isFile() && f.canRead())
         {
+            status = "Reading data";
             FileInputStream in = new FileInputStream(f);
             JsonValue data = new JsonReader().parse(in); //Closes stream
 
